@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Calendar, ExternalLink, MapPin, Trash2 } from "lucide-react";
 import type { PortfolioProperty } from "@/lib/types";
 import { gradeTone, metricTone, strategyLabel } from "@/lib/utils/labels";
 import { cn } from "@/lib/utils/cn";
+import { dashboardPath } from "@/lib/utils/routes";
 import { useFormatters } from "@/hooks/useSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +15,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 interface PortfolioCardProps {
   property: PortfolioProperty;
   index?: number;
-  onOpen: (property: PortfolioProperty) => void;
   onDelete: (property: PortfolioProperty) => void;
   selectable?: boolean;
   selected?: boolean;
@@ -24,7 +25,6 @@ interface PortfolioCardProps {
 export function PortfolioCard({
   property,
   index = 0,
-  onOpen,
   onDelete,
   selectable = false,
   selected = false,
@@ -112,8 +112,10 @@ export function PortfolioCard({
             <Button variant="ghost" size="icon-sm" aria-label="Delete" onClick={() => onDelete(property)} className="text-muted-foreground hover:text-destructive">
               <Trash2 />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onOpen(property)}>
-              <ExternalLink /> Open
+            <Button variant="outline" size="sm" asChild>
+              <Link href={dashboardPath(property.id)}>
+                <ExternalLink /> Open
+              </Link>
             </Button>
           </div>
         </div>

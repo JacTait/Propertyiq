@@ -9,7 +9,7 @@ import type {
   PortfolioSnapshot,
 } from "@/lib/types";
 import { STORAGE_KEYS } from "@/lib/constants";
-import { createId } from "@/lib/utils/storage";
+import { createId, readStorage } from "@/lib/utils/storage";
 import { getRegionName } from "@/data/market-data";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -34,6 +34,16 @@ export const DEFAULT_FILTERS: PortfolioFilters = {
 
 function isPortfolio(value: unknown): value is PortfolioProperty[] {
   return Array.isArray(value) && value.every((v) => typeof v === "object" && v !== null && "id" in v && "input" in v);
+}
+
+/** Read the portfolio directly from localStorage (same key as Compare / Portfolio). */
+export function readPortfolio(): PortfolioProperty[] {
+  return readStorage<PortfolioProperty[]>(STORAGE_KEYS.portfolio, [], isPortfolio);
+}
+
+export function findPortfolioProperty(id: string): PortfolioProperty | undefined {
+  if (!id) return undefined;
+  return readPortfolio().find((p) => p.id === id);
 }
 
 export function buildSnapshot(input: AnalysisInput, results: AnalysisResults): PortfolioSnapshot {

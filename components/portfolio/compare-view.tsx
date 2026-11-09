@@ -6,6 +6,7 @@ import { Check, GitCompareArrows, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import type { PortfolioProperty } from "@/lib/types";
 import { MAX_COMPARE, STORAGE_KEYS } from "@/lib/constants";
+import { dashboardPath } from "@/lib/utils/routes";
 import { gradeTone, strategyLabel } from "@/lib/utils/labels";
 import { cn } from "@/lib/utils/cn";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -70,7 +71,7 @@ export function CompareView() {
           description="Head to the dashboard, analyse a deal and save it. Once you have two or more, they will appear here."
           action={
             <Button variant="gradient" asChild>
-              <Link href="/dashboard">
+              <Link href={dashboardPath()}>
                 <Plus /> Analyse a property
               </Link>
             </Button>

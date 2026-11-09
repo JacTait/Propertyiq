@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
@@ -8,12 +9,13 @@ import { toast } from "sonner";
 import type { AnalysisInput } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { STORAGE_KEYS } from "@/lib/constants";
+import { dashboardPath } from "@/lib/utils/routes";
 import { createDefaultAnalysis } from "@/data/default-analysis";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useSettings } from "@/hooks/useSettings";
 import { usePropertyAnalysis, sanitizeInput } from "@/hooks/usePropertyAnalysis";
 import { useInvestmentSummary } from "@/hooks/useInvestmentSummary";
-import { usePortfolio } from "@/hooks/usePortfolio";
+import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
@@ -28,70 +30,141 @@ export interface AnalysisDraft {
 }
 
 function isDraft(value: unknown): value is AnalysisDraft {
-  return typeof value === "object" && value !== null && "input" in value;
+  return typeof value === "object" && value !== null && "input" in value && "savedId" in value;
+}
+
+function readPropertyId(searchParams: URLSearchParams): string | null {
+  const raw = searchParams.get("id")?.trim();
+  return raw ? raw : null;
+}
+
+export function AnalysisDashboardSkeleton() {
+  return (
+    <>
+      <PageHeader
+        eyebrow="Deal Analyser"
+        title="Property Analysis"
+        description="Enter the deal, tune the assumptions, and PropertyIQ scores it in real time."
+      />
+      <div className="grid gap-6 xl:grid-cols-12">
+        <div className="min-w-0 xl:col-span-5 2xl:col-span-4">
+          <Skeleton className="h-[560px] w-full rounded-2xl" />
+        </div>
+        <div className="min-w-0 space-y-4 xl:col-span-7 2xl:col-span-8">
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
+          <Skeleton className="h-96 w-full rounded-2xl" />
+        </div>
+      </div>
+    </>
+  );
 }
 
 export function AnalysisDashboard() {
+  const searchParams = useSearchParams();
+  const propertyId = readPropertyId(searchParams);
+  const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const { saveProperty, getById } = usePortfolio();
   const [draft, setDraft, draftHydrated] = useLocalStorage<AnalysisDraft | null>(STORAGE_KEYS.draft, null, isDraft);
+  const hydrated = settingsHydrated && draftHydrated && portfolioHydrated;
+
+  if (!hydrated) return <AnalysisDashboardSkeleton />;
+
+  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
+
+  let initial: AnalysisDraft;
+  if (fromPortfolio) {
+    initial = { input: fromPortfolio.input, savedId: fromPortfolio.id };
+  } else if (!propertyId && draft && draft.savedId === null) {
+    initial = draft;
+  } else {
+    initial = { input: createDefaultAnalysis(settings.defaultCountry), savedId: null };
+  }
+
+  return (
+    <DashboardSession
+      key={propertyId ?? "new"}
+      initial={initial}
+      requestedId={propertyId}
+      missing={Boolean(propertyId && !fromPortfolio)}
+      onDraftChange={setDraft}
+    />
+  );
+}
+
+interface DashboardSessionProps {
+  initial: AnalysisDraft;
+  requestedId: string | null;
+  missing: boolean;
+  onDraftChange: (value: AnalysisDraft | ((prev: AnalysisDraft | null) => AnalysisDraft | null)) => void;
+}
+
+function DashboardSession({ initial, requestedId, missing, onDraftChange }: DashboardSessionProps) {
+  const router = useRouter();
+  const { settings } = useSettings();
+  const { saveProperty, getById } = usePortfolio();
   const [saveOpen, setSaveOpen] = useState(false);
-  const initialised = useRef(false);
-  const savedId = draft?.savedId ?? null;
-  const hydrated = settingsHydrated && draftHydrated;
+  const [savedId, setSavedId] = useState<string | null>(initial.savedId);
+  const warnedMissing = useRef(false);
 
   const form = useForm<AnalysisFormValues>({
     resolver: zodResolver(analysisSchema),
-    defaultValues: createDefaultAnalysis("US"),
+    defaultValues: initial.input,
     mode: "onChange",
   });
 
-  /* Hydrate the form once from the saved draft (or defaults for the preferred country). */
   useEffect(() => {
-    if (!hydrated || initialised.current) return;
-    initialised.current = true;
-    form.reset(draft ? draft.input : createDefaultAnalysis(settings.defaultCountry));
-  }, [hydrated, draft, form, settings.defaultCountry]);
+    if (!missing || warnedMissing.current) return;
+    warnedMissing.current = true;
+    toast.error("Property not found", {
+      description: "That saved analysis is no longer in your portfolio. Starting a new one.",
+    });
+    router.replace(dashboardPath());
+  }, [missing, router]);
 
-  /* Live values → analysis */
   const values = useWatch({ control: form.control });
-  const input = useMemo(() => (hydrated ? (values as AnalysisInput) : null), [values, hydrated]);
+  const input = useMemo(() => values as AnalysisInput, [values]);
   const results = usePropertyAnalysis(input);
   const summary = useInvestmentSummary(input, results);
 
-  /* Persist draft (debounced) */
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!hydrated || !initialised.current || !input) return;
+    if (!input) return;
     if (persistTimer.current) clearTimeout(persistTimer.current);
     const next: AnalysisDraft = { input: sanitizeInput(input), savedId };
     persistTimer.current = setTimeout(() => {
-      setDraft((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+      onDraftChange((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
     }, 400);
     return () => {
       if (persistTimer.current) clearTimeout(persistTimer.current);
     };
-  }, [input, savedId, hydrated, setDraft]);
+  }, [input, savedId, onDraftChange]);
 
   const handleReset = useCallback(() => {
     const fresh = createDefaultAnalysis(settings.defaultCountry);
     form.reset(fresh);
-    setDraft({ input: fresh, savedId: null });
+    setSavedId(null);
+    onDraftChange({ input: fresh, savedId: null });
+    router.replace(dashboardPath());
     toast("Analysis reset", { description: "Inputs restored to defaults for your preferred country." });
-  }, [form, settings.defaultCountry, setDraft]);
+  }, [form, settings.defaultCountry, onDraftChange, router]);
 
   const handleSave = (name: string, asNew: boolean) => {
     if (!input || !results) return;
     const clean = sanitizeInput({ ...input, property: { ...input.property, name } });
     const saved = saveProperty(clean, results, name, asNew ? undefined : (savedId ?? undefined));
     form.setValue("property.name", name);
-    setDraft({ input: clean, savedId: saved.id });
+    setSavedId(saved.id);
+    onDraftChange({ input: clean, savedId: saved.id });
+    if (asNew || requestedId !== saved.id) {
+      router.replace(dashboardPath(saved.id));
+    }
     toast.success(asNew || !savedId ? "Saved to portfolio" : "Portfolio updated", {
       description: `${name} · Deal score ${results.dealScore.score}/100`,
     });
   };
 
-  const existing = savedId ? getById(savedId) : undefined;
+  const existing = savedId ? getById(savedId) ?? findPortfolioProperty(savedId) : undefined;
 
   return (
     <>
@@ -114,11 +187,11 @@ export function AnalysisDashboard() {
       <div className="grid gap-6 xl:grid-cols-12">
         <div className="min-w-0 xl:col-span-5 2xl:col-span-4">
           <div className="min-w-0 xl:sticky xl:top-20">
-            {hydrated ? <AnalysisWizard form={form} onReset={handleReset} /> : <Skeleton className="h-[560px] w-full rounded-2xl" />}
+            <AnalysisWizard form={form} onReset={handleReset} />
           </div>
         </div>
         <div className="min-w-0 xl:col-span-7 2xl:col-span-8">
-          {input && results && summary ? (
+          {results && summary ? (
             <ResultsPanel input={input} results={results} summary={summary} />
           ) : (
             <div className="space-y-4">

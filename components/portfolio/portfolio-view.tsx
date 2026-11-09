@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { Briefcase, GitCompareArrows, Plus, SearchX } from "lucide-react";
 import { toast } from "sonner";
 import type { PortfolioProperty } from "@/lib/types";
 import { STORAGE_KEYS, MAX_COMPARE } from "@/lib/constants";
-import { writeStorage } from "@/lib/utils/storage";
+import { dashboardPath } from "@/lib/utils/routes";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Button } from "@/components/ui/button";
@@ -26,24 +25,17 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { PortfolioCard } from "@/components/portfolio/portfolio-card";
 import { PortfolioToolbar } from "@/components/portfolio/portfolio-toolbar";
 import { PortfolioStats } from "@/components/portfolio/portfolio-stats";
-import type { AnalysisDraft } from "@/components/dashboard/analysis-dashboard";
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
 }
 
 export function PortfolioView() {
-  const router = useRouter();
   const { properties, filtered, filters, setFilters, hydrated, stats, deleteProperty } = usePortfolio();
   const [compareIds, setCompareIds] = useLocalStorage<string[]>(STORAGE_KEYS.compare, [], isStringArray);
   const [pendingDelete, setPendingDelete] = useState<PortfolioProperty | null>(null);
 
   const validCompareIds = compareIds.filter((id) => properties.some((p) => p.id === id));
-
-  const openProperty = (property: PortfolioProperty) => {
-    writeStorage<AnalysisDraft>(STORAGE_KEYS.draft, { input: property.input, savedId: property.id });
-    router.push("/dashboard");
-  };
 
   const toggleCompare = (property: PortfolioProperty) => {
     setCompareIds((prev) => {
@@ -78,7 +70,7 @@ export function PortfolioView() {
               </Link>
             </Button>
             <Button variant="gradient" asChild>
-              <Link href="/dashboard">
+              <Link href={dashboardPath()}>
                 <Plus /> New Analysis
               </Link>
             </Button>
@@ -107,7 +99,7 @@ export function PortfolioView() {
           description="Analyse a property on the dashboard and hit “Save to Portfolio” to start building your pipeline."
           action={
             <Button variant="gradient" asChild>
-              <Link href="/dashboard">
+              <Link href={dashboardPath()}>
                 <Plus /> Analyse your first deal
               </Link>
             </Button>
@@ -132,7 +124,6 @@ export function PortfolioView() {
                     key={p.id}
                     property={p}
                     index={i}
-                    onOpen={openProperty}
                     onDelete={setPendingDelete}
                     selectable
                     selected={validCompareIds.includes(p.id)}

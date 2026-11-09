@@ -1,6 +1,6 @@
 export { useLocalStorage, useHydrated } from "@/hooks/useLocalStorage";
 export { SettingsProvider, useSettings, useFormatters } from "@/hooks/useSettings";
-export { usePortfolio, buildSnapshot, DEFAULT_FILTERS } from "@/hooks/usePortfolio";
+export { usePortfolio, buildSnapshot, DEFAULT_FILTERS, readPortfolio, findPortfolioProperty } from "@/hooks/usePortfolio";
 export type { PortfolioFilters, PortfolioSortKey, SortDirection } from "@/hooks/usePortfolio";
 export { useMortgageCalculation } from "@/hooks/useMortgageCalculation";
 export { usePropertyAnalysis, sanitizeInput } from "@/hooks/usePropertyAnalysis";
