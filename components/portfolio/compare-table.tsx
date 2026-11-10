@@ -33,6 +33,8 @@ const ROWS: CompareRow[] = [
   { key: "dscr", label: "DSCR", value: (p) => p.snapshot.dscr, format: (v, f) => f.ratio(v) },
   { key: "appr", label: "Appreciation", value: (p) => p.snapshot.appreciationRate, format: (v, f) => f.percent(v) },
   { key: "score", label: "Deal Score", value: (p) => p.snapshot.dealScore, format: (v) => `${Math.round(v)}/100` },
+  { key: "resilience", label: "Resilience Score", value: (p) => p.snapshot.resilienceScore ?? 0, format: (v) => `${Math.round(v)}/100` },
+  { key: "mos", label: "Margin of Safety", value: (p) => p.snapshot.marginOfSafetyPercent ?? 0, format: (v, f) => f.percent(v) },
 ];
 
 export function CompareTable({ properties }: { properties: PortfolioProperty[] }) {

@@ -11,6 +11,11 @@ export function maxOfferPath(propertyId?: string | null): string {
   return `/max-offer?id=${encodeURIComponent(propertyId)}`;
 }
 
+export function resiliencePath(propertyId?: string | null): string {
+  if (!propertyId) return "/resilience";
+  return `/resilience?id=${encodeURIComponent(propertyId)}`;
+}
+
 export function isMaxOfferProperty(property: Pick<PortfolioProperty, "kind">): boolean {
   return property.kind === "max-offer";
 }

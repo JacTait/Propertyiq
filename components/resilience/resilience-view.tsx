@@ -1,0 +1,222 @@
+"use client";
+
+import { useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowUpRight } from "lucide-react";
+import { toast } from "sonner";
+import type { AnalysisInput, RentSource } from "@/lib/types";
+import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
+import { STORAGE_KEYS } from "@/lib/constants";
+import { dashboardPath, resiliencePath } from "@/lib/utils/routes";
+import { createDefaultAnalysis } from "@/data/default-analysis";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useSettings } from "@/hooks/useSettings";
+import { sanitizeInput, usePropertyAnalysis } from "@/hooks/usePropertyAnalysis";
+import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
+import { useUnderwriting } from "@/hooks/useUnderwriting";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/page-header";
+import { FieldGrid, NumberField, SectionTitle } from "@/components/forms/fields";
+import { useCurrencySymbol } from "@/components/forms/use-currency-symbol";
+import { BuyBoxStatusCard } from "@/components/analysis/buy-box-status";
+import { RentSourceToggle } from "@/components/analysis/rent-source-toggle";
+import { DealResiliencePanel } from "@/components/analysis/deal-resilience";
+import { RefinanceValidator } from "@/components/analysis/refinance-validator";
+import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
+import { DealKillerList } from "@/components/analysis/deal-killers";
+import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
+import { ChartCard, CashflowStressChart, RehabSensitivityChart, RentSensitivityChart, ResilienceBreakdownChart } from "@/components/charts";
+import type { AnalysisDraft } from "@/components/dashboard/analysis-dashboard";
+
+function isDraft(value: unknown): value is AnalysisDraft {
+  return typeof value === "object" && value !== null && "input" in value && "savedId" in value;
+}
+
+function readPropertyId(searchParams: URLSearchParams): string | null {
+  const raw = searchParams.get("id")?.trim();
+  return raw ? raw : null;
+}
+
+export function ResilienceSkeleton() {
+  return (
+    <>
+      <PageHeader
+        eyebrow="Underwriting"
+        title="Deal Resilience"
+        description="Stress-test rent, rehab, vacancy and refinance before you offer."
+      />
+      <div className="space-y-4">
+        <Skeleton className="h-40 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
+    </>
+  );
+}
+
+export function ResilienceView() {
+  const searchParams = useSearchParams();
+  const propertyId = readPropertyId(searchParams);
+  const { getById, hydrated: portfolioHydrated } = usePortfolio();
+  const { settings, hydrated: settingsHydrated } = useSettings();
+  const [draft, setDraft, draftHydrated] = useLocalStorage<AnalysisDraft | null>(STORAGE_KEYS.draft, null, isDraft);
+  const hydrated = settingsHydrated && draftHydrated && portfolioHydrated;
+
+  if (!hydrated) return <ResilienceSkeleton />;
+
+  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
+
+  let initial: AnalysisDraft;
+  if (fromPortfolio) {
+    initial = { input: sanitizeInput(fromPortfolio.input), savedId: fromPortfolio.id };
+  } else if (!propertyId && draft) {
+    initial = { input: sanitizeInput(draft.input), savedId: draft.savedId };
+  } else {
+    initial = { input: createDefaultAnalysis(settings.defaultCountry), savedId: null };
+  }
+
+  return (
+    <ResilienceSession
+      key={propertyId ?? draft?.savedId ?? "draft"}
+      initial={initial}
+      requestedId={propertyId}
+      missing={Boolean(propertyId && !fromPortfolio)}
+      onDraftChange={setDraft}
+    />
+  );
+}
+
+function ResilienceSession({
+  initial,
+  requestedId,
+  missing,
+  onDraftChange,
+}: {
+  initial: AnalysisDraft;
+  requestedId: string | null;
+  missing: boolean;
+  onDraftChange: (value: AnalysisDraft | ((prev: AnalysisDraft | null) => AnalysisDraft | null)) => void;
+}) {
+  const router = useRouter();
+  const symbol = useCurrencySymbol();
+  const warnedMissing = useRef(false);
+
+  const form = useForm<AnalysisFormValues>({
+    resolver: zodResolver(analysisSchema),
+    defaultValues: initial.input,
+    mode: "onChange",
+  });
+
+  useEffect(() => {
+    if (!missing || warnedMissing.current) return;
+    warnedMissing.current = true;
+    toast.error("Property not found", { description: "Starting from your current analysis draft." });
+    router.replace(resiliencePath());
+  }, [missing, router]);
+
+  const values = useWatch({ control: form.control });
+  const input = useMemo(() => values as AnalysisInput, [values]);
+  const results = usePropertyAnalysis(input);
+  const underwriting = useUnderwriting(input, results, { includeSensitivity: true });
+
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!input) return;
+    if (persistTimer.current) clearTimeout(persistTimer.current);
+    const next: AnalysisDraft = { input: sanitizeInput(input), savedId: initial.savedId };
+    persistTimer.current = setTimeout(() => {
+      onDraftChange((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    }, 400);
+    return () => {
+      if (persistTimer.current) clearTimeout(persistTimer.current);
+    };
+  }, [input, initial.savedId, onDraftChange]);
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Underwriting"
+        title="Deal Resilience"
+        description="Stress-test rent, rehab, vacancy and refinance before you offer."
+        actions={
+          <Button variant="outline" asChild>
+            <Link href={requestedId ? dashboardPath(requestedId) : dashboardPath()}>
+              Standard Analysis <ArrowUpRight />
+            </Link>
+          </Button>
+        }
+      />
+
+      <FormProvider {...form}>
+        <div className="grid gap-4 xl:grid-cols-12">
+          <div className="space-y-4 xl:col-span-4">
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <SectionTitle
+                title={input.property.name || "Untitled property"}
+                description="Assumptions shared with Standard Analysis. Changes save to the same draft."
+              />
+              <FieldGrid>
+                <NumberField name="income.monthlyRent" label="Listing Rent" prefix={symbol} />
+                <NumberField name="income.verifiedRent" label="Verified Rent" prefix={symbol} />
+                <NumberField name="income.conservativeRent" label="Conservative Rent" prefix={symbol} />
+                <NumberField name="brrrr.rehabCost" label="Rehab Cost" prefix={symbol} />
+                <NumberField name="brrrr.afterRepairValue" label="ARV" prefix={symbol} />
+                <NumberField name="brrrr.refinanceLtv" label="Refinance LTV" suffix="%" />
+                <NumberField name="brrrr.refinanceRate" label="Interest Rate" suffix="%" />
+                <NumberField name="brrrr.refinanceDscrMin" label="DSCR Requirement" step={0.05} />
+                <NumberField name="expenses.vacancyPercent" label="Vacancy" suffix="%" />
+                <NumberField name="expenses.maintenancePercent" label="Maintenance" suffix="%" />
+              </FieldGrid>
+            </div>
+          </div>
+
+          <div className="space-y-4 xl:col-span-8">
+            {underwriting && results ? (
+              <>
+                <RentSourceToggle
+                  rent={underwriting.rent}
+                  onChange={(source: RentSource) => form.setValue("income.rentSource", source)}
+                />
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <BuyBoxStatusCard match={underwriting.buyBox} />
+                  <MarginOfSafetyCard margin={underwriting.margin} />
+                </div>
+                <DealResiliencePanel resilience={underwriting.resilience} />
+                <DealKillerList warnings={underwriting.warnings} />
+              </>
+            ) : (
+              <div className="space-y-4">
+                <Skeleton className="h-40 w-full rounded-2xl" />
+                <Skeleton className="h-64 w-full rounded-2xl" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {underwriting && (
+          <div className="mt-6 space-y-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ChartCard title="Rent Sensitivity" description="Cashflow and ROI as rent moves ±20% from the active rent.">
+                <RentSensitivityChart data={underwriting.resilience.rentSensitivity} />
+              </ChartCard>
+              <ChartCard title="Rehab Cost Sensitivity" description="How overrun or savings on rehab change returns.">
+                <RehabSensitivityChart data={underwriting.resilience.rehabSensitivity} />
+              </ChartCard>
+              <ChartCard title="Cashflow Stress Test" description="Monthly cashflow across best, expected, stress and worst cases.">
+                <CashflowStressChart scenarios={underwriting.resilience.scenarios} />
+              </ChartCard>
+              <ChartCard title="Resilience Breakdown" description="Survival scores for cashflow, ROI, DSCR and refinance.">
+                <ResilienceBreakdownChart components={underwriting.resilience.components} />
+              </ChartCard>
+            </div>
+            <RefinanceValidator validation={underwriting.refinance} />
+            <UnderwritingSummaryCard summary={underwriting.summary} />
+          </div>
+        )}
+      </FormProvider>
+    </>
+  );
+}

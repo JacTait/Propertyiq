@@ -5,3 +5,7 @@ export { EquityGrowthChart } from "@/components/charts/equity-growth-chart";
 export { AppreciationChart } from "@/components/charts/appreciation-chart";
 export { CashflowProjectionChart } from "@/components/charts/cashflow-projection-chart";
 export { AmortizationChart } from "@/components/charts/amortization-chart";
+export { RentSensitivityChart } from "@/components/charts/rent-sensitivity-chart";
+export { RehabSensitivityChart } from "@/components/charts/rehab-sensitivity-chart";
+export { CashflowStressChart } from "@/components/charts/cashflow-stress-chart";
+export { ResilienceBreakdownChart } from "@/components/charts/resilience-breakdown-chart";

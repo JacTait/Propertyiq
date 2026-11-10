@@ -80,9 +80,20 @@ function IncomeSection({ strategy, symbol }: { strategy: InvestmentStrategy; sym
             <NumberField name="brrrr.refinanceLtv" label="Refinance LTV" suffix="%" />
             <NumberField name="brrrr.refinanceRate" label="Refinance Rate" suffix="%" />
             <NumberField name="brrrr.refinanceTermYears" label="Refinance Term" suffix="yrs" />
-            <NumberField name="brrrr.expectedRent" label="Expected Monthly Rent" prefix={symbol} />
+            <NumberField name="brrrr.refinanceDscrMin" label="DSCR Requirement" step={0.05} hint="Minimum DSCR for the refinance to count as viable." />
             <NumberField name="income.rentGrowthRate" label="Rent Growth" suffix="%" />
           </FieldGrid>
+          <div className="mt-6">
+            <SectionTitle
+              title="Rent validation"
+              description="Analysis uses verified rent by default. Toggle the source on the results panel."
+            />
+            <FieldGrid>
+              <NumberField name="income.monthlyRent" label="Listing Rent" prefix={symbol} />
+              <NumberField name="income.verifiedRent" label="Verified Rent" prefix={symbol} hint="Comps or confirmed in-place rent" />
+              <NumberField name="income.conservativeRent" label="Conservative Rent" prefix={symbol} hint="Haircut used as a downside underwrite" />
+            </FieldGrid>
+          </div>
         </div>
       );
     case "commercial-lease":
@@ -90,7 +101,9 @@ function IncomeSection({ strategy, symbol }: { strategy: InvestmentStrategy; sym
         <div>
           <SectionTitle title="Lease income" />
           <FieldGrid>
-            <NumberField name="income.monthlyRent" label="Monthly Lease Income" prefix={symbol} />
+            <NumberField name="income.monthlyRent" label="Listing Rent" prefix={symbol} />
+            <NumberField name="income.verifiedRent" label="Verified Rent" prefix={symbol} />
+            <NumberField name="income.conservativeRent" label="Conservative Rent" prefix={symbol} />
             <NumberField name="income.otherMonthlyIncome" label="Other Income" prefix={symbol} hint="Parking, signage, CAM recoveries" />
             <NumberField name="income.rentGrowthRate" label="Annual Escalation" suffix="%" />
           </FieldGrid>
@@ -100,9 +113,11 @@ function IncomeSection({ strategy, symbol }: { strategy: InvestmentStrategy; sym
     default:
       return (
         <div>
-          <SectionTitle title="Rental income" />
+          <SectionTitle title="Rental income" description="Metrics are calculated on verified rent unless you switch source." />
           <FieldGrid>
-            <NumberField name="income.monthlyRent" label="Monthly Rent" prefix={symbol} />
+            <NumberField name="income.monthlyRent" label="Listing Rent" prefix={symbol} />
+            <NumberField name="income.verifiedRent" label="Verified Rent" prefix={symbol} hint="Comps or confirmed in-place rent" />
+            <NumberField name="income.conservativeRent" label="Conservative Rent" prefix={symbol} hint="Haircut used as a downside underwrite" />
             <NumberField name="income.otherMonthlyIncome" label="Other Income" prefix={symbol} hint="Laundry, parking, storage, pet rent" />
             <NumberField name="income.rentGrowthRate" label="Rent Growth" suffix="%" hint="Expected annual rent increase" />
           </FieldGrid>

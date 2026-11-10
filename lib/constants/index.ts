@@ -5,6 +5,7 @@ import type {
   InvestmentStrategy,
   PropertyCondition,
   PropertyType,
+  ResilienceShocks,
 } from "@/lib/types";
 
 export const APP_NAME = "PropertyIQ";
@@ -16,6 +17,7 @@ export const STORAGE_KEYS = {
   draft: "propertyiq:draft:v1",
   compare: "propertyiq:compare:v1",
   maxOfferDraft: "propertyiq:max-offer-draft:v1",
+  buyBoxes: "propertyiq:buy-boxes:v1",
 } as const;
 
 export const COUNTRIES: Country[] = [
@@ -145,6 +147,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     decimals: 0,
     locale: "en-US",
   },
+  activeBuyBoxId: "box_default",
 };
 
 export const PROJECTION_YEARS = 10;
@@ -153,3 +156,27 @@ export const MAX_COMPARE = 3;
 
 export const MAX_OFFER_CASHFLOW_PRESETS = [100, 200, 300, 400, 500, 750, 1000] as const;
 export const MAX_OFFER_ROI_PRESETS = [5, 8, 10, 12, 15, 20] as const;
+
+export const DEFAULT_REFINANCE_DSCR = 1.25;
+
+export const DEFAULT_INVESTOR_TARGETS = {
+  desiredMonthlyCashflow: 200,
+  desiredRoi: 8,
+  desiredCashOnCash: 8,
+  minimumDscr: DEFAULT_REFINANCE_DSCR,
+  safetyBufferPercent: 8,
+} as const;
+
+export const RESILIENCE_SHOCKS: Record<"best" | "expected" | "stress" | "worst", ResilienceShocks> = {
+  best: { rentFactor: 1.05, rehabFactor: 0.9, vacancyDelta: -2, maintenanceDelta: -2, arvFactor: 1.05 },
+  expected: { rentFactor: 1, rehabFactor: 1, vacancyDelta: 0, maintenanceDelta: 0, arvFactor: 1 },
+  stress: { rentFactor: 0.9, rehabFactor: 1.15, vacancyDelta: 5, maintenanceDelta: 10, arvFactor: 0.95 },
+  worst: { rentFactor: 0.8, rehabFactor: 1.25, vacancyDelta: 8, maintenanceDelta: 15, arvFactor: 0.9 },
+};
+
+export const RESILIENCE_WEIGHTS = {
+  cashflow: 0.3,
+  roi: 0.25,
+  dscr: 0.25,
+  refinance: 0.2,
+} as const;

@@ -12,6 +12,7 @@ import type {
   PortfolioProperty,
   PortfolioSnapshot,
   Recommendation,
+  UnderwritingPack,
 } from "@/lib/types";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { createId, readStorage } from "@/lib/utils/storage";
@@ -73,7 +74,11 @@ export function findPortfolioProperty(id: string): PortfolioProperty | undefined
   return readPortfolio().find((p) => p.id === id);
 }
 
-export function buildSnapshot(input: AnalysisInput, results: AnalysisResults): PortfolioSnapshot {
+export function buildSnapshot(
+  input: AnalysisInput,
+  results: AnalysisResults,
+  underwriting?: UnderwritingPack | null,
+): PortfolioSnapshot {
   return {
     purchasePrice: input.financing.purchasePrice,
     roi: results.roi,
@@ -88,6 +93,10 @@ export function buildSnapshot(input: AnalysisInput, results: AnalysisResults): P
     dealScore: results.dealScore.score,
     grade: results.dealScore.grade,
     recommendation: results.dealScore.recommendation,
+    resilienceScore: underwriting?.resilience.score,
+    marginOfSafetyPercent: underwriting?.margin.percent,
+    refinanceStatus: underwriting?.refinance.status,
+    buyBoxStatus: underwriting?.buyBox.status,
   };
 }
 
@@ -100,10 +109,16 @@ export function usePortfolio() {
   const [filters, setFilters] = useState<PortfolioFilters>(DEFAULT_FILTERS);
 
   const saveProperty = useCallback(
-    (input: AnalysisInput, results: AnalysisResults, name?: string, existingId?: string): PortfolioProperty => {
+    (
+      input: AnalysisInput,
+      results: AnalysisResults,
+      name?: string,
+      existingId?: string,
+      underwriting?: UnderwritingPack | null,
+    ): PortfolioProperty => {
       const now = new Date().toISOString();
       const regionName = getRegionName(input.location.country, input.location.region);
-      const snapshot = buildSnapshot(input, results);
+      const snapshot = buildSnapshot(input, results, underwriting);
       const existing = existingId ? properties.find((p) => p.id === existingId) : undefined;
 
       const saved: PortfolioProperty = {
@@ -137,6 +152,7 @@ export function usePortfolio() {
       country: CountryCode,
       name?: string,
       existingId?: string,
+      underwriting?: UnderwritingPack | null,
     ): PortfolioProperty => {
       const now = new Date().toISOString();
       const analysisInput = maxOfferToAnalysisInput(maxOfferInput, results, country);
@@ -166,6 +182,10 @@ export function usePortfolio() {
         dealScore,
         grade,
         recommendation,
+        resilienceScore: underwriting?.resilience.score,
+        marginOfSafetyPercent: underwriting?.margin.percent ?? results.safetyMarginPercent,
+        refinanceStatus: underwriting?.refinance.status ?? (results.brrrr.infiniteReturn || results.brrrr.cashPulledOut > 0 ? "viable" : "risk"),
+        buyBoxStatus: underwriting?.buyBox.status,
       };
       const existing = existingId ? properties.find((p) => p.id === existingId) : undefined;
       const saved: PortfolioProperty = {

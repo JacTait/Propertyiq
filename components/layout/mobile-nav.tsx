@@ -8,7 +8,7 @@ import { NAV_ITEMS } from "@/components/layout/nav-items";
 export function MobileNav() {
   const pathname = usePathname();
   return (
-    <nav className="glass fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl px-2 py-2 shadow-2xl lg:hidden">
+    <nav className="glass fixed inset-x-2 bottom-3 z-40 flex items-center justify-around rounded-2xl px-1 py-1.5 shadow-2xl sm:inset-x-3 sm:px-2 lg:hidden">
       {NAV_ITEMS.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
@@ -17,12 +17,12 @@ export function MobileNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition-colors sm:px-2 sm:text-[11px]",
+              "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-medium transition-colors sm:text-[10px]",
               active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <Icon className="size-5" />
-            {item.short ?? item.label}
+            <Icon className="size-4 sm:size-5" />
+            <span className="truncate">{item.short ?? item.label}</span>
           </Link>
         );
       })}

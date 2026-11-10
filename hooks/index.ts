@@ -9,3 +9,5 @@ export type { ProjectionChartData } from "@/hooks/useProjectionAnalysis";
 export { useDealScore } from "@/hooks/useDealScore";
 export { useInvestmentSummary } from "@/hooks/useInvestmentSummary";
 export { useMaxOfferAnalysis } from "@/hooks/useMaxOfferAnalysis";
+export { useBuyBoxes } from "@/hooks/useBuyBoxes";
+export { useUnderwriting } from "@/hooks/useUnderwriting";

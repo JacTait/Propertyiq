@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { AnalysisDashboard, AnalysisDashboardSkeleton } from "@/components/dashboard/analysis-dashboard";
 
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = { title: "Standard Analysis" };
 
 export default function DashboardPage() {
   return (

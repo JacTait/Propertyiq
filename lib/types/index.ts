@@ -66,6 +66,8 @@ export type InvestmentStrategy =
   | "fix-flip"
   | "commercial-lease";
 
+export type RentSource = "listing" | "verified" | "conservative";
+
 export interface LocationInputs {
   country: CountryCode;
   region: string;
@@ -75,6 +77,7 @@ export interface LocationInputs {
 export interface Property {
   name: string;
   address: string;
+  zipCode: string;
   propertyType: PropertyType;
   bedrooms: number;
   bathrooms: number;
@@ -132,7 +135,13 @@ export interface Mortgage {
 /* ------------------------------------------------------------------ */
 
 export interface IncomeInputs {
+  /** Listing / advertised monthly rent. */
   monthlyRent: number;
+  /** Rent supported by comps or confirmation. Used for analysis by default. */
+  verifiedRent: number;
+  /** Haircut rent used as a conservative underwrite. */
+  conservativeRent: number;
+  rentSource: RentSource;
   otherMonthlyIncome: number;
   rentGrowthRate: number;
   /* Short-term rental */
@@ -171,6 +180,7 @@ export interface BrrrrInputs {
   refinanceRate: number;
   refinanceTermYears: number;
   expectedRent: number;
+  refinanceDscrMin: number;
 }
 
 export interface AnalysisInput {
@@ -334,6 +344,9 @@ export interface AnalysisResults {
 /*  Portfolio                                                          */
 /* ------------------------------------------------------------------ */
 
+export type RefinanceStatus = "viable" | "risk" | "n/a";
+export type BuyBoxStatus = "inside" | "outside" | "no-profile";
+
 export interface PortfolioSnapshot {
   purchasePrice: number;
   roi: number;
@@ -348,6 +361,10 @@ export interface PortfolioSnapshot {
   dealScore: number;
   grade: DealGrade;
   recommendation: Recommendation;
+  resilienceScore?: number;
+  marginOfSafetyPercent?: number;
+  refinanceStatus?: RefinanceStatus;
+  buyBoxStatus?: BuyBoxStatus;
 }
 
 export type PortfolioKind = "analysis" | "max-offer";
@@ -445,6 +462,7 @@ export interface AppSettings {
   defaultCountry: CountryCode;
   exportPreferences: ExportPreferences;
   numberFormatting: NumberFormatting;
+  activeBuyBoxId: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -620,4 +638,189 @@ export interface MaxOfferResults {
   brrrr: MaxOfferBrrrrResults;
   summary: MaxOfferSummary;
   generatedAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Buy Box                                                            */
+/* ------------------------------------------------------------------ */
+
+export interface BuyBoxProfile {
+  id: string;
+  name: string;
+  propertyTypes: PropertyType[];
+  minBedrooms: number;
+  maxPurchasePrice: number;
+  minRent: number;
+  minArv: number;
+  maxArv: number;
+  zipCodes: string[];
+  targetZipCodes: string[];
+  strategies: InvestmentStrategy[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BuyBoxReasonTone = "fail" | "warn" | "pass";
+
+export interface BuyBoxReason {
+  key: string;
+  tone: BuyBoxReasonTone;
+  message: string;
+}
+
+export interface BuyBoxSubject {
+  propertyType?: PropertyType;
+  bedrooms?: number;
+  purchasePrice: number;
+  monthlyRent: number;
+  arv: number;
+  zipCode?: string;
+  strategy: InvestmentStrategy;
+}
+
+export interface BuyBoxMatch {
+  status: BuyBoxStatus;
+  inside: boolean;
+  profileId: string | null;
+  profileName: string | null;
+  reasons: BuyBoxReason[];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Rent resolution                                                    */
+/* ------------------------------------------------------------------ */
+
+export interface ResolvedRent {
+  listing: number;
+  verified: number;
+  conservative: number;
+  source: RentSource;
+  active: number;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Deal resilience                                                    */
+/* ------------------------------------------------------------------ */
+
+export type ResilienceScenarioKey = "best" | "expected" | "stress" | "worst";
+
+export type ResilienceGrade = "very-resilient" | "resilient" | "acceptable" | "fragile" | "high-risk";
+
+export interface ResilienceShocks {
+  rentFactor: number;
+  rehabFactor: number;
+  vacancyDelta: number;
+  maintenanceDelta: number;
+  arvFactor: number;
+}
+
+export interface ResilienceScenarioMetrics {
+  key: ResilienceScenarioKey;
+  label: string;
+  shocks: ResilienceShocks;
+  monthlyCashflow: number;
+  annualCashflow: number;
+  roi: number;
+  cashOnCash: number;
+  dscr: number;
+  capRate: number;
+  refinanceViable: boolean;
+}
+
+export interface ResilienceComponentScore {
+  key: "cashflow" | "roi" | "dscr" | "refinance";
+  label: string;
+  score: number;
+  weight: number;
+  detail: string;
+}
+
+export interface SensitivityPoint {
+  changePercent: number;
+  monthlyCashflow: number;
+  roi: number;
+  dscr: number;
+}
+
+export interface DealResilienceResults {
+  score: number;
+  grade: ResilienceGrade;
+  gradeLabel: string;
+  scenarios: ResilienceScenarioMetrics[];
+  components: ResilienceComponentScore[];
+  rentSensitivity: SensitivityPoint[];
+  rehabSensitivity: SensitivityPoint[];
+  generatedAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Refinance validator                                                */
+/* ------------------------------------------------------------------ */
+
+export interface RefinanceValidation {
+  arv: number;
+  refinanceLtv: number;
+  interestRate: number;
+  termYears: number;
+  dscrRequirement: number;
+  maximumRefinanceAmount: number;
+  loanAmount: number;
+  monthlyPayment: number;
+  cashPulledOut: number;
+  cashLeftInDeal: number;
+  postRefiDscr: number;
+  postRefiMonthlyCashflow: number;
+  viable: boolean;
+  status: RefinanceStatus;
+  headline: string;
+  detail: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Margin of safety                                                   */
+/* ------------------------------------------------------------------ */
+
+export type SafetyRating = "excellent" | "strong" | "good" | "weak" | "danger";
+
+export interface MarginOfSafety {
+  purchasePrice: number;
+  recommendedOffer: number;
+  maximumOffer: number;
+  dollarCushion: number;
+  percent: number;
+  rating: SafetyRating;
+  ratingLabel: string;
+  detail: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Deal killers & underwriting summary                                */
+/* ------------------------------------------------------------------ */
+
+export type DealKillerSeverity = "critical" | "warning" | "info";
+
+export interface DealKillerWarning {
+  key: string;
+  severity: DealKillerSeverity;
+  title: string;
+  detail: string;
+}
+
+export interface UnderwritingSummary {
+  headline: string;
+  paragraphs: string[];
+  bullets: string[];
+  resilienceScore: number;
+  assessment: string;
+  generatedAt: string;
+}
+
+export interface UnderwritingPack {
+  rent: ResolvedRent;
+  buyBox: BuyBoxMatch;
+  refinance: RefinanceValidation;
+  resilience: DealResilienceResults;
+  margin: MarginOfSafety;
+  warnings: DealKillerWarning[];
+  summary: UnderwritingSummary;
 }

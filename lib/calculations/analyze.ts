@@ -1,5 +1,6 @@
 import type { AnalysisInput, AnalysisResults } from "@/lib/types";
 import { PROJECTION_YEARS } from "@/lib/constants";
+import { applyActiveRent, normalizeAnalysisInput } from "@/lib/calculations/rent";
 import { calculateMortgage } from "@/lib/calculations/mortgage";
 import {
   calculateBreakEvenOccupancy,
@@ -27,7 +28,8 @@ import { calculateDealScore, type DealScoreInputs } from "@/lib/calculations/dea
  * Runs the full analysis pipeline for a property.
  * Pure function — safe to call on every form change.
  */
-export function analyzeProperty(input: AnalysisInput): AnalysisResults {
+export function analyzeProperty(raw: AnalysisInput): AnalysisResults {
+  const input = applyActiveRent(normalizeAnalysisInput(raw));
   const { financing, income, expenses, strategy, location } = input;
 
   const mortgage = calculateMortgage({

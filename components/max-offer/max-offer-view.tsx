@@ -10,11 +10,13 @@ import type { MaxOfferInputs } from "@/lib/types";
 import { maxOfferSchema, type MaxOfferFormValues } from "@/lib/utils/schema";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { maxOfferPath } from "@/lib/utils/routes";
-import { createDefaultMaxOffer } from "@/data/default-max-offer";
+import { createDefaultMaxOffer, maxOfferToAnalysisInput } from "@/data/default-max-offer";
 import { sanitizeMaxOffer } from "@/lib/calculations/max-offer";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useSettings } from "@/hooks/useSettings";
 import { useMaxOfferAnalysis } from "@/hooks/useMaxOfferAnalysis";
+import { usePropertyAnalysis } from "@/hooks/usePropertyAnalysis";
+import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +30,8 @@ import { ScenarioTable } from "@/components/max-offer/scenario-table";
 import { MaxOfferCharts } from "@/components/max-offer/max-offer-charts";
 import { BrrrrPanel } from "@/components/max-offer/brrrr-panel";
 import { MaxOfferSummaryCard } from "@/components/max-offer/max-offer-summary";
+import { BuyBoxStatusCard } from "@/components/analysis/buy-box-status";
+import { DealKillerList } from "@/components/analysis/deal-killers";
 
 export interface MaxOfferDraft {
   input: MaxOfferInputs;
@@ -134,6 +138,12 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
   const values = useWatch({ control: form.control });
   const input = useMemo(() => values as MaxOfferInputs, [values]);
   const results = useMaxOfferAnalysis(input);
+  const analysisInput = useMemo(
+    () => (results ? maxOfferToAnalysisInput(sanitizeMaxOffer(input), results, settings.defaultCountry) : null),
+    [input, results, settings.defaultCountry],
+  );
+  const analysisResults = usePropertyAnalysis(analysisInput);
+  const underwriting = useUnderwriting(analysisInput, analysisResults, { includeSensitivity: false });
 
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -151,7 +161,14 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
   const handleSave = (name: string, asNew: boolean) => {
     if (!input || !results) return;
     const clean = sanitizeMaxOffer({ ...input, property: { ...input.property, name } });
-    const saved = saveMaxOffer(clean, results, settings.defaultCountry, name, asNew ? undefined : (savedId ?? undefined));
+    const saved = saveMaxOffer(
+      clean,
+      results,
+      settings.defaultCountry,
+      name,
+      asNew ? undefined : (savedId ?? undefined),
+      underwriting,
+    );
     form.setValue("property.name", name);
     setSavedId(saved.id);
     onDraftChange({ input: clean, savedId: saved.id });
@@ -190,8 +207,10 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
           {results ? (
             <>
               <MaxOfferKpis results={results} />
+              {underwriting && <BuyBoxStatusCard match={underwriting.buyBox} />}
               <DealVerdict results={results} />
               <OfferTiers results={results} />
+              {underwriting && <DealKillerList warnings={underwriting.warnings} />}
             </>
           ) : (
             <div className="space-y-4">

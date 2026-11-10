@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/page-header";
+import { BuyBoxProfiles } from "@/components/settings/buy-box-profiles";
 
 const THEMES: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: "dark", label: "Dark", icon: Moon },
@@ -226,6 +227,10 @@ export function SettingsView() {
             </div>
           </div>
         </SettingsCard>
+
+        <div className="lg:col-span-2">
+          <BuyBoxProfiles />
+        </div>
 
         <SettingsCard icon={Trash2} title="Data" description="All PropertyIQ data is stored in this browser only." className="lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">

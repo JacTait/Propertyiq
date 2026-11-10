@@ -19,6 +19,7 @@ export function PropertyStep() {
         <FieldGrid>
           <TextField name="property.name" label="Property Name" placeholder="e.g. 42 Palm Avenue" />
           <TextField name="property.address" label="Address (optional)" placeholder="Street, city" />
+          <TextField name="property.zipCode" label="ZIP / Postcode" placeholder="33602" hint="Used to match the active Buy Box ZIP filters." />
         </FieldGrid>
       </div>
 

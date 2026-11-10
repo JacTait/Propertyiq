@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { NAV_ITEMS } from "@/components/layout/nav-items";
+import { NAV_GROUPS } from "@/components/layout/nav-items";
 import { Logo } from "@/components/layout/logo";
 
 export function Sidebar() {
@@ -17,39 +17,48 @@ export function Sidebar() {
         <Logo />
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                active ? "text-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-              )}
-            >
-              {active && (
-                <motion.span
-                  layoutId="sidebar-active"
-                  className="absolute inset-0 rounded-xl bg-primary/12 ring-1 ring-primary/30"
-                  transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                />
-              )}
-              <Icon
-                className={cn(
-                  "relative size-[18px] transition-colors",
-                  active ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
-                )}
-              />
-              <span className="relative flex flex-col leading-tight">
-                <span>{item.label}</span>
-                <span className="text-[11px] font-normal text-muted-foreground">{item.description}</span>
-              </span>
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        {NAV_GROUPS.map((group, index) => (
+          <div key={group.label ?? `group-${index}`} className="space-y-1">
+            {group.label && (
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {group.label}
+              </p>
+            )}
+            {group.items.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                    active ? "text-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                  )}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="sidebar-active"
+                      className="absolute inset-0 rounded-xl bg-primary/12 ring-1 ring-primary/30"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    />
+                  )}
+                  <Icon
+                    className={cn(
+                      "relative size-[18px] transition-colors",
+                      active ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+                    )}
+                  />
+                  <span className="relative flex flex-col leading-tight">
+                    <span>{item.label}</span>
+                    <span className="text-[11px] font-normal text-muted-foreground">{item.description}</span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <div className="p-4">

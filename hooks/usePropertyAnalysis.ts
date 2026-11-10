@@ -3,26 +3,14 @@
 import { useMemo } from "react";
 import type { AnalysisInput, AnalysisResults } from "@/lib/types";
 import { analyzeProperty } from "@/lib/calculations/analyze";
+import { normalizeAnalysisInput } from "@/lib/calculations/rent";
 
-/** Replace NaN / undefined numbers (from in-progress form edits) with 0. */
+/** Replace NaN / undefined numbers and fill v1.2 fields so legacy drafts keep working. */
 export function sanitizeInput(input: AnalysisInput): AnalysisInput {
-  const clean = <T extends object>(obj: T): T => {
-    const out: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj)) {
-      if (typeof value === "number") {
-        out[key] = Number.isFinite(value) ? value : 0;
-      } else if (value && typeof value === "object" && !Array.isArray(value)) {
-        out[key] = clean(value as object);
-      } else {
-        out[key] = value;
-      }
-    }
-    return out as T;
-  };
-  return clean(input);
+  return normalizeAnalysisInput(input);
 }
 
-export function usePropertyAnalysis(input: AnalysisInput | null): AnalysisResults | null {
+export function usePropertyAnalysis(input: AnalysisInput | null | undefined): AnalysisResults | null {
   const serialized = input ? JSON.stringify(input) : null;
   return useMemo(() => {
     if (!serialized) return null;

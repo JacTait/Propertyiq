@@ -99,6 +99,13 @@ export function PortfolioCard({
             <Badge variant="primary">{strategyLabel(property.strategy, true)}</Badge>
           )}
           <Badge variant={tone}>{s.recommendation}</Badge>
+          {s.buyBoxStatus === "inside" && <Badge variant="success">Inside Buy Box</Badge>}
+          {s.buyBoxStatus === "outside" && <Badge variant="danger">Outside Buy Box</Badge>}
+          {s.refinanceStatus === "viable" && <Badge variant="success">Refi viable</Badge>}
+          {s.refinanceStatus === "risk" && <Badge variant="warning">Refi risk</Badge>}
+          {typeof s.resilienceScore === "number" && (
+            <Badge variant="muted">Resilience {Math.round(s.resilienceScore)}</Badge>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-2">

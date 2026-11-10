@@ -1,7 +1,7 @@
 "use client";
 
-import { BarChart3, Bot, Landmark, LineChart, Target } from "lucide-react";
-import type { AnalysisInput, AnalysisResults, InvestmentSummary as InvestmentSummaryType } from "@/lib/types";
+import { BarChart3, Bot, Landmark, LineChart, Shield, Target } from "lucide-react";
+import type { AnalysisInput, AnalysisResults, InvestmentSummary as InvestmentSummaryType, RentSource, UnderwritingPack } from "@/lib/types";
 import { useProjectionAnalysis } from "@/hooks/useProjectionAnalysis";
 import { useFormatters } from "@/hooks/useSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +13,13 @@ import { StrategyPanel } from "@/components/analysis/strategy-panel";
 import { ProjectionTable } from "@/components/analysis/projection-table";
 import { PropertySummaryCard } from "@/components/analysis/property-summary-card";
 import { InvestmentSummary } from "@/components/reports/investment-summary";
+import { BuyBoxStatusCard } from "@/components/analysis/buy-box-status";
+import { RentSourceToggle } from "@/components/analysis/rent-source-toggle";
+import { DealResiliencePanel } from "@/components/analysis/deal-resilience";
+import { RefinanceValidator } from "@/components/analysis/refinance-validator";
+import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
+import { DealKillerList } from "@/components/analysis/deal-killers";
+import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
 import {
   AmortizationChart,
   AppreciationChart,
@@ -27,9 +34,11 @@ interface ResultsPanelProps {
   input: AnalysisInput;
   results: AnalysisResults;
   summary: InvestmentSummaryType;
+  underwriting?: UnderwritingPack | null;
+  onRentSourceChange?: (source: RentSource) => void;
 }
 
-export function ResultsPanel({ input, results, summary }: ResultsPanelProps) {
+export function ResultsPanel({ input, results, summary, underwriting, onRentSourceChange }: ResultsPanelProps) {
   const charts = useProjectionAnalysis(results);
   const fmt = useFormatters();
   const hasStrategyPanel = Boolean(results.shortTermRental || results.fixFlip || results.brrrr);
@@ -38,6 +47,14 @@ export function ResultsPanel({ input, results, summary }: ResultsPanelProps) {
     <div className="space-y-4">
       <PropertySummaryCard input={input} />
       <DealScoreCard dealScore={results.dealScore} />
+      {underwriting && onRentSourceChange && <RentSourceToggle rent={underwriting.rent} onChange={onRentSourceChange} />}
+      {underwriting && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <BuyBoxStatusCard match={underwriting.buyBox} />
+          <MarginOfSafetyCard margin={underwriting.margin} />
+        </div>
+      )}
+      {underwriting && <DealKillerList warnings={underwriting.warnings} />}
 
       <Tabs defaultValue="overview">
         <TabsList className="h-auto w-full flex-wrap justify-start">
@@ -53,6 +70,11 @@ export function ResultsPanel({ input, results, summary }: ResultsPanelProps) {
           {hasStrategyPanel && (
             <TabsTrigger value="strategy">
               <Target /> Strategy
+            </TabsTrigger>
+          )}
+          {underwriting && (
+            <TabsTrigger value="underwrite">
+              <Shield /> Underwrite
             </TabsTrigger>
           )}
           <TabsTrigger value="summary">
@@ -122,6 +144,14 @@ export function ResultsPanel({ input, results, summary }: ResultsPanelProps) {
         {hasStrategyPanel && (
           <TabsContent value="strategy">
             <StrategyPanel results={results} />
+          </TabsContent>
+        )}
+
+        {underwriting && (
+          <TabsContent value="underwrite" className="space-y-4">
+            <DealResiliencePanel resilience={underwriting.resilience} compact />
+            <RefinanceValidator validation={underwriting.refinance} />
+            <UnderwritingSummaryCard summary={underwriting.summary} />
           </TabsContent>
         )}
 

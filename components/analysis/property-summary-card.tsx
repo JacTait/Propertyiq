@@ -26,6 +26,7 @@ export function PropertySummaryCard({ input }: { input: AnalysisInput }) {
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="size-3.5" />
               {property.address ? `${property.address}, ` : ""}
+              {property.zipCode ? `${property.zipCode}, ` : ""}
               {getRegionName(location.country, location.region)}, {countryName(location.country)}
             </p>
           </div>

@@ -18,6 +18,7 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
     property: {
       name: "Sample Investment Property",
       address: "",
+      zipCode: "",
       propertyType: "single-family",
       bedrooms: 3,
       bathrooms: 2,
@@ -39,6 +40,9 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
     },
     income: {
       monthlyRent,
+      verifiedRent: monthlyRent,
+      conservativeRent: Math.round((monthlyRent * 0.9) / 25) * 25,
+      rentSource: "verified",
       otherMonthlyIncome: 0,
       rentGrowthRate: 3,
       nightlyRate: Math.round(monthlyRent / 12),
@@ -73,6 +77,7 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
       refinanceRate: 6.75,
       refinanceTermYears: 30,
       expectedRent: Math.round(monthlyRent * 1.15),
+      refinanceDscrMin: 1.25,
     },
   };
 }

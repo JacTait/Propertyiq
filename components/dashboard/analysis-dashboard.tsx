@@ -1,21 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save } from "lucide-react";
+import { Save, Shield } from "lucide-react";
 import { toast } from "sonner";
-import type { AnalysisInput } from "@/lib/types";
+import type { AnalysisInput, RentSource } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { STORAGE_KEYS } from "@/lib/constants";
-import { dashboardPath } from "@/lib/utils/routes";
+import { dashboardPath, resiliencePath } from "@/lib/utils/routes";
 import { createDefaultAnalysis } from "@/data/default-analysis";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useSettings } from "@/hooks/useSettings";
 import { usePropertyAnalysis, sanitizeInput } from "@/hooks/usePropertyAnalysis";
 import { useInvestmentSummary } from "@/hooks/useInvestmentSummary";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
+import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
@@ -74,9 +76,9 @@ export function AnalysisDashboard() {
 
   let initial: AnalysisDraft;
   if (fromPortfolio) {
-    initial = { input: fromPortfolio.input, savedId: fromPortfolio.id };
+    initial = { input: sanitizeInput(fromPortfolio.input), savedId: fromPortfolio.id };
   } else if (!propertyId && draft && draft.savedId === null) {
-    initial = draft;
+    initial = { input: sanitizeInput(draft.input), savedId: draft.savedId };
   } else {
     initial = { input: createDefaultAnalysis(settings.defaultCountry), savedId: null };
   }
@@ -126,6 +128,7 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
   const input = useMemo(() => values as AnalysisInput, [values]);
   const results = usePropertyAnalysis(input);
   const summary = useInvestmentSummary(input, results);
+  const underwriting = useUnderwriting(input, results, { includeSensitivity: false });
 
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -152,7 +155,7 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
   const handleSave = (name: string, asNew: boolean) => {
     if (!input || !results) return;
     const clean = sanitizeInput({ ...input, property: { ...input.property, name } });
-    const saved = saveProperty(clean, results, name, asNew ? undefined : (savedId ?? undefined));
+    const saved = saveProperty(clean, results, name, asNew ? undefined : (savedId ?? undefined), underwriting);
     form.setValue("property.name", name);
     setSavedId(saved.id);
     onDraftChange({ input: clean, savedId: saved.id });
@@ -175,6 +178,11 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
         actions={
           results && input && summary ? (
             <>
+              <Button variant="outline" asChild>
+                <Link href={resiliencePath(requestedId)}>
+                  <Shield /> Resilience
+                </Link>
+              </Button>
               <ExportPdfButton input={sanitizeInput(input)} results={results} summary={summary} />
               <Button variant="gradient" onClick={() => setSaveOpen(true)}>
                 <Save /> {existing ? "Update in Portfolio" : "Save to Portfolio"}
@@ -192,7 +200,13 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
         </div>
         <div className="min-w-0 xl:col-span-7 2xl:col-span-8">
           {results && summary ? (
-            <ResultsPanel input={input} results={results} summary={summary} />
+            <ResultsPanel
+              input={input}
+              results={results}
+              summary={summary}
+              underwriting={underwriting}
+              onRentSourceChange={(source: RentSource) => form.setValue("income.rentSource", source)}
+            />
           ) : (
             <div className="space-y-4">
               <Skeleton className="h-40 w-full rounded-2xl" />

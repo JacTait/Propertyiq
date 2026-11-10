@@ -33,6 +33,7 @@ export const locationSchema = z.object({
 export const propertySchema = z.object({
   name: z.string().trim().min(1, "Give the property a name").max(80),
   address: z.string().trim().max(160),
+  zipCode: z.string().trim().max(16),
   propertyType: z.enum([
     "single-family",
     "condo",
@@ -72,7 +73,10 @@ export const financingSchema = z.object({
 });
 
 export const incomeSchema = z.object({
-  monthlyRent: money("Monthly rent"),
+  monthlyRent: money("Listing rent"),
+  verifiedRent: money("Verified rent"),
+  conservativeRent: money("Conservative rent"),
+  rentSource: z.enum(["listing", "verified", "conservative"]),
   otherMonthlyIncome: money("Other income"),
   rentGrowthRate: z.number().min(-10).max(20),
   nightlyRate: money("Nightly rate"),
@@ -110,7 +114,35 @@ export const brrrrSchema = z.object({
   refinanceRate: percent("Refinance rate", 30),
   refinanceTermYears: z.number().min(1).max(40),
   expectedRent: money("Expected rent"),
+  refinanceDscrMin: z.number({ message: "DSCR must be a number" }).min(0).max(5),
 });
+
+const propertyTypeEnum = z.enum([
+  "single-family",
+  "condo",
+  "townhouse",
+  "duplex",
+  "triplex",
+  "fourplex",
+  "multi-family",
+  "commercial",
+  "mixed-use",
+]);
+
+export const buyBoxSchema = z.object({
+  name: z.string().trim().min(1, "Give the profile a name").max(80),
+  propertyTypes: z.array(propertyTypeEnum),
+  minBedrooms: count("Minimum bedrooms", 50),
+  maxPurchasePrice: money("Maximum purchase price"),
+  minRent: money("Minimum rent"),
+  minArv: money("Minimum ARV"),
+  maxArv: money("Maximum ARV"),
+  zipCodes: z.array(z.string()),
+  targetZipCodes: z.array(z.string()),
+  strategies: z.array(strategySchema),
+});
+
+export type BuyBoxFormValues = z.infer<typeof buyBoxSchema>;
 
 export const analysisSchema = z.object({
   location: locationSchema,

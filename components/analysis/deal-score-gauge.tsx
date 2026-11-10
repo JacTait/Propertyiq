@@ -19,9 +19,19 @@ interface DealScoreGaugeProps {
   size?: number;
   className?: string;
   animated?: boolean;
+  label?: string;
+  idPrefix?: string;
 }
 
-export function DealScoreGauge({ score, grade, size = 200, className, animated = true }: DealScoreGaugeProps) {
+export function DealScoreGauge({
+  score,
+  grade,
+  size = 200,
+  className,
+  animated = true,
+  label = "Deal Score",
+  idPrefix = "gauge",
+}: DealScoreGaugeProps) {
   const stroke = Math.max(10, size * 0.07);
   const radius = (size - stroke) / 2;
   const circumference = Math.PI * radius; // half circle
@@ -51,12 +61,12 @@ export function DealScoreGauge({ score, grade, size = 200, className, animated =
     <div className={cn("relative", className)} style={{ width: size, height: size / 2 + stroke }}>
       <svg width={size} height={size / 2 + stroke} viewBox={`0 0 ${size} ${size / 2 + stroke}`}>
         <defs>
-          <linearGradient id="gauge-track" x1="0" x2="1">
+          <linearGradient id={`${idPrefix}-track`} x1="0" x2="1">
             <stop offset="0%" stopColor="#ef4444" stopOpacity={0.25} />
             <stop offset="50%" stopColor="#f59e0b" stopOpacity={0.25} />
             <stop offset="100%" stopColor="#22c55e" stopOpacity={0.25} />
           </linearGradient>
-          <filter id="gauge-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id={`${idPrefix}-glow`} x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="3" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
@@ -67,7 +77,7 @@ export function DealScoreGauge({ score, grade, size = 200, className, animated =
         <path
           d={`M ${stroke / 2} ${cy} A ${radius} ${radius} 0 0 1 ${size - stroke / 2} ${cy}`}
           fill="none"
-          stroke="url(#gauge-track)"
+          stroke={`url(#${idPrefix}-track)`}
           strokeWidth={stroke}
           strokeLinecap="round"
         />
@@ -79,7 +89,7 @@ export function DealScoreGauge({ score, grade, size = 200, className, animated =
           strokeLinecap="round"
           strokeDasharray={circumference}
           style={{ strokeDashoffset: dash }}
-          filter="url(#gauge-glow)"
+          filter={`url(#${idPrefix}-glow)`}
         />
         {[0, 25, 50, 75, 100].map((tick) => {
           const angle = Math.PI - (tick / 100) * Math.PI;
@@ -96,7 +106,7 @@ export function DealScoreGauge({ score, grade, size = 200, className, animated =
         <span className="text-4xl font-black tracking-tight tabular sm:text-5xl" style={{ color }}>
           {display}
         </span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Deal Score</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</span>
       </div>
     </div>
   );
