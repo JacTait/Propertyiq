@@ -132,3 +132,45 @@ export const STEP_FIELDS: Record<number, (keyof AnalysisFormValues)[]> = {
   3: ["financing"],
   4: ["income", "expenses", "flip", "brrrr"],
 };
+
+export const maxOfferSchema = z.object({
+  property: z.object({
+    name: z.string().trim().min(1, "Give the property a name").max(80),
+    arv: money("ARV").min(1, "Enter an after-repair value"),
+    expectedMonthlyRent: money("Expected rent").min(1, "Enter expected monthly rent"),
+    rehabBudget: money("Rehab budget"),
+    closingCosts: money("Closing costs"),
+    holdingCosts: money("Holding costs"),
+    askingPrice: money("Asking price"),
+  }),
+  financing: z.object({
+    interestRate: percent("Interest rate", 30),
+    termYears: z.number().min(1).max(40),
+    loanToValue: percent("Loan-to-value"),
+    downPaymentPercent: percent("Down payment"),
+    loanFees: money("Loan fees"),
+  }),
+  expenses: z.object({
+    propertyTaxAnnual: money("Property tax"),
+    insuranceAnnual: money("Insurance"),
+    managementPercent: percent("Management fee", 50),
+    vacancyPercent: percent("Vacancy", 80),
+    maintenancePercent: percent("Maintenance", 50),
+    capexPercent: percent("CapEx reserve", 50),
+    hoaMonthly: money("HOA fees"),
+    otherMonthly: money("Other expenses"),
+  }),
+  targets: z.object({
+    desiredMonthlyCashflow: z.number({ message: "Cashflow must be a number" }).min(0).max(50_000),
+    desiredRoi: percent("Desired ROI", 80),
+    desiredCashOnCash: percent("Desired cash-on-cash", 80),
+    minimumDscr: z.number({ message: "DSCR must be a number" }).min(0).max(5),
+    safetyBufferPercent: percent("Safety buffer", 40),
+  }),
+  brrrr: z.object({
+    refinanceLtv: percent("Refinance LTV"),
+    refinanceRate: percent("Refinance rate", 30),
+  }),
+});
+
+export type MaxOfferFormValues = z.infer<typeof maxOfferSchema>;

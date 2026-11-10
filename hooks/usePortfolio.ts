@@ -4,13 +4,20 @@ import { useCallback, useMemo, useState } from "react";
 import type {
   AnalysisInput,
   AnalysisResults,
+  CountryCode,
+  DealGrade,
   InvestmentStrategy,
+  MaxOfferInputs,
+  MaxOfferResults,
   PortfolioProperty,
   PortfolioSnapshot,
+  Recommendation,
 } from "@/lib/types";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { createId, readStorage } from "@/lib/utils/storage";
 import { getRegionName } from "@/data/market-data";
+import { maxOfferToAnalysisInput } from "@/data/default-max-offer";
+import { calculateDealScore } from "@/lib/calculations/deal-score";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export type PortfolioSortKey = "date" | "name" | "roi" | "cashflow" | "score" | "price";
@@ -31,6 +38,26 @@ export const DEFAULT_FILTERS: PortfolioFilters = {
   sortKey: "date",
   sortDirection: "desc",
 };
+
+function ratingFromOffer(
+  results: MaxOfferResults,
+  fallbackGrade: DealGrade,
+  fallbackRecommendation: Recommendation,
+  fallbackScore: number,
+): { grade: DealGrade; recommendation: Recommendation; dealScore: number } {
+  switch (results.recommendation.tier) {
+    case "excellent":
+      return { grade: "excellent", recommendation: "Strong Buy", dealScore: Math.max(fallbackScore, 86) };
+    case "good":
+      return { grade: "good", recommendation: "Buy", dealScore: Math.max(fallbackScore, 74) };
+    case "maximum":
+      return { grade: "average", recommendation: "Neutral", dealScore: Math.min(fallbackScore, 66) };
+    case "too-expensive":
+      return { grade: "avoid", recommendation: "Avoid", dealScore: Math.min(fallbackScore, 48) };
+    default:
+      return { grade: fallbackGrade, recommendation: fallbackRecommendation, dealScore: fallbackScore };
+  }
+}
 
 function isPortfolio(value: unknown): value is PortfolioProperty[] {
   return Array.isArray(value) && value.every((v) => typeof v === "object" && v !== null && "id" in v && "input" in v);
@@ -90,6 +117,73 @@ export function usePortfolio() {
         strategy: input.strategy,
         input,
         snapshot,
+      };
+
+      setProperties((prev) =>
+        prev.some((p) => p.id === saved.id)
+          ? prev.map((p) => (p.id === saved.id ? saved : p))
+          : [saved, ...prev],
+      );
+
+      return saved;
+    },
+    [properties, setProperties],
+  );
+
+  const saveMaxOffer = useCallback(
+    (
+      maxOfferInput: MaxOfferInputs,
+      results: MaxOfferResults,
+      country: CountryCode,
+      name?: string,
+      existingId?: string,
+    ): PortfolioProperty => {
+      const now = new Date().toISOString();
+      const analysisInput = maxOfferToAnalysisInput(maxOfferInput, results, country);
+      const regionName = getRegionName(analysisInput.location.country, analysisInput.location.region);
+      const metrics = results.atRecommended.purchasePrice > 0 ? results.atRecommended : results.atMaximum;
+      const score = calculateDealScore({
+        roi: metrics.roi,
+        monthlyCashflow: metrics.monthlyCashflow,
+        capRate: metrics.capRate,
+        dscr: metrics.dscr,
+        grossYield: metrics.grossYield,
+        negativeCashflow: metrics.monthlyCashflow < 0,
+        dscrBelowOne: metrics.dscr < 1,
+      });
+      const { grade, recommendation, dealScore } = ratingFromOffer(results, score.grade, score.recommendation, score.score);
+      const snapshot: PortfolioSnapshot = {
+        purchasePrice: results.maximumOffer || metrics.purchasePrice,
+        roi: metrics.roi,
+        cashOnCash: metrics.cashOnCash,
+        capRate: metrics.capRate,
+        grossYield: metrics.grossYield,
+        netYield: metrics.capRate,
+        monthlyCashflow: metrics.monthlyCashflow,
+        annualCashflow: metrics.annualCashflow,
+        dscr: metrics.dscr,
+        appreciationRate: analysisInput.location.market.appreciationRate,
+        dealScore,
+        grade,
+        recommendation,
+      };
+      const existing = existingId ? properties.find((p) => p.id === existingId) : undefined;
+      const saved: PortfolioProperty = {
+        id: existing?.id ?? createId(),
+        name: name?.trim() || maxOfferInput.property.name,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+        country: analysisInput.location.country,
+        region: analysisInput.location.region,
+        regionName,
+        strategy: "brrrr",
+        input: { ...analysisInput, property: { ...analysisInput.property, name: name?.trim() || maxOfferInput.property.name } },
+        snapshot,
+        kind: "max-offer",
+        maxOfferInput: {
+          ...maxOfferInput,
+          property: { ...maxOfferInput.property, name: name?.trim() || maxOfferInput.property.name },
+        },
       };
 
       setProperties((prev) =>
@@ -173,6 +267,7 @@ export function usePortfolio() {
     hydrated,
     stats,
     saveProperty,
+    saveMaxOffer,
     deleteProperty,
     renameProperty,
     clearPortfolio,

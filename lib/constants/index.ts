@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   settings: "propertyiq:settings:v1",
   draft: "propertyiq:draft:v1",
   compare: "propertyiq:compare:v1",
+  maxOfferDraft: "propertyiq:max-offer-draft:v1",
 } as const;
 
 export const COUNTRIES: Country[] = [
@@ -149,3 +150,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export const PROJECTION_YEARS = 10;
 export const DAYS_PER_MONTH = 30.42;
 export const MAX_COMPARE = 3;
+
+export const MAX_OFFER_CASHFLOW_PRESETS = [100, 200, 300, 400, 500, 750, 1000] as const;
+export const MAX_OFFER_ROI_PRESETS = [5, 8, 10, 12, 15, 20] as const;

@@ -6,7 +6,7 @@ import { Calendar, ExternalLink, MapPin, Trash2 } from "lucide-react";
 import type { PortfolioProperty } from "@/lib/types";
 import { gradeTone, metricTone, strategyLabel } from "@/lib/utils/labels";
 import { cn } from "@/lib/utils/cn";
-import { dashboardPath } from "@/lib/utils/routes";
+import { analysisOpenPath } from "@/lib/utils/routes";
 import { useFormatters } from "@/hooks/useSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,7 +93,11 @@ export function PortfolioCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="primary">{strategyLabel(property.strategy, true)}</Badge>
+          {property.kind === "max-offer" ? (
+            <Badge variant="primary">Max Offer</Badge>
+          ) : (
+            <Badge variant="primary">{strategyLabel(property.strategy, true)}</Badge>
+          )}
           <Badge variant={tone}>{s.recommendation}</Badge>
         </div>
 
@@ -113,7 +117,7 @@ export function PortfolioCard({
               <Trash2 />
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href={dashboardPath(property.id)}>
+              <Link href={analysisOpenPath(property)}>
                 <ExternalLink /> Open
               </Link>
             </Button>

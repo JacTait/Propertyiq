@@ -181,6 +181,41 @@
   border-radius: 0.75rem !important;
 }
 
+.max-offer-slider {
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--primary) 0%,
+    var(--primary) var(--slider-fill, 0%),
+    var(--muted) var(--slider-fill, 0%),
+    var(--muted) 100%
+  );
+  outline: none;
+}
+
+.max-offer-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--primary);
+  border: 3px solid var(--card);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent);
+  cursor: pointer;
+}
+
+.max-offer-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--primary);
+  border: 3px solid var(--card);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent);
+  cursor: pointer;
+}
+
 @media print {
   .no-print {
     display: none !important;

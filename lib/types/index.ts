@@ -350,6 +350,8 @@ export interface PortfolioSnapshot {
   recommendation: Recommendation;
 }
 
+export type PortfolioKind = "analysis" | "max-offer";
+
 export interface PortfolioProperty {
   id: string;
   name: string;
@@ -361,6 +363,10 @@ export interface PortfolioProperty {
   strategy: InvestmentStrategy;
   input: AnalysisInput;
   snapshot: PortfolioSnapshot;
+  /** Absent on legacy records — treated as `"analysis"`. */
+  kind?: PortfolioKind;
+  /** Present when `kind` is `"max-offer"` so the analyser can round-trip. */
+  maxOfferInput?: MaxOfferInputs;
 }
 
 /* ------------------------------------------------------------------ */
@@ -459,5 +465,159 @@ export interface InvestmentSummary {
   sections: SummarySection[];
   strengths: string[];
   weaknesses: string[];
+  generatedAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Max Offer Analyser                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface MaxOfferPropertyInputs {
+  name: string;
+  arv: number;
+  expectedMonthlyRent: number;
+  rehabBudget: number;
+  closingCosts: number;
+  holdingCosts: number;
+  askingPrice: number;
+}
+
+export interface MaxOfferFinancingInputs {
+  interestRate: number;
+  termYears: number;
+  loanToValue: number;
+  downPaymentPercent: number;
+  loanFees: number;
+}
+
+export interface MaxOfferExpenseInputs {
+  propertyTaxAnnual: number;
+  insuranceAnnual: number;
+  managementPercent: number;
+  vacancyPercent: number;
+  maintenancePercent: number;
+  capexPercent: number;
+  hoaMonthly: number;
+  otherMonthly: number;
+}
+
+export interface MaxOfferTargetInputs {
+  desiredMonthlyCashflow: number;
+  desiredRoi: number;
+  desiredCashOnCash: number;
+  minimumDscr: number;
+  safetyBufferPercent: number;
+}
+
+export interface MaxOfferBrrrrInputs {
+  refinanceLtv: number;
+  refinanceRate: number;
+}
+
+export interface MaxOfferInputs {
+  property: MaxOfferPropertyInputs;
+  financing: MaxOfferFinancingInputs;
+  expenses: MaxOfferExpenseInputs;
+  targets: MaxOfferTargetInputs;
+  brrrr: MaxOfferBrrrrInputs;
+}
+
+export type OfferConstraintKey = "cashflow" | "roi" | "cashOnCash" | "dscr";
+
+export type OfferTier = "excellent" | "good" | "maximum" | "too-expensive";
+
+export interface OfferDealMetrics {
+  purchasePrice: number;
+  loanAmount: number;
+  downPayment: number;
+  monthlyPayment: number;
+  annualDebtService: number;
+  monthlyIncome: number;
+  annualIncome: number;
+  vacancyLoss: number;
+  effectiveGrossIncome: number;
+  operatingExpensesAnnual: number;
+  noi: number;
+  monthlyCashflow: number;
+  annualCashflow: number;
+  cashInvested: number;
+  roi: number;
+  cashOnCash: number;
+  dscr: number;
+  capRate: number;
+  grossYield: number;
+  principalYearOne: number;
+}
+
+export interface OfferScenario {
+  key: "excellent" | "recommended" | "maximum" | "asking";
+  label: string;
+  purchasePrice: number;
+  monthlyCashflow: number;
+  roi: number;
+  cashOnCash: number;
+  dscr: number;
+  capRate: number;
+  recommendation: string;
+}
+
+export interface OfferRecommendation {
+  tier: OfferTier;
+  title: string;
+  headline: string;
+  body: string;
+}
+
+export interface OfferConstraint {
+  key: OfferConstraintKey;
+  label: string;
+  maxPurchasePrice: number;
+  isLimiting: boolean;
+}
+
+export interface MaxOfferBrrrrResults {
+  totalProjectCost: number;
+  initialCashInvested: number;
+  refinanceAmount: number;
+  cashPulledOut: number;
+  cashLeftInDeal: number;
+  cashRecoveryPercent: number;
+  monthlyCashflow: number;
+  efficiencyScore: number;
+  infiniteReturn: boolean;
+}
+
+export interface MaxOfferSummary {
+  headline: string;
+  bullets: string[];
+  closing: string;
+  generatedAt: string;
+}
+
+export interface PriceMetricPoint {
+  purchasePrice: number;
+  monthlyCashflow: number;
+  roi: number;
+  dscr: number;
+  capRate: number;
+}
+
+export interface MaxOfferResults {
+  feasible: boolean;
+  maximumOffer: number;
+  recommendedOffer: number;
+  excellentOffer: number;
+  goodOffer: number;
+  safetyMargin: number;
+  safetyMarginPercent: number;
+  limitingConstraint: OfferConstraintKey | null;
+  constraints: OfferConstraint[];
+  atMaximum: OfferDealMetrics;
+  atRecommended: OfferDealMetrics;
+  recommendation: OfferRecommendation;
+  scenarios: OfferScenario[];
+  curve: PriceMetricPoint[];
+  brrrr: MaxOfferBrrrrResults;
+  summary: MaxOfferSummary;
   generatedAt: string;
 }

@@ -17,12 +17,12 @@ export function MobileNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[11px] font-medium transition-colors",
+              "flex flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition-colors sm:px-2 sm:text-[11px]",
               active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground",
             )}
           >
             <Icon className="size-5" />
-            {item.label}
+            {item.short ?? item.label}
           </Link>
         );
       })}

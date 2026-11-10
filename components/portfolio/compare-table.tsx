@@ -6,7 +6,7 @@ import { Crown, Trophy } from "lucide-react";
 import type { PortfolioProperty } from "@/lib/types";
 import { gradeTone, strategyLabel } from "@/lib/utils/labels";
 import { cn } from "@/lib/utils/cn";
-import { dashboardPath } from "@/lib/utils/routes";
+import { analysisOpenPath } from "@/lib/utils/routes";
 import { useFormatters } from "@/hooks/useSettings";
 import type { Formatters } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +70,7 @@ export function CompareTable({ properties }: { properties: PortfolioProperty[] }
           <div className="flex-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-success">Best Investment</p>
             <h3 className="text-xl font-bold">
-              <Link href={dashboardPath(best.id)} className="hover:text-primary hover:underline">
+              <Link href={analysisOpenPath(best)} className="hover:text-primary hover:underline">
                 {best.name}
               </Link>
             </h3>
@@ -101,7 +101,7 @@ export function CompareTable({ properties }: { properties: PortfolioProperty[] }
                       <div className="flex flex-col items-end gap-1">
                         <span className="flex items-center gap-1 font-bold">
                           {p.id === best.id && <Crown className="size-3.5 text-success" />}
-                          <Link href={dashboardPath(p.id)} className="hover:text-primary hover:underline">
+                          <Link href={analysisOpenPath(p)} className="hover:text-primary hover:underline">
                             {p.name}
                           </Link>
                         </span>

@@ -7,3 +7,4 @@ export * from "@/lib/calculations/fix-flip";
 export * from "@/lib/calculations/brrrr";
 export * from "@/lib/calculations/deal-score";
 export * from "@/lib/calculations/analyze";
+export * from "@/lib/calculations/max-offer";
