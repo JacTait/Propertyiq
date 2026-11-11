@@ -208,13 +208,16 @@ describe("conservative operations", () => {
     expect(result.conservative.annualGrossIncome).toBe(24_000);
   });
 
-  it("returns null cap rate, cash-on-cash and DSCR rather than NaN or Infinity", () => {
+  it("returns null for missing ARV or purchase price, not because the deal is unfinanced", () => {
     const empty = evaluateDealDecision(
       fixture((input) => {
         input.financing.purchasePrice = 0;
         input.financing.depositPercent = 0;
         input.decision.conservativeArv = 0;
+        input.income.monthlyRent = 0;
+        input.income.verifiedRent = 0;
         input.income.conservativeRent = 0;
+        input.brrrr.expectedRent = 0;
       }),
     );
     expect(empty.conservative.capRate).toBeNull();
@@ -223,15 +226,44 @@ describe("conservative operations", () => {
     expect(empty.guidelineMaxOffer).toBeNull();
     expect(Number.isNaN(empty.conservative.noi)).toBe(false);
     expect(Number.isFinite(empty.conservative.monthlyCashflow)).toBe(true);
+  });
+});
 
-    const cash = evaluateDealDecision(
+describe("all-cash deal", () => {
+  it("calculates value, return and occupancy metrics with zero P&I, and leaves DSCR null", () => {
+    const result = evaluateDealDecision(
       fixture((input) => {
         input.financing.depositPercent = 100;
       }),
     );
-    expect(cash.conservative.annualDebtService).toBe(0);
-    expect(cash.conservative.dscr).toBeNull();
-    expect(cash.conservative.cashOnCash).not.toBeNull();
+
+    expect(result.costs.loanAmount).toBe(0);
+    expect(result.conservative.annualDebtService).toBe(0);
+    expect(result.conservative.monthlyDebtService).toBe(0);
+
+    expect(result.costs.allInPctConservativeArv).toBeCloseTo((246_500 / 300_000) * 100);
+    expect(result.guidelineMaxOffer).toBe(177_000);
+    expect(result.conservative.capRate).not.toBeNull();
+    expect(result.conservative.capRate).toBeCloseTo((result.conservative.noi / 200_000) * 100);
+
+    expect(result.costs.cashInvested).toBeGreaterThan(0);
+    expect(result.costs.cashInvested).toBe(result.costs.allInCost);
+    expect(result.conservative.cashOnCash).not.toBeNull();
+    expect(result.conservative.cashOnCash).toBeCloseTo(
+      (result.conservative.annualCashflow / result.costs.cashInvested) * 100,
+    );
+
+    expect(result.conservative.annualCashflow).toBeCloseTo(result.conservative.noi);
+    expect(result.conservative.monthlyCashflow).toBeCloseTo(result.conservative.noi / 12);
+
+    expect(result.breakEvens.occupancyPercent).not.toBeNull();
+    expect(result.breakEvens.occupancyPercent).toBeCloseTo(
+      (result.conservative.operatingExpensesAnnual / result.conservative.annualGrossIncome) * 100,
+    );
+    expect(result.breakEvens.monthlyRent).not.toBeNull();
+    expect(result.breakEvens.maxAnnualInsurance).not.toBeNull();
+
+    expect(result.conservative.dscr).toBeNull();
   });
 });
 

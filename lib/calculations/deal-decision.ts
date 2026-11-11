@@ -27,6 +27,22 @@ import { monthlyUtilitiesTotal } from "@/lib/calculations/utilities";
 export const DEAL_DOES_NOT_BREAK_EVEN_BEFORE_INSURANCE =
   "The deal does not break even before insurance is included.";
 
+/**
+ * Null / empty-state rules. Financing is not a blanket requirement.
+ *
+ * | Metric                 | Required denominator / guard                         | All-cash (P&I = 0) |
+ * |------------------------|------------------------------------------------------|--------------------|
+ * | all-in % ARV           | conservative ARV > 0                                 | calculated         |
+ * | guideline max offer    | conservative ARV > 0                                 | calculated         |
+ * | cap rate               | purchase price > 0                                   | calculated         |
+ * | cash-on-cash           | cash invested > 0                                    | calculated         |
+ * | break-even occupancy   | annual gross income > 0                              | calculated (P&I 0) |
+ * | break-even rent        | percentage-opex coefficient > 0                      | calculated (P&I 0) |
+ * | max annual insurance   | EGI − other opex − P&I > 0                           | calculated (P&I 0) |
+ * | DSCR                   | annual debt service > 0                              | null               |
+ * | cash flow              | always a number; CF = NOI − P&I                      | CF = NOI           |
+ */
+
 /** Monthly cash flow below this (and ≥ 0) is labelled marginal rather than positive. */
 export const MARGINAL_MONTHLY_CASHFLOW = 100;
 
