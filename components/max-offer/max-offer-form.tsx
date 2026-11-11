@@ -50,7 +50,7 @@ function PropertySection() {
           <MaxNumberField name="property.rehabBudget" label="Rehab Budget" prefix={symbol} />
           <MaxNumberField name="property.closingCosts" label="Closing Costs" prefix={symbol} />
           <MaxNumberField name="property.holdingCosts" label="Holding Costs" prefix={symbol} hint="Taxes, insurance, utilities and interest during rehab." />
-          <MaxNumberField name="property.askingPrice" label="Current Asking Price" prefix={symbol} hint="Optional. Used for the scenario table and deal verdict." />
+          <MaxNumberField name="property.askingPrice" label="Current Asking Price" prefix={symbol} hint="Optional. Used for Margin of Safety, the scenario table, and the deal verdict. Leave empty until you have a real asking price." />
         </FieldGrid>
       </CardContent>
     </Card>

@@ -17,7 +17,31 @@ const RATING_TONE: Record<SafetyRating, "success" | "primary" | "warning" | "dan
 
 export function MarginOfSafetyCard({ margin }: { margin: MarginOfSafety }) {
   const fmt = useFormatters();
-  const tone = RATING_TONE[margin.rating];
+
+  if (!margin.ready) {
+    return (
+      <Card>
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <Shield className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Margin of Safety</p>
+                <Badge variant="muted">Awaiting Price Input</Badge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Enter a purchase price or asking price to calculate margin of safety.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const tone = margin.rating ? RATING_TONE[margin.rating] : "muted";
 
   return (
     <Card>
@@ -30,6 +54,7 @@ export function MarginOfSafetyCard({ margin }: { margin: MarginOfSafety }) {
               tone === "primary" && "bg-primary/15 text-primary",
               tone === "warning" && "bg-warning/15 text-warning",
               tone === "danger" && "bg-destructive/15 text-destructive",
+              tone === "muted" && "bg-muted text-muted-foreground",
             )}
           >
             <Shield className="size-5" />
@@ -37,14 +62,15 @@ export function MarginOfSafetyCard({ margin }: { margin: MarginOfSafety }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Margin of Safety</p>
-              <Badge variant={tone}>{margin.ratingLabel}</Badge>
+              {margin.rating && <Badge variant={tone}>{margin.ratingLabel}</Badge>}
             </div>
             <p className="mt-1 text-2xl font-black tabular">{fmt.percent(margin.percent, 1)}</p>
             <p className="text-sm text-muted-foreground">{margin.detail}</p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-              <Metric label="Recommended" value={fmt.currency(margin.recommendedOffer, { compact: true })} />
-              <Metric label="Maximum" value={fmt.currency(margin.maximumOffer, { compact: true })} />
-              <Metric label="Dollar cushion" value={fmt.signedCurrency(margin.dollarCushion)} />
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-2">
+              <Metric label="Current Price Used" value={fmt.currency(margin.currentPrice)} hint={margin.priceSourceLabel} />
+              <Metric label="Recommended Offer" value={fmt.currency(margin.recommendedOffer)} />
+              <Metric label="Maximum Offer" value={fmt.currency(margin.maximumOffer)} />
+              <Metric label="Margin Of Safety" value={fmt.percent(margin.percent, 1)} />
             </div>
           </div>
         </div>
@@ -53,11 +79,12 @@ export function MarginOfSafetyCard({ margin }: { margin: MarginOfSafety }) {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg bg-muted/40 px-2.5 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="truncate font-bold tabular">{value}</p>
+      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }

@@ -54,10 +54,16 @@ export function FinancingStep() {
         <SectionTitle title="Purchase & loan" description="Deposit percentage and amount stay in sync automatically." />
         <FieldGrid>
           <NumberField
+            name="financing.askingPrice"
+            label="Current Asking Price"
+            prefix={symbol}
+            hint="Optional. Margin of Safety uses this first. Leave at 0 to use Purchase Price."
+          />
+          <NumberField
             name="financing.purchasePrice"
             label="Purchase Price"
             prefix={symbol}
-            className="sm:col-span-2"
+            hint="Used for financing and for Margin of Safety when asking price is not entered."
             onValueChange={handlePriceChange}
           />
           <NumberField name="financing.depositPercent" label="Deposit Percentage" suffix="%" />

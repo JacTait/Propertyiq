@@ -93,6 +93,8 @@ export interface Property {
 
 export interface FinancingInputs {
   purchasePrice: number;
+  /** Seller asking price. 0 means not provided — never inferred from defaults. */
+  askingPrice: number;
   depositPercent: number;
   interestRate: number;
   termYears: number;
@@ -782,13 +784,26 @@ export interface RefinanceValidation {
 
 export type SafetyRating = "excellent" | "strong" | "good" | "weak" | "danger";
 
+export type MarginPriceSource = "asking" | "purchase";
+
+export interface CurrentDealPrice {
+  price: number;
+  source: MarginPriceSource;
+  label: string;
+}
+
 export interface MarginOfSafety {
+  ready: boolean;
+  priceSource: MarginPriceSource | null;
+  priceSourceLabel: string;
+  /** Current asking or purchase price used in the comparison. 0 when awaiting input. */
+  currentPrice: number;
   purchasePrice: number;
   recommendedOffer: number;
   maximumOffer: number;
   dollarCushion: number;
   percent: number;
-  rating: SafetyRating;
+  rating: SafetyRating | null;
   ratingLabel: string;
   detail: string;
 }

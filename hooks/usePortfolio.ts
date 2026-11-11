@@ -94,7 +94,7 @@ export function buildSnapshot(
     grade: results.dealScore.grade,
     recommendation: results.dealScore.recommendation,
     resilienceScore: underwriting?.resilience.score,
-    marginOfSafetyPercent: underwriting?.margin.percent,
+    marginOfSafetyPercent: underwriting?.margin.ready ? underwriting.margin.percent : undefined,
     refinanceStatus: underwriting?.refinance.status,
     buyBoxStatus: underwriting?.buyBox.status,
   };
@@ -183,7 +183,7 @@ export function usePortfolio() {
         grade,
         recommendation,
         resilienceScore: underwriting?.resilience.score,
-        marginOfSafetyPercent: underwriting?.margin.percent ?? results.safetyMarginPercent,
+        marginOfSafetyPercent: underwriting?.margin.ready ? underwriting.margin.percent : undefined,
         refinanceStatus: underwriting?.refinance.status ?? (results.brrrr.infiniteReturn || results.brrrr.cashPulledOut > 0 ? "viable" : "risk"),
         buyBoxStatus: underwriting?.buyBox.status,
       };

@@ -159,6 +159,18 @@ function ResilienceSession({
                 description="Assumptions shared with Standard Analysis. Changes save to the same draft."
               />
               <FieldGrid>
+                <NumberField
+                  name="financing.askingPrice"
+                  label="Current Asking Price"
+                  prefix={symbol}
+                  hint="Used first for Margin of Safety. Leave at 0 to use Purchase Price."
+                />
+                <NumberField
+                  name="financing.purchasePrice"
+                  label="Purchase Price"
+                  prefix={symbol}
+                  hint="Used for Margin of Safety when asking price is not entered."
+                />
                 <NumberField name="income.monthlyRent" label="Listing Rent" prefix={symbol} />
                 <NumberField name="income.verifiedRent" label="Verified Rent" prefix={symbol} />
                 <NumberField name="income.conservativeRent" label="Conservative Rent" prefix={symbol} />

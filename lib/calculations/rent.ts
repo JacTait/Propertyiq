@@ -76,6 +76,10 @@ export function normalizeAnalysisInput(input: AnalysisInput): AnalysisInput {
       conservativeRent: conservative,
       rentSource: source,
     },
+    financing: {
+      ...clean.financing,
+      askingPrice: Math.max(0, finite(clean.financing.askingPrice)),
+    },
     brrrr: {
       ...clean.brrrr,
       refinanceDscrMin: dscrMin > 0 ? clamp(dscrMin, 0, 5) : 1.25,

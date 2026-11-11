@@ -32,6 +32,7 @@ import { BrrrrPanel } from "@/components/max-offer/brrrr-panel";
 import { MaxOfferSummaryCard } from "@/components/max-offer/max-offer-summary";
 import { BuyBoxStatusCard } from "@/components/analysis/buy-box-status";
 import { DealKillerList } from "@/components/analysis/deal-killers";
+import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
 
 export interface MaxOfferDraft {
   input: MaxOfferInputs;
@@ -143,7 +144,16 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
     [input, results, settings.defaultCountry],
   );
   const analysisResults = usePropertyAnalysis(analysisInput);
-  const underwriting = useUnderwriting(analysisInput, analysisResults, { includeSensitivity: false });
+  const askingPrice =
+    Number.isFinite(input.property?.askingPrice) && input.property.askingPrice > 0 ? input.property.askingPrice : null;
+  const marginOffers = results
+    ? { recommendedOffer: results.recommendedOffer, maximumOffer: results.maximumOffer }
+    : null;
+  const underwriting = useUnderwriting(analysisInput, analysisResults, {
+    includeSensitivity: false,
+    marginPrice: askingPrice,
+    marginOffers,
+  });
 
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -207,7 +217,12 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
           {results ? (
             <>
               <MaxOfferKpis results={results} />
-              {underwriting && <BuyBoxStatusCard match={underwriting.buyBox} />}
+              {underwriting && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <BuyBoxStatusCard match={underwriting.buyBox} />
+                  <MarginOfSafetyCard margin={underwriting.margin} />
+                </div>
+              )}
               <DealVerdict results={results} />
               <OfferTiers results={results} />
               {underwriting && <DealKillerList warnings={underwriting.warnings} />}

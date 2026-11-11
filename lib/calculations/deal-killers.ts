@@ -102,11 +102,11 @@ export function collectDealKillers(args: KillerArgs): DealKillerWarning[] {
     });
   }
 
-  if (margin.rating === "danger" || margin.rating === "weak") {
+  if (margin.ready && (margin.rating === "danger" || margin.rating === "weak")) {
     warnings.push({
       key: "mos",
       severity: margin.rating === "danger" ? "critical" : "warning",
-      title: margin.rating === "danger" ? "Purchase price leaves almost no margin of safety" : "Thin margin of safety",
+      title: margin.rating === "danger" ? "Current price leaves almost no margin of safety" : "Thin margin of safety",
       detail: margin.detail,
     });
   }

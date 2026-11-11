@@ -16,14 +16,18 @@ export function underwriteDeal(
   input: AnalysisInput,
   results: AnalysisResults,
   buyBox: BuyBoxProfile | null | undefined,
-  options: { includeSensitivity?: boolean } = {},
+  options: {
+    includeSensitivity?: boolean;
+    marginPrice?: number | null;
+    marginOffers?: { recommendedOffer: number; maximumOffer: number } | null;
+  } = {},
 ): UnderwritingPack {
   const normalized = normalizeAnalysisInput(input);
   const rent = resolveRent(normalized);
   const buyBoxMatch = matchBuyBox(buyBox, subjectFromAnalysis(normalized));
   const refinance = validateRefinance(normalized, results);
   const resilience = calculateDealResilience(normalized, options);
-  const margin = marginFromAnalysis(normalized);
+  const margin = marginFromAnalysis(normalized, options.marginPrice, options.marginOffers);
   const warnings = collectDealKillers({
     input: normalized,
     results,

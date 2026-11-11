@@ -30,6 +30,7 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
     strategy: "buy-hold",
     financing: {
       purchasePrice,
+      askingPrice: 0,
       depositPercent: 25,
       interestRate: 6.5,
       termYears: 30,

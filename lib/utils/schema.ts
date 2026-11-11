@@ -63,6 +63,7 @@ export const strategySchema = z.enum([
 
 export const financingSchema = z.object({
   purchasePrice: money("Purchase price").min(1, "Enter a purchase price"),
+  askingPrice: money("Asking price"),
   depositPercent: percent("Deposit"),
   interestRate: percent("Interest rate", 30),
   termYears: z.number().min(1).max(40),

@@ -70,6 +70,7 @@ export function maxOfferToAnalysisInput(
     financing: {
       ...base.financing,
       purchasePrice: price,
+      askingPrice: Math.max(0, Number.isFinite(input.property.askingPrice) ? input.property.askingPrice : 0),
       depositPercent: input.financing.downPaymentPercent,
       interestRate: input.financing.interestRate,
       termYears: input.financing.termYears,
