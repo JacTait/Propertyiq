@@ -14,6 +14,7 @@ export function MaxNumberField({
   prefix,
   suffix,
   hint,
+  placeholder,
   className,
   onValueChange,
 }: {
@@ -22,6 +23,7 @@ export function MaxNumberField({
   prefix?: string;
   suffix?: string;
   hint?: string;
+  placeholder?: string;
   className?: string;
   onValueChange?: (value: number) => void;
 }) {
@@ -41,6 +43,7 @@ export function MaxNumberField({
             error={fieldState.error?.message}
             prefix={prefix}
             suffix={suffix}
+            placeholder={placeholder}
             className={className}
             value={numeric}
             onBlur={field.onBlur}

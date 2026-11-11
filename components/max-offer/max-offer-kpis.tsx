@@ -16,7 +16,7 @@ export function MaxOfferKpis({ results }: { results: MaxOfferResults }) {
         index={0}
         label="Maximum Offer Price"
         value={fmt.currency(results.maximumOffer, { compact: true })}
-        sub="highest price that still hits every target"
+        sub="highest price you can pay and still hit every target"
         icon={BadgeDollarSign}
         tone={results.feasible ? "success" : "danger"}
       />

@@ -13,7 +13,7 @@ const TONE: Record<OfferTier, { wrap: string; icon: string; Icon: typeof Sparkle
   "too-expensive": { wrap: "border-destructive/30 from-destructive/20", icon: "bg-destructive text-destructive-foreground", Icon: Ban },
 };
 
-export function DealVerdict({ results }: { results: MaxOfferResults }) {
+export function DealVerdict({ results, evaluating = false }: { results: MaxOfferResults; evaluating?: boolean }) {
   const rec = results.recommendation;
   const tone = TONE[rec.tier];
   const Icon = tone.Icon;
@@ -27,7 +27,9 @@ export function DealVerdict({ results }: { results: MaxOfferResults }) {
             <Icon className="size-6" />
           </span>
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Deal Verdict</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {evaluating ? "Deal Status" : "Discovery"}
+            </p>
             <h3 className="text-2xl font-black tracking-tight">{rec.title}</h3>
             <p className="text-sm leading-relaxed text-foreground/90">{rec.headline}</p>
             <p className="text-sm leading-relaxed text-muted-foreground">{rec.body}</p>

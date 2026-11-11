@@ -12,12 +12,14 @@ import { STORAGE_KEYS } from "@/lib/constants";
 import { maxOfferPath } from "@/lib/utils/routes";
 import { createDefaultMaxOffer, maxOfferToAnalysisInput } from "@/data/default-max-offer";
 import { sanitizeMaxOffer } from "@/lib/calculations/max-offer";
+import { pendingMargin } from "@/lib/calculations/margin-of-safety";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useSettings } from "@/hooks/useSettings";
 import { useMaxOfferAnalysis } from "@/hooks/useMaxOfferAnalysis";
 import { usePropertyAnalysis } from "@/hooks/usePropertyAnalysis";
 import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
@@ -32,7 +34,7 @@ import { BrrrrPanel } from "@/components/max-offer/brrrr-panel";
 import { MaxOfferSummaryCard } from "@/components/max-offer/max-offer-summary";
 import { BuyBoxStatusCard } from "@/components/analysis/buy-box-status";
 import { DealKillerList } from "@/components/analysis/deal-killers";
-import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
+import { OfferEvaluationCard } from "@/components/max-offer/offer-evaluation";
 
 export interface MaxOfferDraft {
   input: MaxOfferInputs;
@@ -197,13 +199,20 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
       <PageHeader
         eyebrow="Offer Engine"
         title="Max Offer Analyzer"
-        description="Work backwards from ARV, rent and rehab to the highest price you can pay while still hitting your investing criteria."
+        description={
+          askingPrice
+            ? "Asking price is in. Score the listing against the recommended and maximum offers your targets allow."
+            : "Find what you can pay before you offer. ARV, rent, rehab, expenses and targets are enough — no purchase price required."
+        }
         actions={
-          results ? (
-            <Button variant="gradient" onClick={() => setSaveOpen(true)}>
-              <Save /> {existing ? "Update in Portfolio" : "Save to Portfolio"}
-            </Button>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={askingPrice ? "primary" : "muted"}>{askingPrice ? "Evaluation" : "Discovery"}</Badge>
+            {results ? (
+              <Button variant="gradient" onClick={() => setSaveOpen(true)}>
+                <Save /> {existing ? "Update in Portfolio" : "Save to Portfolio"}
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
@@ -217,13 +226,15 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
           {results ? (
             <>
               <MaxOfferKpis results={results} />
-              {underwriting && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <BuyBoxStatusCard match={underwriting.buyBox} />
-                  <MarginOfSafetyCard margin={underwriting.margin} />
-                </div>
-              )}
-              <DealVerdict results={results} />
+              <div className="grid gap-4 lg:grid-cols-2">
+                {underwriting && <BuyBoxStatusCard match={underwriting.buyBox} />}
+                <OfferEvaluationCard
+                  askingPrice={askingPrice}
+                  results={results}
+                  margin={underwriting?.margin ?? pendingMargin(results.recommendedOffer, results.maximumOffer)}
+                />
+              </div>
+              <DealVerdict results={results} evaluating={Boolean(askingPrice)} />
               <OfferTiers results={results} />
               {underwriting && <DealKillerList warnings={underwriting.warnings} />}
             </>

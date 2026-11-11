@@ -8,7 +8,6 @@ export function createDefaultMaxOffer(country: CountryCode = "US"): MaxOfferInpu
   const market = profile ? toMarketData(profile) : DEFAULT_MARKET_DATA;
   const arv = Math.round((market.medianPropertyValue * 0.45) / 5000) * 5000;
   const rent = Math.round((arv * (Math.max(market.rentalYield, 8) / 100)) / 12 / 25) * 25;
-  const askingPrice = Math.round((arv * 0.68) / 1000) * 1000;
 
   return {
     property: {
@@ -18,7 +17,7 @@ export function createDefaultMaxOffer(country: CountryCode = "US"): MaxOfferInpu
       rehabBudget: Math.round(arv * 0.12 / 1000) * 1000,
       closingCosts: Math.round(arv * 0.02),
       holdingCosts: 2500,
-      askingPrice,
+      askingPrice: 0,
     },
     financing: {
       interestRate: 7,

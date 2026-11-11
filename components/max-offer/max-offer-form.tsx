@@ -42,7 +42,10 @@ function PropertySection() {
         </div>
       </CardHeader>
       <CardContent>
-        <SectionTitle title="What you know about the deal" description="Work backwards from ARV, rent and rehab — not asking price." />
+        <SectionTitle
+          title="What you know about the deal"
+          description="ARV, rent, rehab, expenses and targets set what you can pay. You do not need a purchase price. Add asking price only when you want to score a listing."
+        />
         <FieldGrid>
           <MaxTextField name="property.name" label="Property Name" className="sm:col-span-2" />
           <MaxNumberField name="property.arv" label="ARV (After Repair Value)" prefix={symbol} hint="Expected value after renovations are complete." />
@@ -50,7 +53,14 @@ function PropertySection() {
           <MaxNumberField name="property.rehabBudget" label="Rehab Budget" prefix={symbol} />
           <MaxNumberField name="property.closingCosts" label="Closing Costs" prefix={symbol} />
           <MaxNumberField name="property.holdingCosts" label="Holding Costs" prefix={symbol} hint="Taxes, insurance, utilities and interest during rehab." />
-          <MaxNumberField name="property.askingPrice" label="Current Asking Price" prefix={symbol} hint="Optional. Used for Margin of Safety, the scenario table, and the deal verdict. Leave empty until you have a real asking price." />
+          <MaxNumberField
+            name="property.askingPrice"
+            label="Current Asking Price"
+            prefix={symbol}
+            placeholder="Optional"
+            className="sm:col-span-2"
+            hint="Optional. Leave at 0 for Discovery (recommended and maximum offer only). Enter a listing price to evaluate margin of safety, deal status, overpricing and cushion."
+          />
         </FieldGrid>
       </CardContent>
     </Card>
