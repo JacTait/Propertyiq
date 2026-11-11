@@ -9,13 +9,13 @@ export const WORKSPACE_SECTIONS = [
     id: "value",
     number: "2",
     title: "Value & Exit",
-    description: "Conservative ARV drives the underwrite. The guideline is configurable, not a valuation rule.",
+    description: "Advertised ARV, conservative ARV and the investor guideline max offer.",
   },
   {
     id: "income",
     number: "3",
     title: "Income",
-    description: "Advertised, current and conservative rent. Decision analysis uses conservative rent.",
+    description: "Advertised/projected rent, current rent and conservative rent. The underwrite uses conservative rent.",
   },
   {
     id: "expenses",

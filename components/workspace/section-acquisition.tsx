@@ -79,7 +79,9 @@ export function SectionAcquisition({ decision }: SectionAcquisitionProps) {
           />
         </FieldGrid>
         <details className="mt-4 rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium">More property details</summary>
+          <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60">
+            More property details
+          </summary>
           <div className="mt-4 space-y-4">
             <FieldGrid>
               <TextField name="property.address" label="Address" placeholder="Street, city" className="sm:col-span-2" />
@@ -104,7 +106,7 @@ export function SectionAcquisition({ decision }: SectionAcquisitionProps) {
                           aria-checked={active}
                           onClick={() => field.onChange(item.value)}
                           className={cn(
-                            "flex items-start justify-between gap-2 rounded-xl border p-3 text-left text-sm transition-colors",
+                            "flex items-start justify-between gap-2 rounded-xl border p-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
                             active
                               ? "border-primary bg-primary/10"
                               : "border-border bg-background/50 hover:border-primary/40",
@@ -143,7 +145,7 @@ export function SectionAcquisition({ decision }: SectionAcquisitionProps) {
                     aria-checked={active}
                     onClick={() => field.onChange(item.value)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                      "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
                       active
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-background/60 text-muted-foreground hover:border-primary/40 hover:text-foreground",
@@ -232,7 +234,7 @@ export function SectionAcquisition({ decision }: SectionAcquisitionProps) {
         <MiniTotal label="Acquisition fees" value={fmt.currency(costs?.acquisitionFees ?? 0)} />
         <MiniTotal label="Total rehab" value={fmt.currency(costs?.totalRehabBudget ?? 0)} />
         <MiniTotal label="Total holding" value={fmt.currency(costs?.totalHoldingCost ?? 0)} />
-        <MiniTotal label="All-in cost" value={fmt.currency(costs?.allInCost ?? 0)} emphasize />
+        <MiniTotal label="Total all-in cost" value={fmt.currency(costs?.allInCost ?? 0)} emphasize />
       </div>
     </div>
   );

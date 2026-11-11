@@ -19,7 +19,11 @@ export function MobileSummaryBar({ decision, onViewSummary }: MobileSummaryBarPr
   const allInPct = decision?.costs.allInPctConservativeArv ?? null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 px-2 xl:hidden">
+    <div
+      role="region"
+      aria-label="Decision summary"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 px-2 xl:hidden"
+    >
       <div className="pointer-events-auto mx-auto flex max-w-lg items-center gap-2 overflow-hidden rounded-2xl border border-border bg-card/95 px-2.5 py-2 shadow-lg shadow-black/20 backdrop-blur-md">
         <MiniMetric
           label="CF"

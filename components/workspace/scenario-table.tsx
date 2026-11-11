@@ -58,7 +58,7 @@ export function ScenarioTable({ decision }: ScenarioTableProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="hidden md:block">
+        <div className="hidden overflow-x-auto md:block">
           <ComparisonTable decision={decision} />
         </div>
         <div className="space-y-3">
@@ -85,7 +85,7 @@ function ComparisonTable({ decision }: { decision: DealDecisionResult | null }) 
   const fmt = useFormatters();
   const rows = metricRows(decision, fmt);
   return (
-    <table className="w-full text-left text-sm">
+    <table className="w-full min-w-[36rem] text-left text-sm">
       <caption className="sr-only">Base, conservative and stress scenario comparison</caption>
       <thead>
         <tr className="border-b border-border/70">
@@ -107,7 +107,7 @@ function ComparisonTable({ decision }: { decision: DealDecisionResult | null }) 
             </th>
             {DEAL_SCENARIO_KEYS.map((key) => (
               <td key={key} className={cn("px-2 py-2 tabular", row.emphasize && "font-medium")}>
-                {row.values[key]}
+                <span className="whitespace-nowrap">{row.values[key]}</span>
               </td>
             ))}
           </tr>

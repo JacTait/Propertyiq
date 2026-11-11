@@ -1,4 +1,5 @@
 import type { ExpenseBreakdownItem, ExpenseInputs } from "@/lib/types";
+import { monthlyUtilitiesTotal } from "@/lib/calculations/utilities";
 
 export interface IncomeSummary {
   monthlyIncome: number;
@@ -34,6 +35,15 @@ export interface OperatingExpenseSummary {
   breakdown: ExpenseBreakdownItem[];
 }
 
+function annualFromMonthly(value: number | undefined): number {
+  return (typeof value === "number" && Number.isFinite(value) ? value : 0) * 12;
+}
+
+function percentOf(amount: number, percent: number | undefined): number {
+  const rate = typeof percent === "number" && Number.isFinite(percent) ? percent : 0;
+  return amount * (rate / 100);
+}
+
 export function calculateOperatingExpenses(
   expenses: ExpenseInputs,
   effectiveGrossIncome: number,
@@ -44,11 +54,12 @@ export function calculateOperatingExpenses(
   const items: ExpenseBreakdownItem[] = [
     item("propertyTax", "Property Tax", expenses.propertyTaxAnnual),
     item("insurance", "Insurance", expenses.insuranceAnnual),
-    item("hoa", "HOA", expenses.hoaMonthly * 12),
-    item("management", "Management", managementBasis * (expenses.managementPercent / 100)),
-    item("maintenance", "Maintenance", annualGrossIncome * (expenses.maintenancePercent / 100)),
-    item("utilities", "Utilities", expenses.utilitiesMonthly * 12),
-    item("other", "Other", expenses.otherMonthly * 12),
+    item("hoa", "HOA", annualFromMonthly(expenses.hoaMonthly)),
+    item("management", "Management", percentOf(managementBasis, expenses.managementPercent)),
+    item("maintenance", "Maintenance", percentOf(annualGrossIncome, expenses.maintenancePercent)),
+    item("capex", "CapEx", percentOf(annualGrossIncome, expenses.capexPercent)),
+    item("utilities", "Utilities", monthlyUtilitiesTotal(expenses) * 12),
+    item("other", "Other", annualFromMonthly(expenses.otherMonthly)),
     ...(options.extraAnnual ?? []).map((e) => item(e.key, e.label, e.annual)),
   ];
   const breakdown = items.filter((i) => i.annual > 0);

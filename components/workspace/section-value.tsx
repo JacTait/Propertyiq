@@ -57,7 +57,7 @@ export function SectionValue({ decision }: SectionValueProps) {
         <FieldGrid>
           <NumberField
             name="decision.advertisedArv"
-            label="Advertised / seller ARV"
+            label="Advertised ARV"
             prefix={symbol}
             hint="The ARV on the listing or appraisal pack."
             onValueChange={syncAdvertised}
@@ -89,7 +89,7 @@ export function SectionValue({ decision }: SectionValueProps) {
             hint="Default 70%. Guideline offer = conservative ARV × this percent − rehab − contingency."
           />
           <CalculatedValue
-            label="Guideline max offer"
+            label="Investor guideline max offer"
             value={guideline === null || guideline === undefined ? "Add conservative ARV" : fmt.currency(guideline)}
             hint={allInPct == null ? undefined : `All-in is currently ${fmt.percent(allInPct)} of conservative ARV.`}
             emphasize

@@ -43,7 +43,7 @@ export function SectionIncome() {
         <FieldGrid>
           <NumberField
             name="income.monthlyRent"
-            label="Advertised / listing rent"
+            label="Advertised/projected rent"
             prefix={symbol}
             hint="Asking or projected monthly rent."
           />
@@ -61,7 +61,7 @@ export function SectionIncome() {
 
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <SectionTitle title="Current / in-place rent" />
+          <SectionTitle title="Current rent" />
           <div className="flex rounded-full border border-border p-0.5" role="radiogroup" aria-label="Current rent entry mode">
             {(["total", "units"] as const).map((value) => (
               <button
@@ -71,7 +71,7 @@ export function SectionIncome() {
                 aria-checked={mode === value}
                 onClick={() => setMode(value)}
                 className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold capitalize",
+                  "rounded-full px-3 py-1 text-xs font-semibold capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
                   mode === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -92,15 +92,15 @@ export function SectionIncome() {
         ) : (
           <div className="space-y-3">
             {fields.map((field, index) => (
-              <div key={field.id} className="grid grid-cols-[1fr_8rem_auto] items-end gap-2">
+              <div key={field.id} className="grid grid-cols-[1fr_minmax(6.5rem,8rem)_auto] items-end gap-2">
                 <TextField
                   name={`income.units.${index}.label` as FieldPath<AnalysisFormValues>}
-                  label={index === 0 ? "Unit" : ""}
+                  label={`Unit ${index + 1}`}
                   placeholder={`Unit ${index + 1}`}
                 />
                 <NumberField
                   name={`income.units.${index}.monthlyRent` as FieldPath<AnalysisFormValues>}
-                  label={index === 0 ? "Rent" : ""}
+                  label={`Unit ${index + 1} rent`}
                   prefix={symbol}
                 />
                 <Button
@@ -134,7 +134,9 @@ export function SectionIncome() {
       </div>
 
       <details className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-        <summary className="cursor-pointer text-sm font-medium">Verified rent, other income and growth</summary>
+        <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60">
+          Verified rent, other income and growth
+        </summary>
         <div className="mt-4">
           <FieldGrid>
             <NumberField

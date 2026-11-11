@@ -12,6 +12,7 @@ interface LiveSummaryProps {
   decision: DealDecisionResult | null;
   id?: string;
   className?: string;
+  headingLevel?: "h2" | "h3";
 }
 
 const MARGIN_BADGE: Record<
@@ -24,14 +25,16 @@ const MARGIN_BADGE: Record<
   "Negative underwrite": { variant: "danger", icon: ShieldAlert },
 };
 
-export function LiveSummary({ decision, id, className }: LiveSummaryProps) {
+export function LiveSummary({ decision, id, className, headingLevel = "h3" }: LiveSummaryProps) {
   const fmt = useFormatters();
+  const Title = headingLevel === "h2" ? "h2" : CardTitle;
+  const titleClass = headingLevel === "h2" ? "text-base font-semibold leading-tight tracking-tight" : undefined;
 
   if (!decision) {
     return (
       <Card id={id} className={className}>
         <CardHeader>
-          <CardTitle>Decision summary</CardTitle>
+          <Title className={titleClass}>Decision summary</Title>
           <CardDescription>Enter a purchase price and conservative rent to underwrite the deal.</CardDescription>
         </CardHeader>
       </Card>
@@ -49,7 +52,7 @@ export function LiveSummary({ decision, id, className }: LiveSummaryProps) {
   return (
     <Card id={id} className={className}>
       <CardHeader className="pb-2">
-        <CardTitle>Decision summary</CardTitle>
+        <Title className={titleClass}>Decision summary</Title>
         <CardDescription>What you are into the deal for, how it cash-flows, and the guideline ceiling.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -89,7 +92,7 @@ export function LiveSummary({ decision, id, className }: LiveSummaryProps) {
             label="Investor guideline max offer"
             value={guideline === null ? null : wholeMoney(fmt, guideline)}
             empty="Add a conservative ARV to calculate."
-            hint="Based on your configurable ARV guideline."
+            hint="ARV-based ceiling from your target percent. Separate from the return-based Max Offer page."
           />
         </div>
 

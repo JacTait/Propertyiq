@@ -210,14 +210,6 @@ export const analysisSchema = z.object({
 
 export type AnalysisFormValues = z.infer<typeof analysisSchema>;
 
-export const STEP_FIELDS: Record<number, (keyof AnalysisFormValues)[]> = {
-  0: ["location"],
-  1: ["property"],
-  2: ["strategy"],
-  3: ["financing"],
-  4: ["income", "expenses", "flip", "brrrr", "decision"],
-};
-
 export const maxOfferSchema = z.object({
   property: z.object({
     name: z.string().trim().min(1, "Give the property a name").max(80),

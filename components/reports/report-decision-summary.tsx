@@ -133,6 +133,9 @@ function Metric({
           )}
         >
           {value}
+          {tone ? (
+            <span className="sr-only">{tone === "positive" ? "Positive" : tone === "negative" ? "Negative" : "Breakeven"}</span>
+          ) : null}
         </p>
       )}
     </div>

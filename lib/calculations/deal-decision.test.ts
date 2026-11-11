@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultAnalysis } from "@/data/default-analysis";
 import { analyzeProperty } from "@/lib/calculations/analyze";
-import { calculateIncome, calculateOperatingExpenses } from "@/lib/calculations/cashflow";
+import { calculateIncome } from "@/lib/calculations/cashflow";
 import { calculateMortgage } from "@/lib/calculations/mortgage";
 import {
   DEAL_DOES_NOT_BREAK_EVEN_BEFORE_INSURANCE,
@@ -527,30 +527,32 @@ describe("scenarios, what-breaks and assumption checks", () => {
   });
 });
 
-describe("legacy analyzeProperty isolation", () => {
-  it("does not change analyzeProperty cash flow when CapEx and split utilities are decision-only", () => {
+describe("analyzeProperty operating expenses", () => {
+  it("counts split utilities and CapEx once and still deducts only P&I from NOI", () => {
     const input = fixture((next) => {
+      next.strategy = "buy-hold";
+      next.income.monthlyRent = 2_000;
+      next.income.verifiedRent = 2_000;
+      next.income.conservativeRent = 2_000;
+      next.brrrr.expectedRent = 2_000;
       next.expenses.capexPercent = 5;
       next.expenses.waterMonthly = 50;
       next.expenses.sewerMonthly = 40;
       next.expenses.trashMonthly = 30;
       next.expenses.sharedUtilitiesMonthly = 80;
-      next.expenses.utilitiesMonthly = 200;
+      next.expenses.utilitiesMonthly = 999;
     });
     const analyzed = analyzeProperty(input);
-    const opex = calculateOperatingExpenses(
-      input.expenses,
-      calculateIncome(input.brrrr.expectedRent + input.income.otherMonthlyIncome, input.expenses.vacancyPercent)
-        .effectiveGrossIncome,
-      (input.brrrr.expectedRent + input.income.otherMonthlyIncome) * 12,
-    );
-    const utilities = opex.breakdown.find((item) => item.key === "utilities");
+    const utilities = analyzed.expenseBreakdown.find((item) => item.key === "utilities");
+    const capex = analyzed.expenseBreakdown.find((item) => item.key === "capex");
     expect(utilities?.annual).toBe(2_400);
-    expect(opex.breakdown.find((item) => item.key === "capex")).toBeUndefined();
+    expect(capex?.annual).toBe(2_000 * 12 * 0.05);
+    expect(analyzed.expenseBreakdown.filter((item) => item.key === "utilities")).toHaveLength(1);
+    expect(analyzed.expenseBreakdown.filter((item) => item.key === "capex")).toHaveLength(1);
     expect(analyzed.annualCashflow).toBeCloseTo(analyzed.noi - analyzed.annualDebtService);
 
     const decision = evaluateDealDecision(input);
-    expect(decision.conservative.expenseBreakdown.find((item) => item.key === "capex")?.annual).toBeGreaterThan(0);
+    expect(decision.conservative.expenseBreakdown.find((item) => item.key === "capex")?.annual).toBe(2_000 * 12 * 0.05);
     expect(decision.conservative.expenseBreakdown.find((item) => item.key === "utilities")?.annual).toBe(2_400);
   });
 });

@@ -56,7 +56,7 @@ export function SectionExpenses() {
       ) : (
         <>
           <div>
-            <SectionTitle title="Reserves" description="Percentages of collected or gross income. CapEx is separate from maintenance." />
+            <SectionTitle title="Reserves" description="Percentages of collected or gross income. CapEx / reserves are separate from maintenance." />
             <FieldGrid>
               <NumberField
                 name="expenses.managementPercent"
@@ -73,9 +73,9 @@ export function SectionExpenses() {
               />
               <NumberField
                 name="expenses.capexPercent"
-                label="CapEx reserve"
+                label="CapEx / reserves"
                 suffix="%"
-                hint="Percentage of gross income. New deals start at 0."
+                hint="Percentage of gross income reserved for capital expenditure. New deals start at 0."
               />
             </FieldGrid>
           </div>
@@ -83,7 +83,7 @@ export function SectionExpenses() {
           <div>
             <SectionTitle
               title="Utilities"
-              description="Decision monthly utilities = water + sewer + trash + shared. Shared does not also add the legacy combined utilities line."
+              description="Monthly utilities = water + sewer + trash + shared. Shared does not also add the legacy combined utilities line."
             />
             <FieldGrid>
               <NumberField name="expenses.waterMonthly" label="Water (monthly)" prefix={symbol} />
@@ -97,7 +97,7 @@ export function SectionExpenses() {
               />
               <NumberField name="expenses.otherMonthly" label="Other expenses (monthly)" prefix={symbol} />
               <NumberField name="expenses.expenseGrowthRate" label="Expense growth" suffix="%" />
-              <CalculatedValue label="Monthly utilities (decision)" value={fmt.currency(utilities)} />
+              <CalculatedValue label="Monthly utilities" value={fmt.currency(utilities)} />
             </FieldGrid>
           </div>
         </>

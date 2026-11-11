@@ -40,7 +40,9 @@ export function SectionAnalysis({
       <WhatBreaks decision={decision} />
       {decision ? (
         <details className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium">Secondary metrics — traditional ratios</summary>
+          <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60">
+            Secondary metrics — traditional ratios
+          </summary>
           <div className="mt-4">
             <SecondaryMetrics decision={decision} />
           </div>
@@ -48,7 +50,9 @@ export function SectionAnalysis({
       ) : null}
       {results && summary ? (
         <details className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium">More detail — projections, charts and legacy score</summary>
+          <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60">
+            More detail — projections, charts and legacy score
+          </summary>
           <div className="mt-4">
             <ResultsPanel
               input={input}

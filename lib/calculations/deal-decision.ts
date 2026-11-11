@@ -2,7 +2,6 @@ import type {
   AnalysisInput,
   DealScenarioKey,
   ExpenseBreakdownItem,
-  ExpenseInputs,
   FinancingInputs,
   GuidelineAdditionalCosts,
   IncomeInputs,
@@ -356,19 +355,6 @@ export interface DealDecisionResult {
   assumptionChecks: AssumptionCheckItem[];
 }
 
-function decisionExpenses(expenses: ExpenseInputs): ExpenseInputs {
-  return {
-    ...expenses,
-    utilitiesMonthly: monthlyUtilitiesTotal(expenses),
-  };
-}
-
-function capexExtra(annualGrossIncome: number, capexPercent: number): { key: string; label: string; annual: number }[] {
-  const annual = annualGrossIncome * (money(capexPercent) / 100);
-  if (!(annual > 0)) return [];
-  return [{ key: "capex", label: "CapEx", annual }];
-}
-
 function scenarioStatus(monthlyCashflow: number): ScenarioStatus {
   if (monthlyCashflow < 0) return "negative";
   if (monthlyCashflow < MARGINAL_MONTHLY_CASHFLOW) return "marginal";
@@ -579,12 +565,10 @@ function computeOperations(input: AnalysisInput, costs: DealCostBreakdown): Deal
   const otherMonthlyIncome = money(input.income.otherMonthlyIncome);
   const vacancyPercent = money(input.expenses.vacancyPercent);
   const income = calculateIncome(monthlyRent + otherMonthlyIncome, vacancyPercent);
-  const expenses = decisionExpenses(input.expenses);
   const opex = calculateOperatingExpenses(
-    expenses,
+    input.expenses,
     income.effectiveGrossIncome,
     income.annualIncome,
-    { extraAnnual: capexExtra(income.annualIncome, input.expenses.capexPercent) },
   );
   const mortgage = calculateMortgage({
     purchasePrice: costs.purchasePrice,

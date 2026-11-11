@@ -7,26 +7,31 @@ import { effectiveSharedUtilities, monthlyUtilitiesTotal } from "@/lib/calculati
 import { isPortfolio } from "@/hooks/usePortfolio";
 import type { AnalysisInput, PortfolioProperty } from "@/lib/types";
 
+function omitFields<T extends Record<string, unknown>>(obj: T, keys: readonly string[]): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...obj };
+  for (const key of keys) delete next[key];
+  return next;
+}
+
 function legacyDraft(): Record<string, unknown> {
   const fresh = createDefaultAnalysis("US");
-  const { decision: _decision, ...rest } = fresh;
-  const { currentMonthlyRent: _current, rentEntryMode: _mode, units: _units, ...income } = rest.income;
-  const {
-    insuranceSource: _source,
-    capexPercent: _capex,
-    waterMonthly: _water,
-    sewerMonthly: _sewer,
-    trashMonthly: _trash,
-    sharedUtilitiesMonthly: _shared,
-    ...expenses
-  } = rest.expenses;
-  const { otherAcquisitionCosts: _other, ...financing } = rest.financing;
   return {
-    ...rest,
-    financing,
-    income,
+    ...omitFields(fresh as unknown as Record<string, unknown>, ["decision"]),
+    financing: omitFields(fresh.financing as unknown as Record<string, unknown>, ["otherAcquisitionCosts"]),
+    income: omitFields(fresh.income as unknown as Record<string, unknown>, [
+      "currentMonthlyRent",
+      "rentEntryMode",
+      "units",
+    ]),
     expenses: {
-      ...expenses,
+      ...omitFields(fresh.expenses as unknown as Record<string, unknown>, [
+        "insuranceSource",
+        "capexPercent",
+        "waterMonthly",
+        "sewerMonthly",
+        "trashMonthly",
+        "sharedUtilitiesMonthly",
+      ]),
       utilitiesMonthly: 200,
     },
   };
@@ -194,6 +199,30 @@ describe("nullable metrics", () => {
     expect(nullableDivide(Number.NaN, 250_000)).toBeNull();
     expect(nullableDivide(100_000, Number.POSITIVE_INFINITY)).toBeNull();
     expect(nullableDivide(100_000, 200_000)).toBe(0.5);
+  });
+});
+
+describe("persisted workspace fields", () => {
+  it("keeps explicit zero scenario overrides, unit rows, insurance source and guideline settings", () => {
+    const input = createDefaultAnalysis("US");
+    input.income.rentEntryMode = "units";
+    input.income.currentMonthlyRent = 1_800;
+    input.income.units = [{ id: "a", label: "Unit A", monthlyRent: 900 }];
+    input.expenses.insuranceSource = "quote";
+    input.decision.targetArvPercent = 65;
+    input.decision.includeAdditionalCostsInGuideline = true;
+    input.decision.scenarios.stress.rentAdjustmentPercent = 0;
+    input.decision.scenarios.stress.vacancyPercent = 0;
+    const next = normalizeAnalysisInput(input);
+    expect(next.income.rentEntryMode).toBe("units");
+    expect(next.income.currentMonthlyRent).toBe(1_800);
+    expect(next.income.units).toEqual([{ id: "a", label: "Unit A", monthlyRent: 900 }]);
+    expect(next.expenses.insuranceSource).toBe("quote");
+    expect(next.decision.targetArvPercent).toBe(65);
+    expect(next.decision.includeAdditionalCostsInGuideline).toBe(true);
+    expect(next.decision.scenarios.stress.rentAdjustmentPercent).toBe(0);
+    expect(next.decision.scenarios.stress.vacancyPercent).toBe(0);
+    expect(normalizeAnalysisInput(next)).toEqual(next);
   });
 });
 

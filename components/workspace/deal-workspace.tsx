@@ -76,7 +76,7 @@ export function DealWorkspace({
 
   return (
     <FormProvider {...form}>
-      <div className="space-y-4 pb-16 xl:pb-0">
+      <div className="space-y-4 pb-24 xl:pb-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <nav aria-label="Deal sections" className="flex min-w-0 flex-1 flex-wrap gap-1.5">
             {WORKSPACE_SECTIONS.map((section) => (
@@ -85,7 +85,7 @@ export function DealWorkspace({
                 type="button"
                 onClick={() => jumpTo(section.id)}
                 className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                  "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
                   open[section.id]
                     ? "border-primary/40 bg-primary/10 text-foreground"
                     : "border-border bg-card text-muted-foreground hover:text-foreground",
@@ -95,14 +95,14 @@ export function DealWorkspace({
               </button>
             ))}
           </nav>
-          <Button variant="ghost" size="sm" onClick={onReset} className="text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={onReset} className="text-muted-foreground" aria-label="Reset deal to defaults">
             <RotateCcw /> Reset
           </Button>
         </div>
 
         <div className="grid items-start gap-6 xl:grid-cols-12">
           <div className="min-w-0 space-y-4 xl:col-span-7">
-            <form onSubmit={(e) => e.preventDefault()} noValidate className="space-y-4">
+            <form onSubmit={(e) => e.preventDefault()} noValidate className="space-y-4 [&_input]:scroll-mb-40 [&_button]:scroll-mb-40">
               {WORKSPACE_SECTIONS.map((section) => (
                 <WorkspaceSection
                   key={section.id}
@@ -133,9 +133,9 @@ export function DealWorkspace({
               ))}
             </form>
           </div>
-          <div className="hidden min-w-0 xl:col-span-5 xl:block">
+          <aside className="hidden min-w-0 xl:col-span-5 xl:block" aria-label="Decision summary">
             <div className="space-y-3 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:pr-1">
-              <LiveSummary decision={decision} />
+              <LiveSummary decision={decision} headingLevel="h2" />
               <button
                 type="button"
                 onClick={() => jumpTo("analysis")}
@@ -144,7 +144,7 @@ export function DealWorkspace({
                 Open assumption check, scenarios and break-even limits
               </button>
             </div>
-          </div>
+          </aside>
         </div>
         <MobileSummaryBar decision={decision} onViewSummary={() => jumpTo("analysis")} />
       </div>

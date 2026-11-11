@@ -40,7 +40,7 @@ export function WorkspaceSection({
       <h2 className="text-base font-semibold">
         <button
           type="button"
-          className="flex w-full items-start gap-3 px-5 py-4 text-left sm:px-6"
+          className="flex w-full items-start gap-3 px-5 py-4 text-left sm:px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => onOpenChange(!open)}
