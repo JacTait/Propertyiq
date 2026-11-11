@@ -1,9 +1,13 @@
 "use client";
 
 import type { AnalysisInput, AnalysisResults, InvestmentSummary, RentSource, UnderwritingPack } from "@/lib/types";
+import type { DealDecisionResult } from "@/lib/calculations/deal-decision";
 import { ResultsPanel } from "@/components/dashboard/results-panel";
+import { LiveSummary } from "@/components/workspace/live-summary";
+import { SecondaryMetrics } from "@/components/workspace/secondary-metrics";
 
 interface SectionAnalysisProps {
+  decision: DealDecisionResult | null;
   input: AnalysisInput;
   results: AnalysisResults | null;
   summary: InvestmentSummary | null;
@@ -12,6 +16,7 @@ interface SectionAnalysisProps {
 }
 
 export function SectionAnalysis({
+  decision,
   input,
   results,
   summary,
@@ -20,9 +25,13 @@ export function SectionAnalysis({
 }: SectionAnalysisProps) {
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Conservative cash flow, scenarios, assumption checks and “what breaks this deal?” will sit here. Until then,
-        existing projections stay under More detail so nothing is lost.
+      <div id="decision-summary" className="scroll-mt-28 space-y-4 xl:hidden">
+        <LiveSummary decision={decision} />
+        <SecondaryMetrics decision={decision} />
+      </div>
+      <p className="hidden text-sm text-muted-foreground xl:block">
+        The live decision summary stays in the right-hand column while you edit. Projections and the legacy score sit
+        under More detail.
       </p>
       {results && summary ? (
         <details className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">

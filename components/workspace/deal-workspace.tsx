@@ -10,7 +10,9 @@ import { useDealDecision } from "@/hooks/useDealDecision";
 import { Button } from "@/components/ui/button";
 import { WORKSPACE_SECTIONS, type WorkspaceSectionId } from "@/components/workspace/workspace-sections";
 import { WorkspaceSection, type SectionStatus } from "@/components/workspace/workspace-section";
-import { WorkspaceSummaryPlaceholder } from "@/components/workspace/workspace-summary-placeholder";
+import { LiveSummary } from "@/components/workspace/live-summary";
+import { SecondaryMetrics } from "@/components/workspace/secondary-metrics";
+import { MobileSummaryBar } from "@/components/workspace/mobile-summary-bar";
 import { SectionAcquisition, acquisitionStatus } from "@/components/workspace/section-acquisition";
 import { SectionValue, valueStatus } from "@/components/workspace/section-value";
 import { SectionIncome, incomeStatus } from "@/components/workspace/section-income";
@@ -63,9 +65,10 @@ export function DealWorkspace({
 
   const jumpTo = (id: WorkspaceSectionId) => {
     setOpen((current) => ({ ...current, [id]: true }));
-    requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    window.setTimeout(() => {
+      const preferred = id === "analysis" ? document.getElementById("decision-summary") : null;
+      (preferred ?? document.getElementById(id))?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   };
 
   const toggle = (id: WorkspaceSectionId, next: boolean) => {
@@ -74,7 +77,7 @@ export function DealWorkspace({
 
   return (
     <FormProvider {...form}>
-      <div className="space-y-4">
+      <div className="space-y-4 pb-16 xl:pb-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <nav aria-label="Deal sections" className="flex min-w-0 flex-1 flex-wrap gap-1.5">
             {WORKSPACE_SECTIONS.map((section) => (
@@ -119,6 +122,7 @@ export function DealWorkspace({
                   {section.id === "financing" ? <SectionFinancing /> : null}
                   {section.id === "analysis" ? (
                     <SectionAnalysis
+                      decision={decision}
                       input={input}
                       results={results}
                       summary={summary}
@@ -130,10 +134,14 @@ export function DealWorkspace({
               ))}
             </form>
           </div>
-          <div className="min-w-0 xl:col-span-5">
-            <WorkspaceSummaryPlaceholder decision={decision} />
+          <div className="hidden min-w-0 xl:col-span-5 xl:block">
+            <div className="space-y-4 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:pr-1">
+              <LiveSummary decision={decision} />
+              <SecondaryMetrics decision={decision} />
+            </div>
           </div>
         </div>
+        <MobileSummaryBar decision={decision} onViewSummary={() => jumpTo("analysis")} />
       </div>
     </FormProvider>
   );

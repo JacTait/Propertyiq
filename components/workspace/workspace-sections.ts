@@ -33,7 +33,7 @@ export const WORKSPACE_SECTIONS = [
     id: "analysis",
     number: "6",
     title: "Analysis",
-    description: "Live summary, scenarios and what-breaks land here next.",
+    description: "Decision summary, secondary metrics and supporting projections.",
   },
 ] as const;
 

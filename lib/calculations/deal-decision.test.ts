@@ -13,6 +13,7 @@ import {
   breakEvenMonthlyRent,
   breakEvenOccupancyPercent,
   evaluateDealDecision,
+  classifyMarginForError,
   guidelineMaxOffer,
   includedGuidelineCosts,
   maxAnnualInsurance,
@@ -551,5 +552,121 @@ describe("strategy rehab source", () => {
     expect(baseRehabCost(flip)).toBe(40_000);
     expect(evaluateDealDecision(flip).costs.baseRehabCost).toBe(40_000);
     expect(evaluateDealDecision(flip).costs.totalRehabBudget).toBe(44_000);
+  });
+});
+
+describe("margin-for-error classification", () => {
+  const base = {
+    conservativeMonthlyCashflow: 400,
+    stressMonthlyCashflow: 150,
+    remainingRehabHeadroom: 20_000,
+    currentTotalRehabBudget: 33_000,
+    allInPctConservativeArv: 55,
+    targetArvPercent: 70,
+  };
+
+  it("labels a negative conservative cash flow as a negative underwrite first", () => {
+    expect(
+      classifyMarginForError({
+        ...base,
+        conservativeMonthlyCashflow: -50,
+        remainingRehabHeadroom: -5_000,
+        allInPctConservativeArv: 95,
+      }).label,
+    ).toBe("Negative underwrite");
+    expect(
+      classifyMarginForError({
+        ...base,
+        conservativeMonthlyCashflow: -50,
+      }).explanation,
+    ).toMatch(/negative/i);
+  });
+
+  it("labels negative rehab headroom as a negative underwrite even when cash flow is positive", () => {
+    const result = classifyMarginForError({
+      ...base,
+      remainingRehabHeadroom: -8_000,
+    });
+    expect(result.label).toBe("Negative underwrite");
+    expect(result.explanation).toMatch(/rehab budget exceeds/i);
+  });
+
+  it("labels all-in above the selected ARV guideline as a negative underwrite", () => {
+    const result = classifyMarginForError({
+      ...base,
+      allInPctConservativeArv: 82.2,
+    });
+    expect(result.label).toBe("Negative underwrite");
+    expect(result.explanation).toMatch(/82\.2%.*70\.0%/);
+  });
+
+  it("labels a default stress case that turns cash flow negative as a thin margin", () => {
+    const result = classifyMarginForError({
+      ...base,
+      stressMonthlyCashflow: -40,
+    });
+    expect(result.label).toBe("Thin margin");
+    expect(result.explanation).toMatch(/stress case/i);
+  });
+
+  it("labels sub-$100 conservative cash flow as a thin margin", () => {
+    expect(classifyMarginForError({ ...base, conservativeMonthlyCashflow: 40 }).label).toBe("Thin margin");
+  });
+
+  it("labels all-in close to the guideline as a thin margin", () => {
+    const result = classifyMarginForError({ ...base, allInPctConservativeArv: 66 });
+    expect(result.label).toBe("Thin margin");
+    expect(result.explanation).toMatch(/close to/i);
+  });
+
+  it("labels thin remaining rehab headroom as a thin margin", () => {
+    expect(
+      classifyMarginForError({
+        ...base,
+        remainingRehabHeadroom: 2_000,
+        currentTotalRehabBudget: 33_000,
+        allInPctConservativeArv: 50,
+      }).label,
+    ).toBe("Thin margin");
+  });
+
+  it("labels healthy cash flow well below the guideline as a stronger margin", () => {
+    const result = classifyMarginForError(base);
+    expect(result.label).toBe("Stronger margin");
+    expect(result.explanation).toMatch(/comfortably below/i);
+  });
+
+  it("uses moderate when cash flow is fine but conservative ARV is missing", () => {
+    const result = classifyMarginForError({
+      ...base,
+      allInPctConservativeArv: null,
+      remainingRehabHeadroom: null,
+    });
+    expect(result.label).toBe("Moderate margin");
+    expect(result.explanation).toMatch(/conservative ARV/i);
+  });
+
+  it("attaches the classification to evaluateDealDecision", () => {
+    const overGuideline = evaluateDealDecision(fixture());
+    expect(overGuideline.marginForError.label).toBe("Negative underwrite");
+    expect(overGuideline.stressUsesProductDefaults).toBe(true);
+
+    const stronger = evaluateDealDecision(
+      fixture((input) => {
+        input.financing.purchasePrice = 100_000;
+        input.financing.closingCosts = 2_000;
+        input.financing.legalFees = 500;
+        input.financing.inspectionCosts = 400;
+        input.financing.loanFees = 600;
+        input.brrrr.rehabCost = 10_000;
+        input.flip.holdingCostsMonthly = 500;
+        input.flip.holdDurationMonths = 2;
+        input.decision.conservativeArv = 300_000;
+        input.decision.targetArvPercent = 70;
+      }),
+    );
+    expect(stronger.costs.allInPctConservativeArv).not.toBeNull();
+    expect(stronger.costs.allInPctConservativeArv ?? 0).toBeLessThan(60);
+    expect(stronger.marginForError.label).toBe("Stronger margin");
   });
 });

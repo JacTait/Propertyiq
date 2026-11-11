@@ -23,6 +23,7 @@ import {
   nullableDivide,
 } from "@/lib/calculations/ratios";
 import { monthlyUtilitiesTotal } from "@/lib/calculations/utilities";
+import { DEFAULT_SCENARIO_ASSUMPTIONS } from "@/lib/constants/deal-workspace";
 
 export const DEAL_DOES_NOT_BREAK_EVEN_BEFORE_INSURANCE =
   "The deal does not break even before insurance is included.";
@@ -45,6 +46,12 @@ export const DEAL_DOES_NOT_BREAK_EVEN_BEFORE_INSURANCE =
 
 /** Monthly cash flow below this (and ≥ 0) is labelled marginal rather than positive. */
 export const MARGINAL_MONTHLY_CASHFLOW = 100;
+/** All-in % within this many points of the selected ARV guideline is a thin buffer. */
+export const GUIDELINE_NEAR_POINTS = 5;
+/** All-in % at least this many points below the guideline can support a stronger-margin label. */
+export const GUIDELINE_COMFORT_POINTS = 10;
+/** Remaining rehab headroom below this share of the ARV-guideline rehab budget is thin. */
+export const HEADROOM_THIN_RATIO = 0.1;
 
 const SCENARIO_KEYS: DealScenarioKey[] = ["base", "conservative", "stress"];
 
@@ -304,6 +311,26 @@ export interface DealBreakObservation {
   severity: BreakSeverity;
 }
 
+export type MarginForErrorLabel =
+  | "Stronger margin"
+  | "Moderate margin"
+  | "Thin margin"
+  | "Negative underwrite";
+
+export interface MarginForErrorInput {
+  conservativeMonthlyCashflow: number;
+  stressMonthlyCashflow: number;
+  remainingRehabHeadroom: number | null;
+  currentTotalRehabBudget: number;
+  allInPctConservativeArv: number | null;
+  targetArvPercent: number;
+}
+
+export interface MarginForError {
+  label: MarginForErrorLabel;
+  explanation: string;
+}
+
 export interface DealDecisionResult {
   advertisedArv: number;
   conservativeArv: number;
@@ -316,6 +343,8 @@ export interface DealDecisionResult {
   breakEvens: DealBreakEvens;
   rehabHeadroom: RehabHeadroom;
   scenarios: Record<DealScenarioKey, DealScenarioResult>;
+  marginForError: MarginForError;
+  stressUsesProductDefaults: boolean;
   whatBreaks: DealBreakObservation[];
   assumptionChecks: AssumptionCheckItem[];
 }
@@ -337,6 +366,117 @@ function scenarioStatus(monthlyCashflow: number): ScenarioStatus {
   if (monthlyCashflow < 0) return "negative";
   if (monthlyCashflow < MARGINAL_MONTHLY_CASHFLOW) return "marginal";
   return "positive";
+}
+
+function round1(value: number): string {
+  return (Math.round(value * 10) / 10).toFixed(1);
+}
+
+export function stressMatchesProductDefaults(assumptions: ScenarioAssumptions): boolean {
+  const defaults = DEFAULT_SCENARIO_ASSUMPTIONS.stress;
+  return (
+    finite(assumptions.rentAdjustmentPercent) === defaults.rentAdjustmentPercent &&
+    money(assumptions.rehabOverrunPercent) === defaults.rehabOverrunPercent &&
+    finite(assumptions.arvAdjustmentPercent) === defaults.arvAdjustmentPercent &&
+    assumptions.vacancyPercent === null &&
+    assumptions.annualInsurance === null &&
+    assumptions.maintenancePercent === null &&
+    assumptions.capexPercent === null
+  );
+}
+
+/**
+ * Descriptive margin-for-error label. Not a 0–100 score or an investment recommendation.
+ * Severity order: negative underwrite → thin → stronger → moderate.
+ */
+export function classifyMarginForError(input: MarginForErrorInput): MarginForError {
+  const cashflow = finite(input.conservativeMonthlyCashflow);
+  const stress = finite(input.stressMonthlyCashflow);
+  const target = money(input.targetArvPercent);
+  const allInPct =
+    input.allInPctConservativeArv !== null && Number.isFinite(input.allInPctConservativeArv)
+      ? input.allInPctConservativeArv
+      : null;
+  const headroom = input.remainingRehabHeadroom;
+  const rehab = money(input.currentTotalRehabBudget);
+
+  if (cashflow < 0) {
+    return {
+      label: "Negative underwrite",
+      explanation: "Conservative cash flow is negative after operating expenses and P&I.",
+    };
+  }
+
+  if (headroom !== null && Number.isFinite(headroom) && headroom < 0) {
+    return {
+      label: "Negative underwrite",
+      explanation: "Current rehab budget exceeds this ARV-guideline threshold.",
+    };
+  }
+
+  if (allInPct !== null && allInPct > target) {
+    return {
+      label: "Negative underwrite",
+      explanation: `All-in cost is ${round1(allInPct)}% of conservative ARV, above the ${round1(target)}% guideline.`,
+    };
+  }
+
+  if (stress < 0) {
+    return {
+      label: "Thin margin",
+      explanation: "Conservative cash flow is non-negative, but the current stress case turns cash flow negative.",
+    };
+  }
+
+  if (cashflow < MARGINAL_MONTHLY_CASHFLOW) {
+    return {
+      label: "Thin margin",
+      explanation: "Conservative cash flow is positive but below $100 per month, leaving little room for error.",
+    };
+  }
+
+  if (allInPct !== null && allInPct > target - GUIDELINE_NEAR_POINTS) {
+    return {
+      label: "Thin margin",
+      explanation: `All-in is ${round1(allInPct)}% of conservative ARV, close to the ${round1(target)}% guideline.`,
+    };
+  }
+
+  const guidelineRehabBudget = headroom !== null && Number.isFinite(headroom) ? headroom + rehab : null;
+  if (
+    headroom !== null &&
+    Number.isFinite(headroom) &&
+    headroom >= 0 &&
+    guidelineRehabBudget !== null &&
+    guidelineRehabBudget > 0 &&
+    headroom < HEADROOM_THIN_RATIO * guidelineRehabBudget
+  ) {
+    return {
+      label: "Thin margin",
+      explanation: "Remaining rehab headroom versus the ARV guideline is thin.",
+    };
+  }
+
+  if (cashflow >= MARGINAL_MONTHLY_CASHFLOW && stress >= 0 && allInPct !== null && allInPct <= target - GUIDELINE_COMFORT_POINTS) {
+    return {
+      label: "Stronger margin",
+      explanation:
+        "Conservative and stress cash flow stay non-negative, and all-in sits comfortably below the selected ARV guideline.",
+    };
+  }
+
+  if (allInPct === null) {
+    return {
+      label: "Moderate margin",
+      explanation: "Cash flow looks workable, but add a conservative ARV to judge all-in percent and rehab headroom.",
+    };
+  }
+
+  return {
+    label: "Moderate margin",
+    explanation:
+      "Conservative cash flow is positive and the current stress case stays non-negative, but the buffer versus the ARV guideline is not large.",
+  };
 }
 
 function nullableDscr(noi: number, annualDebtService: number): number | null {
@@ -850,6 +990,15 @@ export function evaluateDealDecision(raw: AnalysisInput): DealDecisionResult {
     breakEvens,
     rehabHeadroom,
     scenarios,
+    marginForError: classifyMarginForError({
+      conservativeMonthlyCashflow: conservative.monthlyCashflow,
+      stressMonthlyCashflow: scenarios.stress.monthlyCashflow,
+      remainingRehabHeadroom: rehabHeadroom.remainingRehabHeadroom,
+      currentTotalRehabBudget: rehabHeadroom.currentTotalRehabBudget,
+      allInPctConservativeArv: costs.allInPctConservativeArv,
+      targetArvPercent: money(input.decision.targetArvPercent),
+    }),
+    stressUsesProductDefaults: stressMatchesProductDefaults(input.decision.scenarios.stress),
     whatBreaks: [],
     assumptionChecks: assumptionChecks(input),
   };
