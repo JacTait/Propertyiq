@@ -87,6 +87,18 @@ export interface Property {
   condition: PropertyCondition;
 }
 
+/** Identity fields shared across Standard Analysis, Max Offer and Deal Resilience. */
+export interface PropertyIdentity {
+  name: string;
+  propertyType: PropertyType;
+  bedrooms: number;
+  bathrooms: number;
+  country: CountryCode;
+  region: string;
+  zipCode: string;
+  strategy: InvestmentStrategy;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Financing                                                          */
 /* ------------------------------------------------------------------ */
@@ -500,6 +512,10 @@ export interface MaxOfferPropertyInputs {
   closingCosts: number;
   holdingCosts: number;
   askingPrice: number;
+  propertyType: PropertyType;
+  bedrooms: number;
+  bathrooms: number;
+  zipCode: string;
 }
 
 export interface MaxOfferFinancingInputs {
@@ -536,6 +552,8 @@ export interface MaxOfferBrrrrInputs {
 
 export interface MaxOfferInputs {
   property: MaxOfferPropertyInputs;
+  location: Pick<LocationInputs, "country" | "region">;
+  strategy: InvestmentStrategy;
   financing: MaxOfferFinancingInputs;
   expenses: MaxOfferExpenseInputs;
   targets: MaxOfferTargetInputs;
@@ -768,6 +786,9 @@ export interface RefinanceValidation {
   maximumRefinanceAmount: number;
   loanAmount: number;
   monthlyPayment: number;
+  totalProjectCost: number;
+  totalCapitalInvested: number;
+  originalLoanPayoff: number;
   cashPulledOut: number;
   cashLeftInDeal: number;
   postRefiDscr: number;

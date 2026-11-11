@@ -18,6 +18,7 @@ export const STORAGE_KEYS = {
   compare: "propertyiq:compare:v1",
   maxOfferDraft: "propertyiq:max-offer-draft:v1",
   buyBoxes: "propertyiq:buy-boxes:v1",
+  propertyIdentity: "propertyiq:property-identity:v1",
 } as const;
 
 export const COUNTRIES: Country[] = [

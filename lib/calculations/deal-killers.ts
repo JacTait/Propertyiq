@@ -10,6 +10,7 @@ import type {
 } from "@/lib/types";
 import { analyzeProperty } from "@/lib/calculations/analyze";
 import { applyActiveRent } from "@/lib/calculations/rent";
+import { formatDscr } from "@/lib/calculations/ratios";
 
 interface KillerArgs {
   input: AnalysisInput;
@@ -84,12 +85,13 @@ export function collectDealKillers(args: KillerArgs): DealKillerWarning[] {
     });
   }
 
-  if (stress && stress.dscr < (input.brrrr.refinanceDscrMin || 1.25)) {
+  const dscrFloor = input.brrrr.refinanceDscrMin || 1.25;
+  if (stress && Number.isFinite(stress.dscr) && stress.dscr < dscrFloor) {
     warnings.push({
       key: "stress-dscr",
       severity: stress.dscr < 1 ? "critical" : "warning",
       title: "DSCR below target under stress conditions",
-      detail: `Stress-case DSCR is ${stress.dscr.toFixed(2)}x versus a ${ (input.brrrr.refinanceDscrMin || 1.25).toFixed(2)}x target.`,
+      detail: `Stress-case DSCR is ${formatDscr(stress.dscr)} versus a ${formatDscr(dscrFloor)} target.`,
     });
   }
 

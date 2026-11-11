@@ -3,6 +3,8 @@
 import { forwardRef } from "react";
 import type { AnalysisInput, AnalysisResults, ExportPreferences, InvestmentSummary as InvestmentSummaryType } from "@/lib/types";
 import { APP_NAME } from "@/lib/constants";
+import { countryName, formatPropertySpecs, strategyLabel } from "@/lib/utils/labels";
+import { getRegionName } from "@/data/market-data";
 import { useFormatters } from "@/hooks/useSettings";
 import { useProjectionAnalysis } from "@/hooks/useProjectionAnalysis";
 import { PropertySummaryCard } from "@/components/analysis/property-summary-card";
@@ -45,6 +47,10 @@ export const ReportDocument = forwardRef<HTMLDivElement, ReportDocumentProps>(fu
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{APP_NAME} Investment Report</p>
           <h1 className="mt-1 text-3xl font-bold">{input.property.name}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {strategyLabel(input.strategy, true)} · {formatPropertySpecs(input.property)} ·{" "}
+            {getRegionName(input.location.country, input.location.region)}, {countryName(input.location.country)}
+          </p>
         </div>
         <div className="text-right text-xs text-muted-foreground">
           <p>Generated {fmt.dateTime(results.generatedAt)}</p>

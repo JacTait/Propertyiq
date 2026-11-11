@@ -1,9 +1,15 @@
 import type { AnalysisInput, AnalysisResults, RefinanceValidation } from "@/lib/types";
 import { DEFAULT_REFINANCE_DSCR } from "@/lib/constants";
 import { calculateMonthlyPayment } from "@/lib/calculations/mortgage";
-import { calculateDscr, clamp, safeDivide } from "@/lib/calculations/ratios";
+import { calculateDscr, clamp, formatDscr, safeDivide } from "@/lib/calculations/ratios";
 import { resolveRent } from "@/lib/calculations/rent";
 import { calculateIncome, calculateOperatingExpenses } from "@/lib/calculations/cashflow";
+import {
+  acquisitionClosingCosts,
+  computeBrrrrCapital,
+  holdingCostsFromFlip,
+  resolveAcquisitionLoan,
+} from "@/lib/calculations/brrrr-capital";
 
 export function resolveArv(input: AnalysisInput): number {
   if (input.brrrr.afterRepairValue > 0) return input.brrrr.afterRepairValue;
@@ -29,40 +35,46 @@ export function validateRefinance(
   const loanAmount = maximumRefinanceAmount;
   const monthlyPayment = calculateMonthlyPayment(loanAmount, rate, termYears);
 
-  const acquisitionCosts =
-    input.financing.closingCosts +
-    input.financing.legalFees +
-    input.financing.inspectionCosts +
-    input.financing.loanFees;
   const rehab = input.strategy === "fix-flip" ? input.flip.renovationBudget : input.brrrr.rehabCost;
-  const totalProjectCost = input.financing.purchasePrice + acquisitionCosts + rehab;
-  const initialLoan = results.mortgage.loanAmount;
-  const initialCashInvested = Math.max(0, totalProjectCost - initialLoan);
-  const cashPulledOut = Math.max(0, loanAmount - initialLoan);
-  const cashLeftInDeal = Math.max(0, initialCashInvested - cashPulledOut);
+  const capital = computeBrrrrCapital({
+    purchasePrice: input.financing.purchasePrice,
+    rehabCost: rehab,
+    closingCosts: acquisitionClosingCosts(input.financing),
+    holdingCosts: holdingCostsFromFlip(input.flip),
+    originalLoan: resolveAcquisitionLoan(
+      input.financing.purchasePrice,
+      input.financing.depositPercent,
+      results.mortgage?.loanAmount,
+    ),
+    refinanceProceeds: loanAmount,
+  });
 
   const rent = resolveRent(input).active * rentFactor;
   const income = calculateIncome(rent, input.expenses.vacancyPercent);
   const opex = calculateOperatingExpenses(input.expenses, income.effectiveGrossIncome, income.annualIncome);
   const noi = income.effectiveGrossIncome - opex.annual;
-  const postRefiDscr = calculateDscr(noi, monthlyPayment * 12);
-  const postRefiMonthlyCashflow = (noi - monthlyPayment * 12) / 12;
+  const annualDebtService = monthlyPayment * 12;
+  const postRefiDscr = calculateDscr(noi, annualDebtService);
+  const postRefiMonthlyCashflow = (noi - annualDebtService) / 12;
 
-  const dscrOk = postRefiDscr >= dscrRequirement;
+  const dscrOk = Number.isFinite(postRefiDscr) ? postRefiDscr >= dscrRequirement : loanAmount <= 0;
   const loanOk = loanAmount > 0 && arv > 0;
   const cashflowOk = postRefiMonthlyCashflow >= 0;
-  const recovery = safeDivide(cashPulledOut, initialCashInvested);
-  const recoveryWeak = initialCashInvested > 0 && recovery < 0.5;
-  const viable = loanOk && dscrOk && cashflowOk && !recoveryWeak;
+  const recovery = safeDivide(Math.max(0, capital.cashPulledOut), capital.totalCapitalInvested);
+  const recoveryWeak = capital.totalCapitalInvested > 0 && recovery < 0.5;
+  const viable = loanOk && dscrOk && cashflowOk && !recoveryWeak && capital.cashPulledOut >= 0;
 
   let headline: string;
   let detail: string;
   if (!loanOk) {
     headline = "Refinance Risk";
     detail = "ARV or refinance LTV is too low to size a refinance loan.";
+  } else if (capital.cashPulledOut < 0) {
+    headline = "Refinance Risk";
+    detail = `The refinance loan of ${Math.round(loanAmount).toLocaleString()} does not cover the ${Math.round(capital.originalLoanPayoff).toLocaleString()} acquisition payoff.`;
   } else if (!dscrOk) {
     headline = "Refinance Risk";
-    detail = `Post-refinance DSCR of ${postRefiDscr.toFixed(2)}x is below the ${dscrRequirement.toFixed(2)}x requirement.`;
+    detail = `Post-refinance DSCR of ${formatDscr(postRefiDscr)} is below the ${formatDscr(dscrRequirement)} requirement.`;
   } else if (!cashflowOk) {
     headline = "Refinance Risk";
     detail = "The refinance payment would push the property into negative cashflow.";
@@ -72,9 +84,9 @@ export function validateRefinance(
   } else {
     headline = "Refinance Appears Viable";
     detail =
-      cashLeftInDeal <= 0
+      capital.cashLeftInDeal <= 0
         ? "The refinance recycles all invested cash while covering debt service."
-        : `The refinance covers debt service at ${postRefiDscr.toFixed(2)}x DSCR with ${Math.round(recovery * 100)}% cash recovered.`;
+        : `The refinance covers debt service at ${formatDscr(postRefiDscr)} DSCR with ${Math.round(recovery * 100)}% cash recovered.`;
   }
 
   return {
@@ -86,8 +98,11 @@ export function validateRefinance(
     maximumRefinanceAmount,
     loanAmount,
     monthlyPayment,
-    cashPulledOut,
-    cashLeftInDeal,
+    totalProjectCost: capital.totalProjectCost,
+    totalCapitalInvested: capital.totalCapitalInvested,
+    originalLoanPayoff: capital.originalLoanPayoff,
+    cashPulledOut: capital.cashPulledOut,
+    cashLeftInDeal: capital.cashLeftInDeal,
     postRefiDscr,
     postRefiMonthlyCashflow,
     viable,

@@ -12,7 +12,9 @@ import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { dashboardPath, resiliencePath } from "@/lib/utils/routes";
 import { createDefaultAnalysis } from "@/data/default-analysis";
+import { identityFromAnalysis, seedUnsavedAnalysis } from "@/lib/property-identity";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { usePersistPropertyIdentity } from "@/hooks/usePropertyIdentity";
 import { useSettings } from "@/hooks/useSettings";
 import { usePropertyAnalysis, sanitizeInput } from "@/hooks/usePropertyAnalysis";
 import { useInvestmentSummary } from "@/hooks/useInvestmentSummary";
@@ -78,9 +80,15 @@ export function AnalysisDashboard() {
   if (fromPortfolio) {
     initial = { input: sanitizeInput(fromPortfolio.input), savedId: fromPortfolio.id };
   } else if (!propertyId && draft && draft.savedId === null) {
-    initial = { input: sanitizeInput(draft.input), savedId: draft.savedId };
+    initial = {
+      input: seedUnsavedAnalysis(sanitizeInput(draft.input), settings.defaultCountry),
+      savedId: null,
+    };
   } else {
-    initial = { input: createDefaultAnalysis(settings.defaultCountry), savedId: null };
+    initial = {
+      input: seedUnsavedAnalysis(createDefaultAnalysis(settings.defaultCountry), settings.defaultCountry),
+      savedId: null,
+    };
   }
 
   return (
@@ -126,6 +134,11 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
 
   const values = useWatch({ control: form.control });
   const input = useMemo(() => values as AnalysisInput, [values]);
+  const identity = useMemo(
+    () => (input?.property && input.location ? identityFromAnalysis(input) : null),
+    [input],
+  );
+  usePersistPropertyIdentity(identity, !requestedId);
   const results = usePropertyAnalysis(input);
   const summary = useInvestmentSummary(input, results);
   const underwriting = useUnderwriting(input, results, { includeSensitivity: false });

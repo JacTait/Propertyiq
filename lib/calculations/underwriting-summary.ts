@@ -7,6 +7,7 @@ import type {
   UnderwritingSummary,
 } from "@/lib/types";
 import { resolveRent } from "@/lib/calculations/rent";
+import { formatDscr } from "@/lib/calculations/ratios";
 
 interface SummaryArgs {
   input: AnalysisInput;
@@ -67,7 +68,7 @@ export function generateUnderwritingSummary(args: SummaryArgs): UnderwritingSumm
     `Underwriting rent (${rent.source}): $${money(rent.active)}/month`,
     `Expected cashflow: ${expectedCf >= 0 ? "+" : ""}$${money(expectedCf)}/month`,
     `Expected ROI: ${(expected?.roi ?? results.roi).toFixed(1)}%`,
-    `Stress-case DSCR: ${(stress?.dscr ?? results.dscr).toFixed(2)}x`,
+    `Stress-case DSCR: ${formatDscr(stress?.dscr ?? results.dscr)}`,
     `Refinance: ${refinance.viable ? "appears viable" : "at risk"}`,
   ];
 

@@ -54,7 +54,7 @@ export function createFormatters(
     },
     number: (value, decimals = 0) => numberFormatter(decimals).format(safe(value)),
     ratio: (value, decimals = 2) => {
-      if (value === Infinity || value >= 99) return "∞";
+      if (!Number.isFinite(value)) return "∞";
       return `${numberFormatter(decimals).format(safe(value))}x`;
     },
     date: (iso) =>

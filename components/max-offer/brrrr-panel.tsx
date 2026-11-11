@@ -37,11 +37,11 @@ export function BrrrrPanel({ form, results }: { form: UseFormReturn<MaxOfferForm
           </FieldGrid>
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-              <StatRow label="Maximum Refinance Amount" value={fmt.currency(b.refinanceAmount)} />
+              <StatRow label="Total Project Cost" value={fmt.currency(b.totalProjectCost)} />
+              <StatRow label="Total Capital Invested" value={fmt.currency(b.initialCashInvested)} />
+              <StatRow label="Refinance Proceeds" value={fmt.currency(b.refinanceAmount)} />
               <StatRow label="Cash Pulled Out" value={fmt.currency(b.cashPulledOut)} />
               <StatRow label="Cash Remaining In Deal" value={fmt.currency(b.cashLeftInDeal)} />
-              <StatRow label="Initial Cash Invested" value={fmt.currency(b.initialCashInvested)} />
-              <StatRow label="Total Project Cost" value={fmt.currency(b.totalProjectCost)} />
             </div>
             <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-4">
               <div>

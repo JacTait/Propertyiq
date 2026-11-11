@@ -72,7 +72,16 @@ export function analysisToMaxOfferInputs(input: AnalysisInput): MaxOfferInputs {
       closingCosts: input.financing.closingCosts + input.financing.legalFees + input.financing.inspectionCosts,
       holdingCosts: Math.max(0, input.flip.holdingCostsMonthly * 3),
       askingPrice: finitePrice(input.financing.askingPrice),
+      propertyType: input.property.propertyType,
+      bedrooms: input.property.bedrooms,
+      bathrooms: input.property.bathrooms,
+      zipCode: input.property.zipCode ?? "",
     },
+    location: {
+      country: input.location.country,
+      region: input.location.region,
+    },
+    strategy: input.strategy,
     financing: {
       interestRate: input.financing.interestRate,
       termYears: input.financing.termYears,

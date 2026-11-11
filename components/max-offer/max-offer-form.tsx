@@ -1,30 +1,53 @@
 "use client";
 
 import { FormProvider, useFormContext, useWatch, type UseFormReturn } from "react-hook-form";
-import { Landmark, Target, Wallet, Wrench } from "lucide-react";
+import { Home, Landmark, Target, Wallet, Wrench } from "lucide-react";
+import type { CountryCode } from "@/lib/types";
 import type { MaxOfferFormValues } from "@/lib/utils/schema";
 import { MAX_OFFER_CASHFLOW_PRESETS, MAX_OFFER_ROI_PRESETS } from "@/lib/constants";
 import { FieldGrid, SectionTitle } from "@/components/forms/fields";
+import { PropertyDetailsFields } from "@/components/forms/property-details-fields";
 import { useCurrencySymbol } from "@/components/forms/use-currency-symbol";
 import { useFormatters } from "@/hooks/useSettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MaxNumberField, MaxTextField } from "@/components/max-offer/form-fields";
+import { MaxNumberField } from "@/components/max-offer/form-fields";
 import { TargetSlider } from "@/components/max-offer/target-slider";
 
 interface MaxOfferFormProps {
   form: UseFormReturn<MaxOfferFormValues>;
+  onLocationChange?: (country: CountryCode, region: string) => void;
 }
 
-export function MaxOfferForm({ form }: MaxOfferFormProps) {
+export function MaxOfferForm({ form, onLocationChange }: MaxOfferFormProps) {
   return (
     <FormProvider {...form}>
       <div className="space-y-4">
+        <IdentitySection onLocationChange={onLocationChange} />
         <PropertySection />
         <FinancingSection />
         <ExpenseSection />
         <TargetsSection />
       </div>
     </FormProvider>
+  );
+}
+
+function IdentitySection({ onLocationChange }: { onLocationChange?: (country: CountryCode, region: string) => void }) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center gap-3 space-y-0">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
+          <Home className="size-4" />
+        </span>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 1</p>
+          <CardTitle>Property Details</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <PropertyDetailsFields onLocationChange={onLocationChange} />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -37,8 +60,8 @@ function PropertySection() {
           <Wrench className="size-4" />
         </span>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 1</p>
-          <CardTitle>Property</CardTitle>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 2</p>
+          <CardTitle>Deal Numbers</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -47,7 +70,6 @@ function PropertySection() {
           description="ARV, rent, rehab, expenses and targets set what you can pay. You do not need a purchase price. Add asking price only when you want to score a listing."
         />
         <FieldGrid>
-          <MaxTextField name="property.name" label="Property Name" className="sm:col-span-2" />
           <MaxNumberField name="property.arv" label="ARV (After Repair Value)" prefix={symbol} hint="Expected value after renovations are complete." />
           <MaxNumberField name="property.expectedMonthlyRent" label="Expected Monthly Rent" prefix={symbol} />
           <MaxNumberField name="property.rehabBudget" label="Rehab Budget" prefix={symbol} />
@@ -90,7 +112,7 @@ function FinancingSection() {
           <Landmark className="size-4" />
         </span>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 2</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 3</p>
           <CardTitle>Financing</CardTitle>
         </div>
       </CardHeader>
@@ -117,7 +139,7 @@ function ExpenseSection() {
           <Wallet className="size-4" />
         </span>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 3</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 4</p>
           <CardTitle>Operating Expenses</CardTitle>
         </div>
       </CardHeader>
@@ -152,7 +174,7 @@ function TargetsSection() {
           <Target className="size-4" />
         </span>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 4</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Section 5</p>
           <CardTitle>Investor Targets</CardTitle>
         </div>
       </CardHeader>

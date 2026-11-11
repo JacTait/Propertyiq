@@ -175,7 +175,16 @@ export const maxOfferSchema = z.object({
     closingCosts: money("Closing costs"),
     holdingCosts: money("Holding costs"),
     askingPrice: money("Asking price"),
+    propertyType: propertySchema.shape.propertyType,
+    bedrooms: count("Bedrooms", 50),
+    bathrooms: count("Bathrooms", 50),
+    zipCode: z.string().trim().max(16),
   }),
+  location: z.object({
+    country: z.enum(["US", "GB", "CA", "AU"]),
+    region: z.string().min(1, "Select a region"),
+  }),
+  strategy: strategySchema,
   financing: z.object({
     interestRate: percent("Interest rate", 30),
     termYears: z.number().min(1).max(40),

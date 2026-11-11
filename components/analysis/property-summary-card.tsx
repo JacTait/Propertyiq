@@ -36,9 +36,10 @@ export function PropertySummaryCard({ input }: { input: AnalysisInput }) {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           <Spec icon={BedDouble} label="Beds" value={String(property.bedrooms)} />
           <Spec icon={Bath} label="Baths" value={String(property.bathrooms)} />
+          <Spec icon={MapPin} label="ZIP" value={property.zipCode || "—"} />
           <Spec icon={Ruler} label="Sq Ft" value={fmt.number(property.squareFootage)} />
           <Spec icon={Trees} label="Lot" value={fmt.number(property.lotSize)} />
           <Spec icon={Calendar} label="Built" value={String(property.yearBuilt)} />

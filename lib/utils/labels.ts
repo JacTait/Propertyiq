@@ -2,6 +2,7 @@ import type {
   CountryCode,
   DealGrade,
   InvestmentStrategy,
+  Property,
   PropertyCondition,
   PropertyType,
   Recommendation,
@@ -28,6 +29,17 @@ export function countryName(code: CountryCode): string {
 
 export function regionLabel(code: CountryCode): string {
   return COUNTRIES.find((c) => c.code === code)?.regionLabel ?? "Region";
+}
+
+export function formatPropertySpecs(
+  property: Pick<Property, "propertyType" | "bedrooms" | "bathrooms" | "zipCode">,
+): string {
+  const parts = [
+    propertyTypeLabel(property.propertyType),
+    `${property.bedrooms} bd / ${property.bathrooms} ba`,
+  ];
+  if (property.zipCode) parts.push(property.zipCode);
+  return parts.join(" · ");
 }
 
 export type Tone = "success" | "warning" | "danger" | "primary" | "muted";

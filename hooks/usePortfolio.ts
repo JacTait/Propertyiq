@@ -196,7 +196,7 @@ export function usePortfolio() {
         country: analysisInput.location.country,
         region: analysisInput.location.region,
         regionName,
-        strategy: "brrrr",
+        strategy: maxOfferInput.strategy || analysisInput.strategy || "brrrr",
         input: { ...analysisInput, property: { ...analysisInput.property, name: name?.trim() || maxOfferInput.property.name } },
         snapshot,
         kind: "max-offer",

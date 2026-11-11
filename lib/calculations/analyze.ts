@@ -141,6 +141,7 @@ export function analyzeProperty(raw: AnalysisInput): AnalysisResults {
           brrrr: input.brrrr,
           expenses,
           initialLoanAmount: mortgage.loanAmount,
+          holdingCosts: input.flip.holdingCostsMonthly * input.flip.holdDurationMonths,
         })
       : null;
 
@@ -205,7 +206,7 @@ export function analyzeProperty(raw: AnalysisInput): AnalysisResults {
     netYield,
     capRate,
     cashOnCash,
-    dscr,
+    dscr: brrrr ? calculateDscr(noi, brrrr.newMonthlyPayment * 12) : dscr,
     breakEvenOccupancy,
     roi,
     projections,

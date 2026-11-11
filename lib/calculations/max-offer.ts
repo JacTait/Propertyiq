@@ -19,8 +19,10 @@ import {
   calculateDscr,
   calculateGrossYield,
   clamp,
+  formatDscr,
   safeDivide,
 } from "@/lib/calculations/ratios";
+import { computeBrrrrCapital } from "@/lib/calculations/brrrr-capital";
 
 const SEARCH_STEPS = 40;
 const PRICE_STEP = 50;
@@ -45,7 +47,32 @@ export function sanitizeMaxOffer(input: MaxOfferInputs): MaxOfferInputs {
     }
     return out as T;
   };
-  return clean(input);
+  const next = clean(input);
+  const country = next.location?.country === "GB" || next.location?.country === "CA" || next.location?.country === "AU" || next.location?.country === "US"
+    ? next.location.country
+    : "US";
+  const region =
+    typeof next.location?.region === "string" && next.location.region
+      ? next.location.region
+      : country === "US"
+        ? "FL"
+        : country === "GB"
+          ? "NW"
+          : country === "CA"
+            ? "AB"
+            : "QLD";
+  return {
+    ...next,
+    strategy: next.strategy || "brrrr",
+    location: { country, region },
+    property: {
+      ...next.property,
+      propertyType: next.property.propertyType || "single-family",
+      bedrooms: Number.isFinite(next.property.bedrooms) ? next.property.bedrooms : 3,
+      bathrooms: Number.isFinite(next.property.bathrooms) ? next.property.bathrooms : 2,
+      zipCode: typeof next.property.zipCode === "string" ? next.property.zipCode : "",
+    },
+  };
 }
 
 function depositPercent(input: MaxOfferInputs): number {
@@ -307,20 +334,25 @@ function buildCurve(input: MaxOfferInputs, maximumOffer: number): PriceMetricPoi
 }
 
 function buildBrrrr(input: MaxOfferInputs, purchasePrice: number, metrics: OfferDealMetrics): MaxOfferBrrrrResults {
-  const totalProjectCost =
-    purchasePrice + input.property.rehabBudget + input.property.closingCosts + input.property.holdingCosts + input.financing.loanFees;
-  const initialCashInvested = metrics.cashInvested;
   const refinanceAmount = input.property.arv * (input.brrrr.refinanceLtv / 100);
-  const cashPulledOut = Math.max(0, refinanceAmount - metrics.loanAmount);
-  const cashLeftInDeal = Math.max(0, initialCashInvested - cashPulledOut);
-  const cashRecoveryPercent = safeDivide(cashPulledOut, initialCashInvested) * 100;
+  const capital = computeBrrrrCapital({
+    purchasePrice,
+    rehabCost: input.property.rehabBudget,
+    closingCosts: input.property.closingCosts + input.financing.loanFees,
+    holdingCosts: input.property.holdingCosts,
+    originalLoan: metrics.loanAmount,
+    refinanceProceeds: refinanceAmount,
+  });
+  const cashPulledOut = capital.cashPulledOut;
+  const cashLeftInDeal = Math.max(0, capital.cashLeftInDeal);
+  const cashRecoveryPercent = safeDivide(Math.max(0, cashPulledOut), capital.totalCapitalInvested) * 100;
   const recoveryScore = clamp(cashRecoveryPercent / 100, 0, 1) * 70;
   const cashflowScore = clamp(metrics.monthlyCashflow / 400, 0, 1) * 30;
   const infiniteReturn = cashLeftInDeal <= 0 && metrics.monthlyCashflow > 0;
 
   return {
-    totalProjectCost,
-    initialCashInvested,
+    totalProjectCost: capital.totalProjectCost,
+    initialCashInvested: capital.totalCapitalInvested,
     refinanceAmount,
     cashPulledOut,
     cashLeftInDeal,
@@ -359,7 +391,7 @@ function buildSummary(
     bullets: [
       `${formatPlain(Math.abs(m.monthlyCashflow))}/month cashflow (${m.monthlyCashflow >= 0 ? "positive" : "negative"})`,
       `${m.roi.toFixed(1)}% ROI including year-one principal paydown`,
-      `${m.dscr.toFixed(2)}x DSCR`,
+      `${formatDscr(m.dscr)} DSCR`,
     ],
     closing: `A recommended target offer of ${formatPlain(rec)} would create additional protection against vacancy and maintenance risks.`,
     generatedAt,

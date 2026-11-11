@@ -54,11 +54,19 @@ export function annualiseRoi(roiPercent: number, months: number): number {
 
 /* ----------------------------- DSCR ---------------------------- */
 
-export const DSCR_CAP = 99;
-
 export function calculateDscr(noi: number, annualDebtService: number): number {
-  if (annualDebtService <= 0) return noi > 0 ? DSCR_CAP : 0;
-  return Math.min(DSCR_CAP, safeDivide(noi, annualDebtService));
+  if (!Number.isFinite(noi)) return 0;
+  if (!Number.isFinite(annualDebtService) || annualDebtService <= 0) {
+    return noi > 0 ? Infinity : 0;
+  }
+  return safeDivide(noi, annualDebtService);
+}
+
+/** User-facing DSCR. No-debt coverage is ∞, never a fake 99.00x. */
+export function formatDscr(value: number, decimals = 2): string {
+  if (!Number.isFinite(value)) return "∞";
+  if (value <= 0) return `${(0).toFixed(decimals)}x`;
+  return `${value.toFixed(decimals)}x`;
 }
 
 /* --------------------------- Cash needed ----------------------- */

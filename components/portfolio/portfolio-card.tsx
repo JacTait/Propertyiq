@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Calendar, ExternalLink, MapPin, Trash2 } from "lucide-react";
 import type { PortfolioProperty } from "@/lib/types";
-import { gradeTone, metricTone, strategyLabel } from "@/lib/utils/labels";
+import { formatPropertySpecs, gradeTone, metricTone, strategyLabel } from "@/lib/utils/labels";
 import { cn } from "@/lib/utils/cn";
 import { analysisOpenPath } from "@/lib/utils/routes";
 import { useFormatters } from "@/hooks/useSettings";
@@ -64,6 +64,10 @@ export function PortfolioCard({
             <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
               <MapPin className="size-3 shrink-0" />
               {property.regionName}
+              {property.input.property.zipCode ? ` · ${property.input.property.zipCode}` : ""}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {formatPropertySpecs(property.input.property)}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -93,11 +97,8 @@ export function PortfolioCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          {property.kind === "max-offer" ? (
-            <Badge variant="primary">Max Offer</Badge>
-          ) : (
-            <Badge variant="primary">{strategyLabel(property.strategy, true)}</Badge>
-          )}
+          {property.kind === "max-offer" && <Badge variant="primary">Max Offer</Badge>}
+          <Badge variant={property.kind === "max-offer" ? "muted" : "primary"}>{strategyLabel(property.strategy, true)}</Badge>
           <Badge variant={tone}>{s.recommendation}</Badge>
           {s.buyBoxStatus === "inside" && <Badge variant="success">Inside Buy Box</Badge>}
           {s.buyBoxStatus === "outside" && <Badge variant="danger">Outside Buy Box</Badge>}

@@ -6,14 +6,17 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
-import type { MaxOfferInputs } from "@/lib/types";
+import type { CountryCode, MaxOfferInputs } from "@/lib/types";
 import { maxOfferSchema, type MaxOfferFormValues } from "@/lib/utils/schema";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { maxOfferPath } from "@/lib/utils/routes";
 import { createDefaultMaxOffer, maxOfferToAnalysisInput } from "@/data/default-max-offer";
+import { getMarketProfile } from "@/data/market-data";
 import { sanitizeMaxOffer } from "@/lib/calculations/max-offer";
 import { pendingMargin } from "@/lib/calculations/margin-of-safety";
+import { identityFromMaxOffer, seedUnsavedMaxOffer } from "@/lib/property-identity";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { usePersistPropertyIdentity } from "@/hooks/usePropertyIdentity";
 import { useSettings } from "@/hooks/useSettings";
 import { useMaxOfferAnalysis } from "@/hooks/useMaxOfferAnalysis";
 import { usePropertyAnalysis } from "@/hooks/usePropertyAnalysis";
@@ -92,9 +95,12 @@ export function MaxOfferView() {
   if (savedInput) {
     initial = { input: savedInput, savedId: fromPortfolio.id };
   } else if (!propertyId && draft && draft.savedId === null) {
-    initial = draft;
+    initial = { input: seedUnsavedMaxOffer(sanitizeMaxOffer(draft.input), settings.defaultCountry), savedId: null };
   } else {
-    initial = { input: createDefaultMaxOffer(settings.defaultCountry), savedId: null };
+    initial = {
+      input: seedUnsavedMaxOffer(createDefaultMaxOffer(settings.defaultCountry), settings.defaultCountry),
+      savedId: null,
+    };
   }
 
   return (
@@ -140,6 +146,11 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
 
   const values = useWatch({ control: form.control });
   const input = useMemo(() => values as MaxOfferInputs, [values]);
+  const identity = useMemo(
+    () => (input?.property && input.location ? identityFromMaxOffer(sanitizeMaxOffer(input), settings.defaultCountry) : null),
+    [input, settings.defaultCountry],
+  );
+  usePersistPropertyIdentity(identity, !requestedId);
   const results = useMaxOfferAnalysis(input);
   const analysisInput = useMemo(
     () => (results ? maxOfferToAnalysisInput(sanitizeMaxOffer(input), results, settings.defaultCountry) : null),
@@ -194,6 +205,16 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
 
   const existing = savedId ? getById(savedId) : undefined;
 
+  const handleLocationChange = (country: CountryCode, region: string) => {
+    const profile = getMarketProfile(country, region);
+    if (!profile) return;
+    const arv = form.getValues("property.arv");
+    if (Number.isFinite(arv) && arv > 0) {
+      form.setValue("expenses.propertyTaxAnnual", Math.round(arv * (profile.propertyTaxRate / 100)), { shouldDirty: true });
+    }
+    form.setValue("expenses.insuranceAnnual", profile.insuranceAnnual, { shouldDirty: true });
+  };
+
   return (
     <>
       <PageHeader
@@ -219,7 +240,7 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
       <div className="grid gap-6 xl:grid-cols-12">
         <div className="min-w-0 xl:col-span-5 2xl:col-span-4">
           <div className="min-w-0 xl:sticky xl:top-20">
-            <MaxOfferForm form={form} />
+            <MaxOfferForm form={form} onLocationChange={handleLocationChange} />
           </div>
         </div>
         <div className="min-w-0 space-y-4 xl:col-span-7 2xl:col-span-8">

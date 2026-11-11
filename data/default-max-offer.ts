@@ -18,7 +18,16 @@ export function createDefaultMaxOffer(country: CountryCode = "US"): MaxOfferInpu
       closingCosts: Math.round(arv * 0.02),
       holdingCosts: 2500,
       askingPrice: 0,
+      propertyType: "single-family",
+      bedrooms: 3,
+      bathrooms: 2,
+      zipCode: "",
     },
+    location: {
+      country,
+      region: regionCode,
+    },
+    strategy: "brrrr",
     financing: {
       interestRate: 7,
       termYears: 30,
@@ -56,16 +65,28 @@ export function maxOfferToAnalysisInput(
   results: MaxOfferResults,
   country: CountryCode,
 ): AnalysisInput {
-  const base = createDefaultAnalysis(country);
+  const resolvedCountry = input.location?.country || country;
+  const resolvedRegion = input.location?.region;
+  const base = createDefaultAnalysis(resolvedCountry);
+  const profile = resolvedRegion ? getMarketProfile(resolvedCountry, resolvedRegion) : null;
   const price = results.recommendedOffer || results.maximumOffer || input.property.askingPrice || input.property.arv;
   return {
     ...base,
+    location: {
+      country: resolvedCountry,
+      region: resolvedRegion || base.location.region,
+      market: profile ? toMarketData(profile) : base.location.market,
+    },
     property: {
       ...base.property,
       name: input.property.name,
+      propertyType: input.property.propertyType || base.property.propertyType,
+      bedrooms: Number.isFinite(input.property.bedrooms) ? input.property.bedrooms : base.property.bedrooms,
+      bathrooms: Number.isFinite(input.property.bathrooms) ? input.property.bathrooms : base.property.bathrooms,
+      zipCode: typeof input.property.zipCode === "string" ? input.property.zipCode : "",
       condition: "needs-repair",
     },
-    strategy: "brrrr",
+    strategy: input.strategy || "brrrr",
     financing: {
       ...base.financing,
       purchasePrice: price,

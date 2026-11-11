@@ -52,10 +52,13 @@ export function subjectFromAnalysis(input: AnalysisInput): BuyBoxSubject {
 
 export function subjectFromMaxOffer(input: MaxOfferInputs, purchasePrice: number): BuyBoxSubject {
   return {
+    propertyType: input.property.propertyType,
+    bedrooms: input.property.bedrooms,
     purchasePrice,
     monthlyRent: input.property.expectedMonthlyRent,
     arv: input.property.arv,
-    strategy: "brrrr",
+    zipCode: input.property.zipCode,
+    strategy: input.strategy || "brrrr",
   };
 }
 

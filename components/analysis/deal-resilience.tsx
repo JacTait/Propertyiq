@@ -59,6 +59,7 @@ export function DealResiliencePanel({
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{scenario.label}</p>
                 <p className="mt-1 text-sm font-bold tabular">{fmt.percent(scenario.roi, 1)} ROI</p>
                 <p className="text-xs tabular text-muted-foreground">{fmt.signedCurrency(scenario.monthlyCashflow)}/mo</p>
+                <p className="text-xs tabular text-muted-foreground">{fmt.ratio(scenario.dscr)} DSCR</p>
               </div>
             ))}
           </div>

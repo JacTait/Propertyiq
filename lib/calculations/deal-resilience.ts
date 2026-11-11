@@ -57,7 +57,7 @@ function scenarioMetrics(input: AnalysisInput, key: ResilienceScenarioKey): Resi
     annualCashflow: results.annualCashflow,
     roi: Number.isFinite(results.roi) ? results.roi : 0,
     cashOnCash: results.cashOnCash,
-    dscr: results.dscr,
+    dscr: refinance.loanAmount > 0 ? refinance.postRefiDscr : results.dscr,
     capRate: results.capRate,
     refinanceViable: refinance.viable,
   };
@@ -94,16 +94,18 @@ function scoreRoi(stress: ResilienceScenarioMetrics, worst: ResilienceScenarioMe
 }
 
 function scoreDscr(stress: ResilienceScenarioMetrics, worst: ResilienceScenarioMetrics): { score: number; detail: string } {
+  const stressDscr = Number.isFinite(stress.dscr) ? stress.dscr : Infinity;
+  const worstDscr = Number.isFinite(worst.dscr) ? worst.dscr : Infinity;
   let score = 0;
-  if (stress.dscr >= 1.25) score += 55;
-  else if (stress.dscr >= 1) score += 38;
-  else if (stress.dscr >= 0.85) score += 16;
-  if (worst.dscr >= 1) score += 45;
-  else if (worst.dscr >= 0.85) score += 18;
+  if (stressDscr >= 1.25) score += 55;
+  else if (stressDscr >= 1) score += 38;
+  else if (stressDscr >= 0.85) score += 16;
+  if (worstDscr >= 1) score += 45;
+  else if (worstDscr >= 0.85) score += 18;
   const detail =
-    stress.dscr >= 1.25
+    stressDscr >= 1.25
       ? "DSCR stays above 1.25x under stress."
-      : stress.dscr >= 1
+      : stressDscr >= 1
         ? "DSCR covers debt under stress but sits below 1.25x."
         : "DSCR drops below 1.0x under stress conditions.";
   return { score: clamp(score, 0, 100), detail };

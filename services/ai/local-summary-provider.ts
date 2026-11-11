@@ -74,7 +74,7 @@ export function buildLocalSummary(ctx: SummaryContext): InvestmentSummary {
       `Annual debt service of ${fc(r.annualDebtService)} leaves ${fc(r.annualCashflow)} of annual cashflow, or ${fc(
         r.monthlyCashflow,
       )} per month. The debt service coverage ratio is ${
-        r.dscr >= 99 ? "not applicable (no debt)" : `${r.dscr.toFixed(2)}x`
+        Number.isFinite(r.dscr) ? `${r.dscr.toFixed(2)}x` : "not applicable (no debt)"
       }, and the property breaks even at ${fp(r.breakEvenOccupancy, 0)} occupancy.`,
       cfTone === "positive"
         ? "Cashflow is comfortably positive with a meaningful buffer against vacancy, rate increases or unexpected repairs."
@@ -85,8 +85,8 @@ export function buildLocalSummary(ctx: SummaryContext): InvestmentSummary {
   };
   if (r.monthlyCashflow >= 300) strengths.push(`Positive cashflow of ${fc(r.monthlyCashflow)}/month`);
   if (r.monthlyCashflow < 0) weaknesses.push(`Negative monthly cashflow of ${fc(r.monthlyCashflow)}`);
-  if (r.dscr >= 1.25 && r.dscr < 99) strengths.push(`Lender-friendly DSCR of ${r.dscr.toFixed(2)}x`);
-  if (r.dscr < 1) weaknesses.push(`DSCR below 1.0x (${r.dscr.toFixed(2)}x)`);
+  if (Number.isFinite(r.dscr) && r.dscr >= 1.25) strengths.push(`Lender-friendly DSCR of ${r.dscr.toFixed(2)}x`);
+  if (Number.isFinite(r.dscr) && r.dscr < 1) weaknesses.push(`DSCR below 1.0x (${r.dscr.toFixed(2)}x)`);
 
   /* ---------------- ROI Assessment ---------------- */
   const roiParagraphs: string[] = [];
@@ -145,7 +145,7 @@ export function buildLocalSummary(ctx: SummaryContext): InvestmentSummary {
 
   /* ---------------- Risk Assessment ---------------- */
   const risks: string[] = [];
-  if (r.dscr < 1.2 && r.dscr < 99) risks.push("tight debt coverage");
+  if (Number.isFinite(r.dscr) && r.dscr < 1.2) risks.push("tight debt coverage");
   if (r.breakEvenOccupancy > 85) risks.push(`a high ${fp(r.breakEvenOccupancy, 0)} break-even occupancy`);
   if (financing.depositPercent < 20) risks.push("high leverage");
   if (property.condition === "needs-repair" || property.condition === "full-renovation")

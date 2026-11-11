@@ -7,12 +7,15 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
-import type { AnalysisInput, RentSource } from "@/lib/types";
+import type { AnalysisInput, CountryCode, RentSource } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { dashboardPath, resiliencePath } from "@/lib/utils/routes";
 import { createDefaultAnalysis } from "@/data/default-analysis";
+import { getMarketProfile, toMarketData } from "@/data/market-data";
+import { identityFromAnalysis, seedUnsavedAnalysis } from "@/lib/property-identity";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { usePersistPropertyIdentity } from "@/hooks/usePropertyIdentity";
 import { useSettings } from "@/hooks/useSettings";
 import { sanitizeInput, usePropertyAnalysis } from "@/hooks/usePropertyAnalysis";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
@@ -21,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import { FieldGrid, NumberField, SectionTitle } from "@/components/forms/fields";
+import { PropertyDetailsFields } from "@/components/forms/property-details-fields";
 import { useCurrencySymbol } from "@/components/forms/use-currency-symbol";
 import { BuyBoxStatusCard } from "@/components/analysis/buy-box-status";
 import { RentSourceToggle } from "@/components/analysis/rent-source-toggle";
@@ -73,9 +77,16 @@ export function ResilienceView() {
   if (fromPortfolio) {
     initial = { input: sanitizeInput(fromPortfolio.input), savedId: fromPortfolio.id };
   } else if (!propertyId && draft) {
-    initial = { input: sanitizeInput(draft.input), savedId: draft.savedId };
+    const clean = sanitizeInput(draft.input);
+    initial = {
+      input: draft.savedId === null ? seedUnsavedAnalysis(clean, settings.defaultCountry) : clean,
+      savedId: draft.savedId,
+    };
   } else {
-    initial = { input: createDefaultAnalysis(settings.defaultCountry), savedId: null };
+    initial = {
+      input: seedUnsavedAnalysis(createDefaultAnalysis(settings.defaultCountry), settings.defaultCountry),
+      savedId: null,
+    };
   }
 
   return (
@@ -119,8 +130,25 @@ function ResilienceSession({
 
   const values = useWatch({ control: form.control });
   const input = useMemo(() => values as AnalysisInput, [values]);
+  const identity = useMemo(
+    () => (input?.property && input.location ? identityFromAnalysis(input) : null),
+    [input],
+  );
+  usePersistPropertyIdentity(identity, !requestedId && initial.savedId === null);
   const results = usePropertyAnalysis(input);
   const underwriting = useUnderwriting(input, results, { includeSensitivity: true });
+
+  const handleLocationChange = (country: CountryCode, region: string) => {
+    const profile = getMarketProfile(country, region);
+    if (!profile) return;
+    const data = toMarketData(profile);
+    form.setValue("location.market", data, { shouldDirty: true, shouldValidate: true });
+    const price = form.getValues("financing.purchasePrice");
+    if (Number.isFinite(price) && price > 0) {
+      form.setValue("expenses.propertyTaxAnnual", Math.round(price * (data.propertyTaxRate / 100)), { shouldDirty: true });
+    }
+    form.setValue("expenses.insuranceAnnual", data.insuranceAnnual, { shouldDirty: true });
+  };
 
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -154,9 +182,12 @@ function ResilienceSession({
         <div className="grid gap-4 xl:grid-cols-12">
           <div className="space-y-4 xl:col-span-4">
             <div className="rounded-2xl border border-border bg-card p-5">
+              <PropertyDetailsFields onLocationChange={handleLocationChange} />
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-5">
               <SectionTitle
-                title={input.property.name || "Untitled property"}
-                description="Assumptions shared with Standard Analysis. Changes save to the same draft."
+                title="Deal assumptions"
+                description="Shared with Standard Analysis. Changes save to the same draft."
               />
               <FieldGrid>
                 <NumberField

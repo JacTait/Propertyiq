@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import type { PortfolioProperty } from "@/lib/types";
 import { MAX_COMPARE, STORAGE_KEYS } from "@/lib/constants";
 import { dashboardPath } from "@/lib/utils/routes";
-import { gradeTone, strategyLabel } from "@/lib/utils/labels";
+import { formatPropertySpecs, gradeTone, strategyLabel } from "@/lib/utils/labels";
 import { cn } from "@/lib/utils/cn";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -112,7 +112,10 @@ export function CompareView() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">{p.name}</p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {p.regionName} · {strategyLabel(p.strategy, true)} · {fmt.currency(p.snapshot.purchasePrice, { compact: true })}
+                          {formatPropertySpecs(p.input.property)} · {p.regionName} · {strategyLabel(p.strategy, true)}
+                        </p>
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {fmt.currency(p.snapshot.purchasePrice, { compact: true })}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">

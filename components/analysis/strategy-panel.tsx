@@ -106,8 +106,8 @@ export function StrategyPanel({ results }: { results: AnalysisResults }) {
           <div className="grid gap-x-8 sm:grid-cols-2">
             <div>
               <StatRow label="Total Project Cost" value={fmt.currency(b.totalProjectCost)} />
-              <StatRow label="Initial Cash Invested" value={fmt.currency(b.initialCashInvested)} />
-              <StatRow label="Refinance Amount" value={fmt.currency(b.refinanceAmount)} />
+              <StatRow label="Total Capital Invested" value={fmt.currency(b.initialCashInvested)} />
+              <StatRow label="Refinance Proceeds" value={fmt.currency(b.refinanceAmount)} />
               <StatRow label="Cash Pulled Out" value={fmt.currency(b.cashPulledOut)} />
               <StatRow label="Cash Left In Deal" value={fmt.currency(b.cashLeftInDeal)} emphasis />
             </div>

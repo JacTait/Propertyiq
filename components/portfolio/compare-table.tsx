@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Crown, Trophy } from "lucide-react";
 import type { PortfolioProperty } from "@/lib/types";
-import { gradeTone, strategyLabel } from "@/lib/utils/labels";
+import { formatPropertySpecs, gradeTone, strategyLabel } from "@/lib/utils/labels";
 import { cn } from "@/lib/utils/cn";
 import { analysisOpenPath } from "@/lib/utils/routes";
 import { useFormatters } from "@/hooks/useSettings";
@@ -80,6 +80,9 @@ export function CompareTable({ properties }: { properties: PortfolioProperty[] }
               Highest deal score ({best.snapshot.dealScore}/100) · {best.snapshot.recommendation} · wins {wins.get(best.id) ?? 0} of{" "}
               {ROWS.length} metrics
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatPropertySpecs(best.input.property)} · {best.regionName} · {strategyLabel(best.strategy, true)}
+            </p>
           </div>
           <Badge variant={gradeTone(best.snapshot.grade)} className="px-3 py-1 text-sm">
             {strategyLabel(best.strategy, true)} · {best.regionName}
@@ -106,6 +109,9 @@ export function CompareTable({ properties }: { properties: PortfolioProperty[] }
                           <Link href={analysisOpenPath(p)} className="hover:text-primary hover:underline">
                             {p.name}
                           </Link>
+                        </span>
+                        <span className="text-[11px] font-normal text-muted-foreground">
+                          {formatPropertySpecs(p.input.property)}
                         </span>
                         <span className="text-[11px] font-normal text-muted-foreground">
                           {p.regionName} · {strategyLabel(p.strategy, true)}

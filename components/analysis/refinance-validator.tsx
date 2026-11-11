@@ -41,16 +41,22 @@ export function RefinanceValidator({ validation, children }: { validation: Refin
             <StatRow label="Refinance LTV" value={fmt.percent(validation.refinanceLtv, 0)} />
             <StatRow label="Interest Rate" value={fmt.percent(validation.interestRate, 2)} />
             <StatRow label="DSCR Requirement" value={fmt.ratio(validation.dscrRequirement)} />
-            <StatRow label="Maximum Refinance Amount" value={fmt.currency(validation.maximumRefinanceAmount)} emphasis />
+            <StatRow label="Total Project Cost" value={fmt.currency(validation.totalProjectCost)} />
+            <StatRow label="Total Capital Invested" value={fmt.currency(validation.totalCapitalInvested)} />
           </div>
           <div>
-            <StatRow label="Loan Amount" value={fmt.currency(validation.loanAmount)} />
+            <StatRow label="Refinance Proceeds" value={fmt.currency(validation.loanAmount)} />
+            <StatRow label="Acquisition Loan Payoff" value={fmt.currency(validation.originalLoanPayoff)} />
             <StatRow label="Monthly Payment" value={`${fmt.currency(validation.monthlyPayment)}/mo`} />
             <StatRow label="Estimated Cash Pulled Out" value={fmt.currency(validation.cashPulledOut)} />
-            <StatRow label="Estimated Cash Left In Deal" value={fmt.currency(validation.cashLeftInDeal)} />
+            <StatRow label="Estimated Cash Left In Deal" value={fmt.currency(Math.max(0, validation.cashLeftInDeal))} />
             <StatRow label="Post-Refi DSCR" value={fmt.ratio(validation.postRefiDscr)} emphasis />
           </div>
         </div>
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Cash pulled out is refinance proceeds minus the acquisition loan payoff. Cash left in the deal is
+          purchase + rehab + closing + holding minus refinance proceeds.
+        </p>
       </CardContent>
     </Card>
   );
