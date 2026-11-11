@@ -103,6 +103,11 @@ export interface PropertyIdentity {
 /*  Financing                                                          */
 /* ------------------------------------------------------------------ */
 
+export type InsuranceSource = "quote" | "estimate" | "previous";
+export type RentEntryMode = "total" | "units";
+/** Historical and current: closingCosts is exclusive of legal, inspection and loan fees. */
+export type AcquisitionCostMode = "itemised";
+
 export interface FinancingInputs {
   purchasePrice: number;
   /** Seller asking price. 0 means not provided — never inferred from defaults. */
@@ -114,6 +119,8 @@ export interface FinancingInputs {
   legalFees: number;
   inspectionCosts: number;
   loanFees: number;
+  /** Extra acquisition line. Defaults to 0 so legacy all-in is unchanged. */
+  otherAcquisitionCosts: number;
 }
 
 export interface AmortizationEntry {
@@ -148,13 +155,23 @@ export interface Mortgage {
 /*  Income & expenses                                                  */
 /* ------------------------------------------------------------------ */
 
-export interface IncomeInputs {
-  /** Listing / advertised monthly rent. */
+export interface RentUnit {
+  id: string;
+  label: string;
   monthlyRent: number;
-  /** Rent supported by comps or confirmation. Used for analysis by default. */
+}
+
+export interface IncomeInputs {
+  /** Listing / advertised / projected monthly rent. */
+  monthlyRent: number;
+  /** Rent supported by comps or confirmation. */
   verifiedRent: number;
-  /** Haircut rent used as a conservative underwrite. */
+  /** Haircut rent used as the conservative underwrite. */
   conservativeRent: number;
+  /** In-place / current gross monthly rent. Separate from advertised and conservative. */
+  currentMonthlyRent: number;
+  rentEntryMode: RentEntryMode;
+  units: RentUnit[];
   rentSource: RentSource;
   otherMonthlyIncome: number;
   rentGrowthRate: number;
@@ -168,10 +185,17 @@ export interface IncomeInputs {
 export interface ExpenseInputs {
   propertyTaxAnnual: number;
   insuranceAnnual: number;
+  insuranceSource: InsuranceSource;
   hoaMonthly: number;
   managementPercent: number;
   vacancyPercent: number;
   maintenancePercent: number;
+  capexPercent: number;
+  waterMonthly: number;
+  sewerMonthly: number;
+  trashMonthly: number;
+  sharedUtilitiesMonthly: number;
+  /** Legacy combined utilities. Kept after migration so existing opex is unchanged. */
   utilitiesMonthly: number;
   otherMonthly: number;
   expenseGrowthRate: number;
@@ -197,6 +221,42 @@ export interface BrrrrInputs {
   refinanceDscrMin: number;
 }
 
+export interface GuidelineAdditionalCosts {
+  closingCosts: boolean;
+  legalFees: boolean;
+  inspectionCosts: boolean;
+  loanFees: boolean;
+  otherAcquisitionCosts: boolean;
+  holdingCosts: boolean;
+}
+
+/**
+ * Scenario pack. `null` on vacancy / insurance / maintenance / capex inherits the main assumption.
+ * Adjustment percents are labelled changes vs the main case (0 = no change).
+ */
+export interface ScenarioAssumptions {
+  rentAdjustmentPercent: number;
+  vacancyPercent: number | null;
+  annualInsurance: number | null;
+  maintenancePercent: number | null;
+  capexPercent: number | null;
+  rehabOverrunPercent: number;
+  arvAdjustmentPercent: number;
+}
+
+export type DealScenarioKey = "base" | "conservative" | "stress";
+
+export interface DealDecisionInputs {
+  advertisedArv: number;
+  conservativeArv: number;
+  rehabContingencyPercent: number;
+  targetArvPercent: number;
+  includeAdditionalCostsInGuideline: boolean;
+  guidelineAdditionalCosts: GuidelineAdditionalCosts;
+  acquisitionCostMode: AcquisitionCostMode;
+  scenarios: Record<DealScenarioKey, ScenarioAssumptions>;
+}
+
 export interface AnalysisInput {
   location: LocationInputs;
   property: Property;
@@ -206,6 +266,7 @@ export interface AnalysisInput {
   expenses: ExpenseInputs;
   flip: FlipInputs;
   brrrr: BrrrrInputs;
+  decision: DealDecisionInputs;
 }
 
 /* ------------------------------------------------------------------ */
@@ -379,6 +440,10 @@ export interface PortfolioSnapshot {
   marginOfSafetyPercent?: number;
   refinanceStatus?: RefinanceStatus;
   buyBoxStatus?: BuyBoxStatus;
+  allInCost?: number;
+  conservativeMonthlyCashflow?: number;
+  stressMonthlyCashflow?: number;
+  guidelineMaxOffer?: number;
   dealSurvivalScore?: number;
   primaryRisk?: string;
   worstCaseCashflow?: number;

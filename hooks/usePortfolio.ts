@@ -60,7 +60,7 @@ function ratingFromOffer(
   }
 }
 
-function isPortfolio(value: unknown): value is PortfolioProperty[] {
+export function isPortfolio(value: unknown): value is PortfolioProperty[] {
   return Array.isArray(value) && value.every((v) => typeof v === "object" && v !== null && "id" in v && "input" in v);
 }
 

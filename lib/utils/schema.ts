@@ -71,12 +71,22 @@ export const financingSchema = z.object({
   legalFees: money("Legal fees"),
   inspectionCosts: money("Inspection costs"),
   loanFees: money("Loan fees"),
+  otherAcquisitionCosts: money("Other acquisition costs"),
+});
+
+export const rentUnitSchema = z.object({
+  id: z.string().min(1).max(40),
+  label: z.string().trim().min(1).max(40),
+  monthlyRent: money("Unit rent"),
 });
 
 export const incomeSchema = z.object({
   monthlyRent: money("Listing rent"),
   verifiedRent: money("Verified rent"),
   conservativeRent: money("Conservative rent"),
+  currentMonthlyRent: money("Current rent"),
+  rentEntryMode: z.enum(["total", "units"]),
+  units: z.array(rentUnitSchema),
   rentSource: z.enum(["listing", "verified", "conservative"]),
   otherMonthlyIncome: money("Other income"),
   rentGrowthRate: z.number().min(-10).max(20),
@@ -89,10 +99,16 @@ export const incomeSchema = z.object({
 export const expenseSchema = z.object({
   propertyTaxAnnual: money("Property tax"),
   insuranceAnnual: money("Insurance"),
+  insuranceSource: z.enum(["quote", "estimate", "previous"]),
   hoaMonthly: money("HOA"),
   managementPercent: percent("Management fee", 50),
   vacancyPercent: percent("Vacancy", 80),
   maintenancePercent: percent("Maintenance", 50),
+  capexPercent: percent("CapEx reserve", 50),
+  waterMonthly: money("Water"),
+  sewerMonthly: money("Sewer"),
+  trashMonthly: money("Trash"),
+  sharedUtilitiesMonthly: money("Shared utilities"),
   utilitiesMonthly: money("Utilities"),
   otherMonthly: money("Other expenses"),
   expenseGrowthRate: z.number().min(-10).max(20),
@@ -145,6 +161,41 @@ export const buyBoxSchema = z.object({
 
 export type BuyBoxFormValues = z.infer<typeof buyBoxSchema>;
 
+const nullablePercent = (label: string, max = 80) =>
+  z.number({ message: `${label} must be a number` }).min(0).max(max).nullable();
+
+export const scenarioAssumptionsSchema = z.object({
+  rentAdjustmentPercent: z.number().min(-80).max(80),
+  vacancyPercent: nullablePercent("Vacancy", 80),
+  annualInsurance: money("Insurance").nullable(),
+  maintenancePercent: nullablePercent("Maintenance", 50),
+  capexPercent: nullablePercent("CapEx", 50),
+  rehabOverrunPercent: z.number().min(0).max(100),
+  arvAdjustmentPercent: z.number().min(-80).max(80),
+});
+
+export const decisionSchema = z.object({
+  advertisedArv: money("Advertised ARV"),
+  conservativeArv: money("Conservative ARV"),
+  rehabContingencyPercent: percent("Rehab contingency", 50),
+  targetArvPercent: percent("Target ARV", 100),
+  includeAdditionalCostsInGuideline: z.boolean(),
+  guidelineAdditionalCosts: z.object({
+    closingCosts: z.boolean(),
+    legalFees: z.boolean(),
+    inspectionCosts: z.boolean(),
+    loanFees: z.boolean(),
+    otherAcquisitionCosts: z.boolean(),
+    holdingCosts: z.boolean(),
+  }),
+  acquisitionCostMode: z.literal("itemised"),
+  scenarios: z.object({
+    base: scenarioAssumptionsSchema,
+    conservative: scenarioAssumptionsSchema,
+    stress: scenarioAssumptionsSchema,
+  }),
+});
+
 export const analysisSchema = z.object({
   location: locationSchema,
   property: propertySchema,
@@ -154,6 +205,7 @@ export const analysisSchema = z.object({
   expenses: expenseSchema,
   flip: flipSchema,
   brrrr: brrrrSchema,
+  decision: decisionSchema,
 });
 
 export type AnalysisFormValues = z.infer<typeof analysisSchema>;
@@ -163,7 +215,7 @@ export const STEP_FIELDS: Record<number, (keyof AnalysisFormValues)[]> = {
   1: ["property"],
   2: ["strategy"],
   3: ["financing"],
-  4: ["income", "expenses", "flip", "brrrr"],
+  4: ["income", "expenses", "flip", "brrrr", "decision"],
 };
 
 export const maxOfferSchema = z.object({

@@ -9,6 +9,7 @@ export * from "@/lib/calculations/deal-score";
 export * from "@/lib/calculations/analyze";
 export * from "@/lib/calculations/max-offer";
 export * from "@/lib/calculations/rent";
+export * from "@/lib/calculations/utilities";
 export * from "@/lib/calculations/buy-box";
 export * from "@/lib/calculations/refinance";
 export * from "@/lib/calculations/deal-resilience";

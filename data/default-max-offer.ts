@@ -104,6 +104,7 @@ export function maxOfferToAnalysisInput(
       monthlyRent: input.property.expectedMonthlyRent,
       verifiedRent: input.property.expectedMonthlyRent,
       conservativeRent: Math.round((input.property.expectedMonthlyRent * 0.9) / 25) * 25,
+      currentMonthlyRent: input.property.expectedMonthlyRent,
       rentSource: "verified",
     },
     expenses: {
@@ -124,6 +125,11 @@ export function maxOfferToAnalysisInput(
       refinanceTermYears: input.financing.termYears,
       expectedRent: input.property.expectedMonthlyRent,
       refinanceDscrMin: input.targets.minimumDscr || 1.25,
+    },
+    decision: {
+      ...base.decision,
+      advertisedArv: input.property.arv,
+      conservativeArv: input.property.arv,
     },
   };
 }

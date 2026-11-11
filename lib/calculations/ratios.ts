@@ -9,6 +9,13 @@ export function safeDivide(numerator: number, denominator: number, fallback = 0)
   return Number.isFinite(result) ? result : fallback;
 }
 
+/** Same guards as safeDivide, but returns null instead of a numeric fallback. */
+export function nullableDivide(numerator: number, denominator: number): number | null {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return null;
+  const result = numerator / denominator;
+  return Number.isFinite(result) ? result : null;
+}
+
 /* ---------------------------- Yield ---------------------------- */
 
 export function calculateGrossYield(annualIncome: number, purchasePrice: number): number {
