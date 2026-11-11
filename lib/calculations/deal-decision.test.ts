@@ -444,6 +444,9 @@ describe("scenarios, what-breaks and assumption checks", () => {
     expect(result.scenarios.stress.totalRehabBudget).toBe(totalRehabBudget(36_000, 10));
     expect(result.scenarios.conservative.monthlyCashflow).toBeLessThan(result.scenarios.base.monthlyCashflow);
     expect(result.scenarios.stress.monthlyCashflow).toBeLessThan(result.scenarios.conservative.monthlyCashflow);
+    expect(result.scenarios.stress.monthlyRent).toBeCloseTo(2_000 * 0.85);
+    expect(result.scenarios.base.vacancyPercent).toBe(5);
+    expect(result.scenarios.base.allInPctConservativeArv).not.toBeNull();
   });
 
   it("inherits null scenario fields and honours explicit overrides", () => {
@@ -460,6 +463,16 @@ describe("scenarios, what-breaks and assumption checks", () => {
     const income = calculateIncome(2_000 * 0.95, 20);
     expect(overridden.scenarios.conservative.noi).toBeLessThan(inherited.scenarios.conservative.noi);
     expect(income.effectiveGrossIncome).toBeLessThan(calculateIncome(2_000 * 0.95, 5).effectiveGrossIncome);
+    expect(overridden.scenarios.conservative.vacancyPercent).toBe(20);
+    expect(overridden.scenarios.conservative.annualInsurance).toBe(3_000);
+
+    const zeroInsurance = evaluateDealDecision(
+      fixture((input) => {
+        input.decision.scenarios.stress.annualInsurance = 0;
+      }),
+    );
+    expect(zeroInsurance.scenarios.stress.annualInsurance).toBe(0);
+    expect(zeroInsurance.scenarios.stress.annualInsurance).not.toBe(inherited.scenarios.stress.annualInsurance);
   });
 
   it("flags asking above guideline, negative conservative cash flow, and missing ARV", () => {
@@ -469,6 +482,7 @@ describe("scenarios, what-breaks and assumption checks", () => {
       }),
     );
     expect(asking.whatBreaks.some((item) => item.key === "asking-vs-guideline")).toBe(true);
+    expect(asking.whatBreaks.some((item) => item.key === "purchase-vs-guideline")).toBe(true);
 
     const negative = evaluateDealDecision(
       fixture((input) => {

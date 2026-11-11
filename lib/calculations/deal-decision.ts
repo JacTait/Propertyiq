@@ -53,7 +53,8 @@ export const GUIDELINE_COMFORT_POINTS = 10;
 /** Remaining rehab headroom below this share of the ARV-guideline rehab budget is thin. */
 export const HEADROOM_THIN_RATIO = 0.1;
 
-const SCENARIO_KEYS: DealScenarioKey[] = ["base", "conservative", "stress"];
+export const DEAL_SCENARIO_KEYS: DealScenarioKey[] = ["base", "conservative", "stress"];
+const SCENARIO_KEYS = DEAL_SCENARIO_KEYS;
 
 function finite(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -292,8 +293,14 @@ export interface DealScenarioResult {
   cashOnCash: number | null;
   dscr: number | null;
   allInCost: number;
+  allInPctConservativeArv: number | null;
   conservativeArv: number;
   totalRehabBudget: number;
+  monthlyRent: number;
+  vacancyPercent: number;
+  annualInsurance: number;
+  maintenancePercent: number;
+  capexPercent: number;
   status: ScenarioStatus;
 }
 
@@ -676,8 +683,14 @@ function computeScenario(input: AnalysisInput, key: DealScenarioKey): DealScenar
     cashOnCash: operations.cashOnCash,
     dscr: operations.dscr,
     allInCost: costs.allInCost,
+    allInPctConservativeArv: costs.allInPctConservativeArv,
     conservativeArv: money(next.decision.conservativeArv),
     totalRehabBudget: costs.totalRehabBudget,
+    monthlyRent: operations.monthlyRent,
+    vacancyPercent: operations.vacancyPercent,
+    annualInsurance: money(next.expenses.insuranceAnnual),
+    maintenancePercent: money(next.expenses.maintenancePercent),
+    capexPercent: money(next.expenses.capexPercent),
     status: scenarioStatus(operations.monthlyCashflow),
   };
 }
@@ -775,6 +788,25 @@ export function whatBreaksDeal(result: DealDecisionResult): DealBreakObservation
     });
   }
 
+  if (result.purchasePrice > 0 && guidelineMaxOffer !== null && result.purchasePrice > guidelineMaxOffer) {
+    const over = result.purchasePrice - guidelineMaxOffer;
+    observations.push({
+      key: "purchase-vs-guideline",
+      title: "Purchase price is above the guideline maximum offer",
+      detail: `Purchase price is ${over.toFixed(0)} above your configured investor-guideline maximum.`,
+      severity: "warning",
+    });
+  }
+
+  if (result.scenarios.stress.monthlyCashflow < 0) {
+    observations.push({
+      key: "stress-negative",
+      title: "Stress-case cash flow is negative",
+      detail: `Stress-case cash flow is negative by ${Math.abs(result.scenarios.stress.monthlyCashflow).toFixed(0)} per month.`,
+      severity: conservative.monthlyCashflow >= 0 ? "warning" : "critical",
+    });
+  }
+
   return observations;
 }
 
@@ -818,7 +850,7 @@ export function assumptionChecks(input: AnalysisInput): AssumptionCheckItem[] {
             title: "Conservative ARV is not below advertised",
             detail:
               conservative >= advertised
-                ? "Conservative ARV is equal to or above advertised ARV. Confirm the haircut before relying on the guideline."
+                ? "Conservative ARV matches or exceeds advertised ARV. Confirm the haircut before relying on the guideline."
                 : "Advertised ARV is present but conservative ARV is missing.",
           },
     );
@@ -843,7 +875,10 @@ export function assumptionChecks(input: AnalysisInput): AssumptionCheckItem[] {
           key: "insurance-source",
           status: "review",
           title: "Insurance is not a current quote",
-          detail: "Get a current insurance quote before relying on this cash-flow estimate.",
+          detail:
+            input.expenses.insuranceSource === "previous"
+              ? "Insurance is based on a previous policy rather than a current quote."
+              : "Insurance is based on an estimate rather than a current quote.",
         },
   );
 
@@ -891,7 +926,7 @@ export function assumptionChecks(input: AnalysisInput): AssumptionCheckItem[] {
           key: "capex",
           status: "review",
           title: "No CapEx reserve",
-          detail: "CapEx is 0%. Capital replacements are not in the underwrite.",
+          detail: "No CapEx reserve has been included.",
         },
   );
 

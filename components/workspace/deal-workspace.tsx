@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { WORKSPACE_SECTIONS, type WorkspaceSectionId } from "@/components/workspace/workspace-sections";
 import { WorkspaceSection, type SectionStatus } from "@/components/workspace/workspace-section";
 import { LiveSummary } from "@/components/workspace/live-summary";
-import { SecondaryMetrics } from "@/components/workspace/secondary-metrics";
 import { MobileSummaryBar } from "@/components/workspace/mobile-summary-bar";
 import { SectionAcquisition, acquisitionStatus } from "@/components/workspace/section-acquisition";
 import { SectionValue, valueStatus } from "@/components/workspace/section-value";
@@ -135,9 +134,15 @@ export function DealWorkspace({
             </form>
           </div>
           <div className="hidden min-w-0 xl:col-span-5 xl:block">
-            <div className="space-y-4 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:pr-1">
+            <div className="space-y-3 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto xl:pr-1">
               <LiveSummary decision={decision} />
-              <SecondaryMetrics decision={decision} />
+              <button
+                type="button"
+                onClick={() => jumpTo("analysis")}
+                className="text-left text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2"
+              >
+                Open assumption check, scenarios and break-even limits
+              </button>
             </div>
           </div>
         </div>

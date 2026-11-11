@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  DEAL_DOES_NOT_BREAK_EVEN_BEFORE_INSURANCE,
-  type DealDecisionResult,
-} from "@/lib/calculations/deal-decision";
+import type { DealDecisionResult } from "@/lib/calculations/deal-decision";
 import { useFormatters } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils/cn";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,10 +16,8 @@ export function SecondaryMetrics({ decision, className }: SecondaryMetricsProps)
 
   if (!decision) return null;
 
-  const { conservative, costs, breakEvens, rehabHeadroom } = decision;
+  const { conservative, costs } = decision;
   const allCash = costs.loanAmount === 0 && costs.purchasePrice > 0;
-  const headroom = rehabHeadroom.remainingRehabHeadroom;
-  const headroomNegative = headroom !== null && headroom < 0;
 
   const rows: MetricRow[] = [
     {
@@ -55,45 +50,13 @@ export function SecondaryMetrics({ decision, className }: SecondaryMetricsProps)
         : "Add financing details to calculate DSCR.",
       hint: "NOI ÷ annual debt service.",
     },
-    {
-      label: "Break-even monthly rent",
-      value: breakEvens.monthlyRent === null ? null : `${wholeMoney(fmt, breakEvens.monthlyRent)} / mo`,
-      empty: "Break-even rent cannot be calculated with these expense ratios.",
-      hint: "Rent needed to cover operating expenses and P&I. Not a recommended target.",
-    },
-    {
-      label: "Break-even occupancy",
-      value: breakEvens.occupancyPercent === null ? null : fmt.percent(breakEvens.occupancyPercent, 1),
-      empty: "Add gross rent to calculate break-even occupancy.",
-      hint: "Occupancy needed to cover operating expenses and P&I. Not a recommended target.",
-    },
-    {
-      label: "Maximum annual insurance",
-      value: breakEvens.maxAnnualInsurance === null ? null : wholeMoney(fmt, breakEvens.maxAnnualInsurance),
-      empty: DEAL_DOES_NOT_BREAK_EVEN_BEFORE_INSURANCE,
-      hint: "Premium at which conservative cash flow hits zero.",
-    },
-    {
-      label: "Remaining rehab headroom",
-      value:
-        headroom === null
-          ? null
-          : headroomNegative
-            ? `-${wholeMoney(fmt, Math.abs(headroom))}`
-            : wholeMoney(fmt, headroom),
-      empty: "Add a conservative ARV to calculate rehab headroom.",
-      hint: headroomNegative
-        ? `Current rehab budget exceeds this ARV-guideline threshold by ${wholeMoney(fmt, Math.abs(headroom ?? 0))}.`
-        : "Room left versus the ARV-guideline rehab budget. Negative amounts are not clamped to zero.",
-      emphasize: headroomNegative,
-    },
   ];
 
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
         <CardTitle>Secondary metrics</CardTitle>
-        <CardDescription>Supporting ratios and break-evens. These sit behind the decision figures.</CardDescription>
+        <CardDescription>Traditional financial metrics. Break-even limits sit in What breaks this deal?</CardDescription>
       </CardHeader>
       <CardContent className="p-0 sm:p-0">
         <dl>
@@ -110,7 +73,6 @@ export function SecondaryMetrics({ decision, className }: SecondaryMetricsProps)
                 className={cn(
                   "shrink-0 text-right text-sm font-medium tabular",
                   row.value === null && "max-w-[11rem] font-normal text-muted-foreground",
-                  row.emphasize && "text-destructive",
                 )}
               >
                 {row.value ?? row.empty}
@@ -128,5 +90,4 @@ interface MetricRow {
   value: string | null;
   empty?: string;
   hint: string;
-  emphasize?: boolean;
 }

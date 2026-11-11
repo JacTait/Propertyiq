@@ -33,7 +33,7 @@ export const WORKSPACE_SECTIONS = [
     id: "analysis",
     number: "6",
     title: "Analysis",
-    description: "Decision summary, secondary metrics and supporting projections.",
+    description: "Assumption quality, scenarios and the limits of the current underwrite.",
   },
 ] as const;
 

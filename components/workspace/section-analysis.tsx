@@ -4,6 +4,9 @@ import type { AnalysisInput, AnalysisResults, InvestmentSummary, RentSource, Und
 import type { DealDecisionResult } from "@/lib/calculations/deal-decision";
 import { ResultsPanel } from "@/components/dashboard/results-panel";
 import { LiveSummary } from "@/components/workspace/live-summary";
+import { AssumptionCheck } from "@/components/workspace/assumption-check";
+import { ScenarioTable } from "@/components/workspace/scenario-table";
+import { WhatBreaks } from "@/components/workspace/what-breaks";
 import { SecondaryMetrics } from "@/components/workspace/secondary-metrics";
 
 interface SectionAnalysisProps {
@@ -25,14 +28,24 @@ export function SectionAnalysis({
 }: SectionAnalysisProps) {
   return (
     <div className="space-y-4">
-      <div id="decision-summary" className="scroll-mt-28 space-y-4 xl:hidden">
+      <div id="decision-summary" className="scroll-mt-28 xl:hidden">
         <LiveSummary decision={decision} />
-        <SecondaryMetrics decision={decision} />
       </div>
       <p className="hidden text-sm text-muted-foreground xl:block">
-        The live decision summary stays in the right-hand column while you edit. Projections and the legacy score sit
-        under More detail.
+        The live decision summary stays in the right-hand column. Checks, scenarios and limits sit here so traditional
+        metrics stay secondary.
       </p>
+      <AssumptionCheck decision={decision} />
+      <ScenarioTable decision={decision} />
+      <WhatBreaks decision={decision} />
+      {decision ? (
+        <details className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
+          <summary className="cursor-pointer text-sm font-medium">Secondary metrics — traditional ratios</summary>
+          <div className="mt-4">
+            <SecondaryMetrics decision={decision} />
+          </div>
+        </details>
+      ) : null}
       {results && summary ? (
         <details className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
           <summary className="cursor-pointer text-sm font-medium">More detail — projections, charts and legacy score</summary>

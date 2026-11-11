@@ -40,3 +40,13 @@ export const DEFAULT_SCENARIO_ASSUMPTIONS: Record<DealScenarioKey, ScenarioAssum
     arvAdjustmentPercent: -10,
   },
 };
+
+export const DEAL_SCENARIO_LABELS: Record<DealScenarioKey, string> = {
+  base: "Base",
+  conservative: "Conservative",
+  stress: "Stress",
+};
+
+export function cloneScenarioAssumptions(key: DealScenarioKey): ScenarioAssumptions {
+  return { ...DEFAULT_SCENARIO_ASSUMPTIONS[key] };
+}
