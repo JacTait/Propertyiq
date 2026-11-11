@@ -19,8 +19,10 @@ import { StrategyPanel } from "@/components/analysis/strategy-panel";
 import { ProjectionTable } from "@/components/analysis/projection-table";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
 import { InvestmentSummary } from "@/components/reports/investment-summary";
+import { ReportDecisionSummary } from "@/components/reports/report-decision-summary";
 import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
 import { DownsideAnalysisPanel } from "@/components/analysis/downside-analysis";
+import { useDealDecision } from "@/hooks/useDealDecision";
 import {
   AmortizationChart,
   AppreciationChart,
@@ -49,6 +51,7 @@ export const ReportDocument = forwardRef<HTMLDivElement, ReportDocumentProps>(fu
 ) {
   const fmt = useFormatters();
   const charts = useProjectionAnalysis(results);
+  const decision = useDealDecision(input);
 
   return (
     <div ref={ref} className="w-[1100px] space-y-5 bg-background p-8 text-foreground">
@@ -68,8 +71,9 @@ export const ReportDocument = forwardRef<HTMLDivElement, ReportDocumentProps>(fu
       </header>
 
       <PropertySummaryCard input={input} />
-      <DealScoreCard dealScore={results.dealScore} animated={false} />
+      {decision ? <ReportDecisionSummary decision={decision} /> : null}
       <KpiGrid results={results} />
+      <DealScoreCard dealScore={results.dealScore} animated={false} />
       <StrategyPanel results={results} />
 
       {preferences.includeCharts && charts && (

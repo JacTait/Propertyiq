@@ -87,7 +87,7 @@ export interface Property {
   condition: PropertyCondition;
 }
 
-/** Identity fields shared across Standard Analysis, Max Offer and Deal Resilience. */
+/** Identity fields shared across Deal Workspace, Max Offer and Deal Resilience. */
 export interface PropertyIdentity {
   name: string;
   propertyType: PropertyType;
@@ -440,10 +440,12 @@ export interface PortfolioSnapshot {
   marginOfSafetyPercent?: number;
   refinanceStatus?: RefinanceStatus;
   buyBoxStatus?: BuyBoxStatus;
-  allInCost?: number;
-  conservativeMonthlyCashflow?: number;
-  stressMonthlyCashflow?: number;
-  guidelineMaxOffer?: number;
+  allInCost?: number | null;
+  conservativeMonthlyCashflow?: number | null;
+  stressMonthlyCashflow?: number | null;
+  guidelineMaxOffer?: number | null;
+  /** Descriptive Deal Workspace margin status. Absent on legacy records. */
+  marginForErrorLabel?: string;
   dealSurvivalScore?: number;
   primaryRisk?: string;
   worstCaseCashflow?: number;

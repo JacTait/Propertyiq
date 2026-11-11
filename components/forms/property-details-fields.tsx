@@ -19,7 +19,7 @@ interface PropertyDetailsFieldsProps {
 
 export function PropertyDetailsFields({
   onLocationChange,
-  description = "Shared across Standard Analysis, Max Offer and Deal Resilience.",
+  description = "Shared across Deal Workspace, Max Offer and Deal Resilience.",
 }: PropertyDetailsFieldsProps) {
   const { control, setValue } = useFormContext();
   const country = (useWatch({ name: "location.country" }) as CountryCode | undefined) ?? "US";

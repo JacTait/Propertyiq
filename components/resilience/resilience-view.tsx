@@ -33,6 +33,8 @@ import { RefinanceValidator } from "@/components/analysis/refinance-validator";
 import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
 import { DealKillerList } from "@/components/analysis/deal-killers";
 import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
+import { DecisionContext } from "@/components/workspace/decision-context";
+import { useDealDecision } from "@/hooks/useDealDecision";
 import { DownsideAnalysisPanel, DownsideCharts } from "@/components/analysis/downside-analysis";
 import { ChartCard, CashflowStressChart, RehabSensitivityChart, RentSensitivityChart, ResilienceBreakdownChart } from "@/components/charts";
 import type { AnalysisDraft } from "@/components/dashboard/analysis-dashboard";
@@ -52,7 +54,7 @@ export function ResilienceSkeleton() {
       <PageHeader
         eyebrow="Underwriting"
         title="Deal Resilience"
-        description="Stress-test rent, rehab, vacancy and refinance before you offer."
+        description="How much deterioration can the deal absorb?"
       />
       <div className="space-y-4">
         <Skeleton className="h-40 w-full rounded-2xl" />
@@ -138,6 +140,7 @@ function ResilienceSession({
   usePersistPropertyIdentity(identity, !requestedId && initial.savedId === null);
   const results = usePropertyAnalysis(input);
   const underwriting = useUnderwriting(input, results, { includeSensitivity: true });
+  const decision = useDealDecision(input);
 
   const handleLocationChange = (country: CountryCode, region: string) => {
     const profile = getMarketProfile(country, region);
@@ -169,7 +172,7 @@ function ResilienceSession({
       <PageHeader
         eyebrow="Underwriting"
         title="Deal Resilience"
-        description="Stress-test rent, rehab, vacancy and refinance before you offer."
+        description="How much deterioration can the deal absorb? Stress-test rent, rehab, vacancy and refinance."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" asChild>
@@ -179,7 +182,7 @@ function ResilienceSession({
             </Button>
             <Button variant="outline" asChild>
               <Link href={requestedId ? dashboardPath(requestedId) : dashboardPath()}>
-                Standard Analysis <ArrowUpRight />
+                Deal Workspace <ArrowUpRight />
               </Link>
             </Button>
           </div>
@@ -195,7 +198,7 @@ function ResilienceSession({
             <div className="rounded-2xl border border-border bg-card p-5">
               <SectionTitle
                 title="Deal assumptions"
-                description="Shared with Standard Analysis. Changes save to the same draft."
+                description="Shared with Deal Workspace. Changes save to the same draft."
               />
               <FieldGrid>
                 <NumberField
@@ -225,6 +228,11 @@ function ResilienceSession({
           </div>
 
           <div className="space-y-4 xl:col-span-8">
+            <DecisionContext
+              decision={decision}
+              purpose="resilience"
+              dashboardHref={requestedId ? dashboardPath(requestedId) : dashboardPath()}
+            />
             {underwriting && results ? (
               <>
                 <RentSourceToggle

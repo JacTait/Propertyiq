@@ -31,6 +31,8 @@ import { RentSourceToggle } from "@/components/analysis/rent-source-toggle";
 import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
 import { DealKillerList } from "@/components/analysis/deal-killers";
 import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
+import { DecisionContext } from "@/components/workspace/decision-context";
+import { useDealDecision } from "@/hooks/useDealDecision";
 import { DownsideAnalysisPanel, DownsideCharts } from "@/components/analysis/downside-analysis";
 import type { AnalysisDraft } from "@/components/dashboard/analysis-dashboard";
 
@@ -49,7 +51,7 @@ export function DownsideSkeleton() {
       <PageHeader
         eyebrow="Underwriting"
         title="Downside Analysis"
-        description="Score whether the deal survives a bad year — cashflow, DSCR, margin, refinance and ROI."
+        description="What happens when the deal moves against you?"
       />
       <div className="space-y-4">
         <Skeleton className="h-40 w-full rounded-2xl" />
@@ -135,6 +137,7 @@ function DownsideSession({
   usePersistPropertyIdentity(identity, !requestedId && initial.savedId === null);
   const results = usePropertyAnalysis(input);
   const underwriting = useUnderwriting(input, results, { includeSensitivity: true });
+  const decision = useDealDecision(input);
 
   const handleLocationChange = (country: CountryCode, region: string) => {
     const profile = getMarketProfile(country, region);
@@ -166,7 +169,7 @@ function DownsideSession({
       <PageHeader
         eyebrow="Underwriting"
         title="Downside Analysis"
-        description="Score whether the deal survives a bad year — cashflow, DSCR, margin, refinance and ROI."
+        description="What happens when the deal moves against you? Score survival under a bad year."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" asChild>
@@ -176,7 +179,7 @@ function DownsideSession({
             </Button>
             <Button variant="outline" asChild>
               <Link href={requestedId ? dashboardPath(requestedId) : dashboardPath()}>
-                Standard Analysis <ArrowUpRight />
+                Deal Workspace <ArrowUpRight />
               </Link>
             </Button>
           </div>
@@ -192,7 +195,7 @@ function DownsideSession({
             <div className="rounded-2xl border border-border bg-card p-5">
               <SectionTitle
                 title="Deal assumptions"
-                description="Shared with Standard Analysis. Changes save to the same draft."
+                description="Shared with Deal Workspace. Changes save to the same draft."
               />
               <FieldGrid>
                 <NumberField
@@ -223,6 +226,11 @@ function DownsideSession({
           </div>
 
           <div className="space-y-4 xl:col-span-8">
+            <DecisionContext
+              decision={decision}
+              purpose="downside"
+              dashboardHref={requestedId ? dashboardPath(requestedId) : dashboardPath()}
+            />
             {underwriting && results ? (
               <>
                 <RentSourceToggle

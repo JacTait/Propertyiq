@@ -1,4 +1,12 @@
+import type { MarginForErrorLabel } from "@/lib/calculations/deal-decision";
 import type { Formatters } from "@/lib/utils/format";
+
+export const MARGIN_BADGE_VARIANT: Record<MarginForErrorLabel, "success" | "warning" | "danger" | "primary"> = {
+  "Stronger margin": "success",
+  "Moderate margin": "primary",
+  "Thin margin": "warning",
+  "Negative underwrite": "danger",
+};
 
 export function wholeMoney(fmt: Formatters, value: number): string {
   return fmt.currency(value, { decimals: 0 });

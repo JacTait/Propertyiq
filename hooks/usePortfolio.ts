@@ -19,6 +19,7 @@ import { createId, readStorage } from "@/lib/utils/storage";
 import { getRegionName } from "@/data/market-data";
 import { maxOfferToAnalysisInput } from "@/data/default-max-offer";
 import { calculateDealScore } from "@/lib/calculations/deal-score";
+import { decisionSnapshotFields } from "@/lib/calculations/portfolio-snapshot";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export type PortfolioSortKey = "date" | "name" | "roi" | "cashflow" | "score" | "price";
@@ -102,6 +103,7 @@ export function buildSnapshot(
     worstCaseCashflow: underwriting?.downside.worstCase.monthlyCashflow,
     worstCaseDscr: underwriting?.downside.worstCase.dscr,
     worstCaseRoi: underwriting?.downside.worstCase.roi,
+    ...decisionSnapshotFields(input),
   };
 }
 
@@ -196,6 +198,7 @@ export function usePortfolio() {
         worstCaseCashflow: underwriting?.downside.worstCase.monthlyCashflow,
         worstCaseDscr: underwriting?.downside.worstCase.dscr,
         worstCaseRoi: underwriting?.downside.worstCase.roi,
+        ...decisionSnapshotFields(analysisInput),
       };
       const existing = existingId ? properties.find((p) => p.id === existingId) : undefined;
       const saved: PortfolioProperty = {

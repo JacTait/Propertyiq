@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils/cn";
 
 interface WhatBreaksProps {
   decision: DealDecisionResult | null;
+  compact?: boolean;
 }
 
 const SEVERITY_LABEL: Record<BreakSeverity, string> = {
@@ -17,10 +18,11 @@ const SEVERITY_LABEL: Record<BreakSeverity, string> = {
   info: "Threshold",
 };
 
-export function WhatBreaks({ decision }: WhatBreaksProps) {
+export function WhatBreaks({ decision, compact = false }: WhatBreaksProps) {
   const fmt = useFormatters();
   if (!decision) return null;
-  const items = presentWhatBreaks(decision, fmt);
+  const presented = presentWhatBreaks(decision, fmt);
+  const items = compact ? presented.filter((item) => item.severity !== "info") : presented;
 
   return (
     <Card>

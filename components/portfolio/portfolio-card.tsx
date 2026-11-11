@@ -8,6 +8,7 @@ import { formatPropertySpecs, gradeTone, metricTone, strategyLabel } from "@/lib
 import { cn } from "@/lib/utils/cn";
 import { analysisOpenPath } from "@/lib/utils/routes";
 import { useFormatters } from "@/hooks/useSettings";
+import { readDecisionSnapshot } from "@/lib/calculations/portfolio-snapshot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,6 +36,7 @@ export function PortfolioCard({
   const s = property.snapshot;
   const tone = gradeTone(s.grade);
   const roiDisplay = s.roi >= 999 ? "∞" : fmt.percent(s.roi);
+  const decision = readDecisionSnapshot(s);
 
   return (
     <motion.article
@@ -113,13 +115,38 @@ export function PortfolioCard({
             </Badge>
           )}
           {s.primaryRisk && <Badge variant="muted">{s.primaryRisk}</Badge>}
+          {decision.marginForErrorLabel ? <Badge variant="muted">{decision.marginForErrorLabel}</Badge> : null}
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           <Metric label="Price" value={fmt.currency(s.purchasePrice, { compact: true })} />
           <Metric label="ROI" value={roiDisplay} tone={metricTone(s.roi, { good: 12, ok: 6 })} />
-          <Metric label="Cashflow" value={`${fmt.signedCurrency(s.monthlyCashflow)}`} sub="/mo" tone={metricTone(s.monthlyCashflow, { good: 300, ok: 0 })} />
+          <Metric
+            label={decision.conservativeMonthlyCashflow === null ? "Cashflow" : "Conservative CF"}
+            value={fmt.signedCurrency(decision.conservativeMonthlyCashflow ?? s.monthlyCashflow)}
+            sub="/mo"
+            tone={metricTone(decision.conservativeMonthlyCashflow ?? s.monthlyCashflow, { good: 300, ok: 0 })}
+          />
         </div>
+        {decision.allInCost !== null ? (
+          <div className="grid grid-cols-3 gap-2">
+            <Metric label="All-in" value={fmt.currency(decision.allInCost, { compact: true })} />
+            <Metric
+              label="Guideline"
+              value={decision.guidelineMaxOffer === null ? "—" : fmt.currency(decision.guidelineMaxOffer, { compact: true })}
+            />
+            <Metric
+              label="Stress CF"
+              value={decision.stressMonthlyCashflow === null ? "—" : fmt.signedCurrency(decision.stressMonthlyCashflow)}
+              sub={decision.stressMonthlyCashflow === null ? undefined : "/mo"}
+              tone={
+                decision.stressMonthlyCashflow === null
+                  ? undefined
+                  : metricTone(decision.stressMonthlyCashflow, { good: 1, ok: 0 })
+              }
+            />
+          </div>
+        ) : null}
         {typeof s.dealSurvivalScore === "number" && (
           <div className="grid grid-cols-3 gap-2">
             <Metric

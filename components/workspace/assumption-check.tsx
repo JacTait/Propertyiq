@@ -11,9 +11,10 @@ import { cn } from "@/lib/utils/cn";
 
 interface AssumptionCheckProps {
   decision: DealDecisionResult | null;
+  compact?: boolean;
 }
 
-export function AssumptionCheck({ decision }: AssumptionCheckProps) {
+export function AssumptionCheck({ decision, compact = false }: AssumptionCheckProps) {
   if (!decision) return null;
   const grouped = groupAssumptionChecks(assumptionChecksForDisplay(decision));
   const attention = grouped.highRisk.length + grouped.review.length;
@@ -23,8 +24,9 @@ export function AssumptionCheck({ decision }: AssumptionCheckProps) {
       <CardHeader className="pb-2">
         <CardTitle>Assumption check</CardTitle>
         <CardDescription>
-          How trustworthy are the assumptions behind these results? This highlights inputs to verify — it does not decide
-          the deal.
+          {compact
+            ? "Inputs that still need verification before treating these results as reliable."
+            : "How trustworthy are the assumptions behind these results? This highlights inputs to verify — it does not decide the deal."}
         </CardDescription>
         <p className="text-xs text-muted-foreground">
           {attention === 0
@@ -37,7 +39,7 @@ export function AssumptionCheck({ decision }: AssumptionCheckProps) {
           <CheckGroup title="High risk" items={grouped.highRisk} variant="danger" />
         ) : null}
         {grouped.review.length > 0 ? <CheckGroup title="Review" items={grouped.review} variant="warning" /> : null}
-        {grouped.confirmed.length > 0 ? (
+        {!compact && grouped.confirmed.length > 0 ? (
           <details className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
             <summary className="cursor-pointer text-sm font-medium">Confirmed ({grouped.confirmed.length})</summary>
             <div className="mt-3">
