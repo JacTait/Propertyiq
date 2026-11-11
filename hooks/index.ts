@@ -4,6 +4,7 @@ export { usePortfolio, buildSnapshot, DEFAULT_FILTERS, readPortfolio, findPortfo
 export type { PortfolioFilters, PortfolioSortKey, SortDirection } from "@/hooks/usePortfolio";
 export { useMortgageCalculation } from "@/hooks/useMortgageCalculation";
 export { usePropertyAnalysis, sanitizeInput } from "@/hooks/usePropertyAnalysis";
+export { useDealDecision } from "@/hooks/useDealDecision";
 export { useProjectionAnalysis } from "@/hooks/useProjectionAnalysis";
 export type { ProjectionChartData } from "@/hooks/useProjectionAnalysis";
 export { useDealScore } from "@/hooks/useDealScore";

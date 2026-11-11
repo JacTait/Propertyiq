@@ -23,8 +23,7 @@ import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
-import { AnalysisWizard } from "@/components/forms/analysis-wizard";
-import { ResultsPanel } from "@/components/dashboard/results-panel";
+import { DealWorkspace } from "@/components/workspace/deal-workspace";
 import { ExportPdfButton } from "@/components/reports/export-pdf-button";
 import { SavePropertyDialog } from "@/components/portfolio/save-property-dialog";
 
@@ -46,18 +45,18 @@ export function AnalysisDashboardSkeleton() {
   return (
     <>
       <PageHeader
-        eyebrow="Deal Analyser"
-        title="Property Analysis"
-        description="Enter the deal, tune the assumptions, and PropertyIQ scores it in real time."
+        eyebrow="Deal Workspace"
+        title="Don’t just calculate the deal."
+        description="Stress-test it. Enter the full underwrite on one page."
       />
       <div className="grid gap-6 xl:grid-cols-12">
-        <div className="min-w-0 xl:col-span-5 2xl:col-span-4">
-          <Skeleton className="h-[560px] w-full rounded-2xl" />
+        <div className="min-w-0 space-y-4 xl:col-span-7">
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-72 w-full rounded-2xl" />
+          <Skeleton className="h-72 w-full rounded-2xl" />
         </div>
-        <div className="min-w-0 space-y-4 xl:col-span-7 2xl:col-span-8">
-          <Skeleton className="h-40 w-full rounded-2xl" />
+        <div className="min-w-0 xl:col-span-5">
           <Skeleton className="h-64 w-full rounded-2xl" />
-          <Skeleton className="h-96 w-full rounded-2xl" />
         </div>
       </div>
     </>
@@ -185,9 +184,9 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
   return (
     <>
       <PageHeader
-        eyebrow="Deal Analyser"
-        title="Property Analysis"
-        description="Enter the deal, tune the assumptions, and PropertyIQ scores it in real time."
+        eyebrow="Deal Workspace"
+        title="Don’t just calculate the deal."
+        description="Stress-test it. Enter the full underwrite on one page — acquisition through financing."
         actions={
           results && input && summary ? (
             <>
@@ -210,30 +209,15 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-12">
-        <div className="min-w-0 xl:col-span-5 2xl:col-span-4">
-          <div className="min-w-0 xl:sticky xl:top-20">
-            <AnalysisWizard form={form} onReset={handleReset} />
-          </div>
-        </div>
-        <div className="min-w-0 xl:col-span-7 2xl:col-span-8">
-          {results && summary ? (
-            <ResultsPanel
-              input={input}
-              results={results}
-              summary={summary}
-              underwriting={underwriting}
-              onRentSourceChange={(source: RentSource) => form.setValue("income.rentSource", source)}
-            />
-          ) : (
-            <div className="space-y-4">
-              <Skeleton className="h-40 w-full rounded-2xl" />
-              <Skeleton className="h-64 w-full rounded-2xl" />
-              <Skeleton className="h-96 w-full rounded-2xl" />
-            </div>
-          )}
-        </div>
-      </div>
+      <DealWorkspace
+        form={form}
+        onReset={handleReset}
+        input={input}
+        results={results}
+        summary={summary}
+        underwriting={underwriting}
+        onRentSourceChange={(source: RentSource) => form.setValue("income.rentSource", source)}
+      />
 
       {input && (
         <SavePropertyDialog
