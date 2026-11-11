@@ -379,6 +379,11 @@ export interface PortfolioSnapshot {
   marginOfSafetyPercent?: number;
   refinanceStatus?: RefinanceStatus;
   buyBoxStatus?: BuyBoxStatus;
+  dealSurvivalScore?: number;
+  primaryRisk?: string;
+  worstCaseCashflow?: number;
+  worstCaseDscr?: number;
+  worstCaseRoi?: number;
 }
 
 export type PortfolioKind = "analysis" | "max-offer";
@@ -774,6 +779,72 @@ export interface DealResilienceResults {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Downside analysis / deal survival                                  */
+/* ------------------------------------------------------------------ */
+
+export type DealSurvivalGrade = "very-defensive" | "defensive" | "acceptable" | "exposed" | "high-risk";
+
+export type DealSurvivalVerdict = "likely" | "significant-risk" | "unlikely";
+
+export type DownsideRiskCategory = "cashflow" | "dscr" | "margin" | "refinance" | "roi";
+
+export interface DownsideShocks {
+  rentFactor: number;
+  rehabFactor: number;
+  vacancyDelta: number;
+  maintenanceDelta: number;
+  taxFactor: number;
+  insuranceFactor: number;
+}
+
+export interface DownsideComponentScore {
+  key: DownsideRiskCategory;
+  label: string;
+  score: number;
+  weight: number;
+  detail: string;
+}
+
+export interface DownsideWorstCase {
+  monthlyCashflow: number;
+  annualCashflow: number;
+  roi: number;
+  cashOnCash: number;
+  dscr: number;
+}
+
+export interface DealSurvivalTest {
+  cashflowPass: boolean;
+  dscrPass: boolean;
+  roiPass: boolean;
+  failCount: number;
+  verdict: DealSurvivalVerdict;
+  verdictLabel: string;
+}
+
+export interface DownsideAnalysisResults {
+  score: number;
+  grade: DealSurvivalGrade;
+  gradeLabel: string;
+  primaryRisk: DownsideRiskCategory;
+  primaryRiskLabel: string;
+  components: DownsideComponentScore[];
+  worstCase: DownsideWorstCase;
+  survival: DealSurvivalTest;
+  marginOfSafetyPercent: number;
+  marginReady: boolean;
+  desiredMonthlyCashflow: number;
+  postRefinanceDscr: number;
+  shocks: DownsideShocks;
+  assessment: string;
+  rentSensitivity: SensitivityPoint[];
+  vacancySensitivity: SensitivityPoint[];
+  rehabSensitivity: SensitivityPoint[];
+  refinanceSensitivity: SensitivityPoint[];
+  generatedAt: string;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Refinance validator                                                */
 /* ------------------------------------------------------------------ */
 
@@ -849,6 +920,12 @@ export interface UnderwritingSummary {
   resilienceScore: number;
   assessment: string;
   generatedAt: string;
+  dealSurvivalScore: number;
+  primaryRisk: string;
+  worstCaseCashflow: number;
+  worstCaseDscr: number;
+  worstCaseRoi: number;
+  dealSurvivalVerdict: string;
 }
 
 export interface UnderwritingPack {
@@ -856,6 +933,7 @@ export interface UnderwritingPack {
   buyBox: BuyBoxMatch;
   refinance: RefinanceValidation;
   resilience: DealResilienceResults;
+  downside: DownsideAnalysisResults;
   margin: MarginOfSafety;
   warnings: DealKillerWarning[];
   summary: UnderwritingSummary;

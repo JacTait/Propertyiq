@@ -16,6 +16,11 @@ export function resiliencePath(propertyId?: string | null): string {
   return `/resilience?id=${encodeURIComponent(propertyId)}`;
 }
 
+export function downsidePath(propertyId?: string | null): string {
+  if (!propertyId) return "/downside";
+  return `/downside?id=${encodeURIComponent(propertyId)}`;
+}
+
 export function isMaxOfferProperty(property: Pick<PortfolioProperty, "kind">): boolean {
   return property.kind === "max-offer";
 }

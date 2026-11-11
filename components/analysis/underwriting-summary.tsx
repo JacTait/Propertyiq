@@ -28,6 +28,18 @@ export function UnderwritingSummaryCard({ summary }: { summary: UnderwritingSumm
             </li>
           ))}
         </ul>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Deal Survival Score</p>
+            <p className="text-2xl font-black tabular">{summary.dealSurvivalScore}/100</p>
+            <p className="text-sm font-medium">{summary.dealSurvivalVerdict}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Primary Risk</p>
+            <p className="text-lg font-bold">{summary.primaryRisk}</p>
+            <p className="text-sm text-muted-foreground">Assessment: {summary.assessment}</p>
+          </div>
+        </div>
         <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Overall Resilience Score</p>
           <p className="text-2xl font-black tabular">{summary.resilienceScore}/100</p>

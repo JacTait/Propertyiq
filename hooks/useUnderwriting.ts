@@ -10,6 +10,8 @@ export function useUnderwriting(
   results: AnalysisResults | null,
   options: {
     includeSensitivity?: boolean;
+    includeDownsideSensitivity?: boolean;
+    desiredMonthlyCashflow?: number;
     marginPrice?: number | null;
     marginOffers?: { recommendedOffer: number; maximumOffer: number } | null;
   } = {},
@@ -18,6 +20,8 @@ export function useUnderwriting(
   const serialized = input ? JSON.stringify(input) : null;
   const buyBoxSerialized = active ? JSON.stringify(active) : null;
   const includeSensitivity = options.includeSensitivity !== false;
+  const includeDownsideSensitivity = options.includeDownsideSensitivity !== false;
+  const desiredMonthlyCashflow = options.desiredMonthlyCashflow;
   const marginPrice = options.marginPrice;
   const hasMarginOverride = Object.prototype.hasOwnProperty.call(options, "marginPrice");
   const recommendedOffer = options.marginOffers?.recommendedOffer;
@@ -33,6 +37,8 @@ export function useUnderwriting(
         : undefined;
     return underwriteDeal(parsed, results, box, {
       includeSensitivity,
+      includeDownsideSensitivity,
+      ...(desiredMonthlyCashflow !== undefined ? { desiredMonthlyCashflow } : {}),
       ...(hasMarginOverride ? { marginPrice } : {}),
       ...(marginOffers ? { marginOffers } : {}),
     });
@@ -41,6 +47,8 @@ export function useUnderwriting(
     results,
     buyBoxSerialized,
     includeSensitivity,
+    includeDownsideSensitivity,
+    desiredMonthlyCashflow,
     hasMarginOverride,
     marginPrice,
     recommendedOffer,

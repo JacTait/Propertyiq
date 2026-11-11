@@ -97,6 +97,11 @@ export function buildSnapshot(
     marginOfSafetyPercent: underwriting?.margin.ready ? underwriting.margin.percent : undefined,
     refinanceStatus: underwriting?.refinance.status,
     buyBoxStatus: underwriting?.buyBox.status,
+    dealSurvivalScore: underwriting?.downside.score,
+    primaryRisk: underwriting?.downside.primaryRiskLabel,
+    worstCaseCashflow: underwriting?.downside.worstCase.monthlyCashflow,
+    worstCaseDscr: underwriting?.downside.worstCase.dscr,
+    worstCaseRoi: underwriting?.downside.worstCase.roi,
   };
 }
 
@@ -186,6 +191,11 @@ export function usePortfolio() {
         marginOfSafetyPercent: underwriting?.margin.ready ? underwriting.margin.percent : undefined,
         refinanceStatus: underwriting?.refinance.status ?? (results.brrrr.infiniteReturn || results.brrrr.cashPulledOut > 0 ? "viable" : "risk"),
         buyBoxStatus: underwriting?.buyBox.status,
+        dealSurvivalScore: underwriting?.downside.score,
+        primaryRisk: underwriting?.downside.primaryRiskLabel,
+        worstCaseCashflow: underwriting?.downside.worstCase.monthlyCashflow,
+        worstCaseDscr: underwriting?.downside.worstCase.dscr,
+        worstCaseRoi: underwriting?.downside.worstCase.roi,
       };
       const existing = existingId ? properties.find((p) => p.id === existingId) : undefined;
       const saved: PortfolioProperty = {

@@ -107,6 +107,12 @@ export function PortfolioCard({
           {typeof s.resilienceScore === "number" && (
             <Badge variant="muted">Resilience {Math.round(s.resilienceScore)}</Badge>
           )}
+          {typeof s.dealSurvivalScore === "number" && (
+            <Badge variant={s.dealSurvivalScore >= 80 ? "success" : s.dealSurvivalScore >= 60 ? "warning" : "danger"}>
+              Survival {Math.round(s.dealSurvivalScore)}
+            </Badge>
+          )}
+          {s.primaryRisk && <Badge variant="muted">{s.primaryRisk}</Badge>}
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -114,6 +120,26 @@ export function PortfolioCard({
           <Metric label="ROI" value={roiDisplay} tone={metricTone(s.roi, { good: 12, ok: 6 })} />
           <Metric label="Cashflow" value={`${fmt.signedCurrency(s.monthlyCashflow)}`} sub="/mo" tone={metricTone(s.monthlyCashflow, { good: 300, ok: 0 })} />
         </div>
+        {typeof s.dealSurvivalScore === "number" && (
+          <div className="grid grid-cols-3 gap-2">
+            <Metric
+              label="Survival"
+              value={`${Math.round(s.dealSurvivalScore)}/100`}
+              tone={metricTone(s.dealSurvivalScore, { good: 80, ok: 60 })}
+            />
+            <Metric
+              label="WC Cashflow"
+              value={fmt.signedCurrency(s.worstCaseCashflow ?? 0)}
+              sub="/mo"
+              tone={metricTone(s.worstCaseCashflow ?? 0, { good: 1, ok: 0 })}
+            />
+            <Metric
+              label="WC DSCR"
+              value={fmt.ratio(s.worstCaseDscr ?? 0)}
+              tone={metricTone(s.worstCaseDscr ?? 0, { good: 1.25, ok: 1 })}
+            />
+          </div>
+        )}
 
         <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-3">
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">

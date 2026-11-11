@@ -4,6 +4,7 @@ import { applyActiveRent, normalizeAnalysisInput, resolveRent } from "@/lib/calc
 import { matchBuyBox, subjectFromAnalysis } from "@/lib/calculations/buy-box";
 import { validateRefinance } from "@/lib/calculations/refinance";
 import { calculateDealResilience } from "@/lib/calculations/deal-resilience";
+import { calculateDownsideAnalysis } from "@/lib/calculations/downside-analysis";
 import { marginFromAnalysis } from "@/lib/calculations/margin-of-safety";
 import { collectDealKillers } from "@/lib/calculations/deal-killers";
 import { generateUnderwritingSummary } from "@/lib/calculations/underwriting-summary";
@@ -18,6 +19,8 @@ export function underwriteDeal(
   buyBox: BuyBoxProfile | null | undefined,
   options: {
     includeSensitivity?: boolean;
+    includeDownsideSensitivity?: boolean;
+    desiredMonthlyCashflow?: number;
     marginPrice?: number | null;
     marginOffers?: { recommendedOffer: number; maximumOffer: number } | null;
   } = {},
@@ -28,6 +31,20 @@ export function underwriteDeal(
   const refinance = validateRefinance(normalized, results);
   const resilience = calculateDealResilience(normalized, options);
   const margin = marginFromAnalysis(normalized, options.marginPrice, options.marginOffers);
+  const asking =
+    options.marginPrice === null
+      ? 0
+      : typeof options.marginPrice === "number"
+        ? options.marginPrice
+        : normalized.financing.askingPrice;
+  const downside = calculateDownsideAnalysis(normalized, {
+    includeSensitivity: options.includeDownsideSensitivity !== false,
+    desiredMonthlyCashflow: options.desiredMonthlyCashflow,
+    maximumOffer: margin.maximumOffer,
+    askingPrice: asking,
+    postRefinanceDscr: refinance.postRefiDscr,
+    refinanceLoanAmount: refinance.loanAmount,
+  });
   const warnings = collectDealKillers({
     input: normalized,
     results,
@@ -43,6 +60,7 @@ export function underwriteDeal(
     buyBox: buyBoxMatch,
     refinance,
     resilience,
+    downside,
   });
-  return { rent, buyBox: buyBoxMatch, refinance, resilience, margin, warnings, summary };
+  return { rent, buyBox: buyBoxMatch, refinance, resilience, downside, margin, warnings, summary };
 }

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
 import { FileDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { AnalysisInput, AnalysisResults, InvestmentSummary } from "@/lib/types";
+import type { AnalysisInput, AnalysisResults, InvestmentSummary, UnderwritingPack } from "@/lib/types";
 import { useSettings } from "@/hooks/useSettings";
 import { buildReportFileName, exportElementToPdf } from "@/lib/utils/pdf";
 import { Button, type ButtonProps } from "@/components/ui/button";
@@ -15,9 +15,10 @@ interface ExportPdfButtonProps extends Pick<ButtonProps, "variant" | "size" | "c
   input: AnalysisInput;
   results: AnalysisResults;
   summary: InvestmentSummary;
+  underwriting?: UnderwritingPack | null;
 }
 
-export function ExportPdfButton({ input, results, summary, variant = "outline", size, className }: ExportPdfButtonProps) {
+export function ExportPdfButton({ input, results, summary, underwriting, variant = "outline", size, className }: ExportPdfButtonProps) {
   const { settings } = useSettings();
   const { resolvedTheme } = useTheme();
   const [exporting, setExporting] = useState(false);
@@ -62,7 +63,14 @@ export function ExportPdfButton({ input, results, summary, variant = "outline", 
             aria-hidden
             style={{ position: "absolute", left: -20000, top: 0, pointerEvents: "none", width: 1100 }}
           >
-            <ReportDocument ref={reportRef} input={input} results={results} summary={summary} preferences={settings.exportPreferences} />
+            <ReportDocument
+              ref={reportRef}
+              input={input}
+              results={results}
+              summary={summary}
+              preferences={settings.exportPreferences}
+              underwriting={underwriting}
+            />
           </div>,
           document.body,
         )}

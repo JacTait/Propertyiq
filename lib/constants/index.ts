@@ -181,3 +181,21 @@ export const RESILIENCE_WEIGHTS = {
   dscr: 0.25,
   refinance: 0.2,
 } as const;
+
+/** Worst-case shocks for Downside Analysis. Rent −15%, vacancy +10, maintenance +20, rehab +20, tax +10, insurance +15. */
+export const DOWNSIDE_SHOCKS = {
+  rentFactor: 0.85,
+  rehabFactor: 1.2,
+  vacancyDelta: 10,
+  maintenanceDelta: 20,
+  taxFactor: 1.1,
+  insuranceFactor: 1.15,
+} as const;
+
+export const DOWNSIDE_WEIGHTS = {
+  cashflow: 0.3,
+  dscr: 0.25,
+  margin: 0.2,
+  refinance: 0.15,
+  roi: 0.1,
+} as const;

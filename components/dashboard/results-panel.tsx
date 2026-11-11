@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Bot, Landmark, LineChart, Shield, Target } from "lucide-react";
+import { BarChart3, Bot, Landmark, LineChart, Shield, Target, Umbrella } from "lucide-react";
 import type { AnalysisInput, AnalysisResults, InvestmentSummary as InvestmentSummaryType, RentSource, UnderwritingPack } from "@/lib/types";
 import { useProjectionAnalysis } from "@/hooks/useProjectionAnalysis";
 import { useFormatters } from "@/hooks/useSettings";
@@ -20,6 +20,7 @@ import { RefinanceValidator } from "@/components/analysis/refinance-validator";
 import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
 import { DealKillerList } from "@/components/analysis/deal-killers";
 import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
+import { DownsideAnalysisPanel, DownsideCharts } from "@/components/analysis/downside-analysis";
 import {
   AmortizationChart,
   AppreciationChart,
@@ -75,6 +76,11 @@ export function ResultsPanel({ input, results, summary, underwriting, onRentSour
           {underwriting && (
             <TabsTrigger value="underwrite">
               <Shield /> Underwrite
+            </TabsTrigger>
+          )}
+          {underwriting && (
+            <TabsTrigger value="downside">
+              <Umbrella /> Downside
             </TabsTrigger>
           )}
           <TabsTrigger value="summary">
@@ -152,6 +158,13 @@ export function ResultsPanel({ input, results, summary, underwriting, onRentSour
             <DealResiliencePanel resilience={underwriting.resilience} compact />
             <RefinanceValidator validation={underwriting.refinance} />
             <UnderwritingSummaryCard summary={underwriting.summary} />
+          </TabsContent>
+        )}
+
+        {underwriting && (
+          <TabsContent value="downside" className="space-y-4">
+            <DownsideAnalysisPanel downside={underwriting.downside} compact />
+            <DownsideCharts downside={underwriting.downside} />
           </TabsContent>
         )}
 

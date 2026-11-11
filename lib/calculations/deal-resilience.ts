@@ -41,25 +41,51 @@ export function applyResilienceShocks(input: AnalysisInput, shocks: ResilienceSh
   return next;
 }
 
-function scenarioMetrics(input: AnalysisInput, key: ResilienceScenarioKey): ResilienceScenarioMetrics {
-  const shocks = RESILIENCE_SHOCKS[key];
-  const shocked = applyResilienceShocks(input, shocks);
-  const results = analyzeProperty(applyActiveRent(shocked));
-  const refinance = validateRefinance(shocked, results, {
+export function evaluateDealMetrics(input: AnalysisInput): {
+  monthlyCashflow: number;
+  annualCashflow: number;
+  roi: number;
+  cashOnCash: number;
+  dscr: number;
+  capRate: number;
+  refinanceViable: boolean;
+  postRefiDscr: number;
+  refinanceLoanAmount: number;
+} {
+  const results = analyzeProperty(applyActiveRent(input));
+  const refinance = validateRefinance(input, results, {
     arvFactor: 1,
     rentFactor: 1,
   });
+  const roi = results.roi === Infinity ? Infinity : Number.isFinite(results.roi) ? results.roi : 0;
   return {
-    key,
-    label: SCENARIO_LABELS[key],
-    shocks,
     monthlyCashflow: results.monthlyCashflow,
     annualCashflow: results.annualCashflow,
-    roi: Number.isFinite(results.roi) ? results.roi : 0,
+    roi,
     cashOnCash: results.cashOnCash,
     dscr: refinance.loanAmount > 0 ? refinance.postRefiDscr : results.dscr,
     capRate: results.capRate,
     refinanceViable: refinance.viable,
+    postRefiDscr: refinance.postRefiDscr,
+    refinanceLoanAmount: refinance.loanAmount,
+  };
+}
+
+function scenarioMetrics(input: AnalysisInput, key: ResilienceScenarioKey): ResilienceScenarioMetrics {
+  const shocks = RESILIENCE_SHOCKS[key];
+  const shocked = applyResilienceShocks(input, shocks);
+  const metrics = evaluateDealMetrics(shocked);
+  return {
+    key,
+    label: SCENARIO_LABELS[key],
+    shocks,
+    monthlyCashflow: metrics.monthlyCashflow,
+    annualCashflow: metrics.annualCashflow,
+    roi: Number.isFinite(metrics.roi) ? metrics.roi : 0,
+    cashOnCash: metrics.cashOnCash,
+    dscr: metrics.dscr,
+    capRate: metrics.capRate,
+    refinanceViable: metrics.refinanceViable,
   };
 }
 

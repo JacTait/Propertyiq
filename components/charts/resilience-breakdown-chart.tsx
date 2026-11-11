@@ -1,12 +1,18 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { ResilienceComponentScore } from "@/lib/types";
 import { CHART_COLORS } from "@/lib/constants";
 import { CHART_THEME } from "@/components/charts/chart-card";
 
-export function ResilienceBreakdownChart({ components }: { components: ResilienceComponentScore[] }) {
-  const data = components.map((c) => ({ name: c.label.replace(" survival", "").replace(" viability", ""), score: c.score }));
+export function ResilienceBreakdownChart({
+  components,
+}: {
+  components: Array<{ label: string; score: number }>;
+}) {
+  const data = components.map((c) => ({
+    name: c.label.replace(" Survival", "").replace(" Durability", "").replace(" of Safety", "").replace(" Viability", ""),
+    score: c.score,
+  }));
 
   return (
     <ResponsiveContainer width="100%" height="100%">

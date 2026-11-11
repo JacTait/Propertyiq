@@ -1,7 +1,13 @@
 "use client";
 
 import { forwardRef } from "react";
-import type { AnalysisInput, AnalysisResults, ExportPreferences, InvestmentSummary as InvestmentSummaryType } from "@/lib/types";
+import type {
+  AnalysisInput,
+  AnalysisResults,
+  ExportPreferences,
+  InvestmentSummary as InvestmentSummaryType,
+  UnderwritingPack,
+} from "@/lib/types";
 import { APP_NAME } from "@/lib/constants";
 import { countryName, formatPropertySpecs, strategyLabel } from "@/lib/utils/labels";
 import { getRegionName } from "@/data/market-data";
@@ -13,6 +19,8 @@ import { StrategyPanel } from "@/components/analysis/strategy-panel";
 import { ProjectionTable } from "@/components/analysis/projection-table";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
 import { InvestmentSummary } from "@/components/reports/investment-summary";
+import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
+import { DownsideAnalysisPanel } from "@/components/analysis/downside-analysis";
 import {
   AmortizationChart,
   AppreciationChart,
@@ -28,6 +36,7 @@ interface ReportDocumentProps {
   results: AnalysisResults;
   summary: InvestmentSummaryType;
   preferences: ExportPreferences;
+  underwriting?: UnderwritingPack | null;
 }
 
 /**
@@ -35,7 +44,7 @@ interface ReportDocumentProps {
  * width so charts and layout are deterministic regardless of viewport.
  */
 export const ReportDocument = forwardRef<HTMLDivElement, ReportDocumentProps>(function ReportDocument(
-  { input, results, summary, preferences },
+  { input, results, summary, preferences, underwriting },
   ref,
 ) {
   const fmt = useFormatters();
@@ -89,6 +98,13 @@ export const ReportDocument = forwardRef<HTMLDivElement, ReportDocumentProps>(fu
       )}
 
       <ProjectionTable projections={results.projections} fiveYear={results.fiveYear} tenYear={results.tenYear} />
+
+      {underwriting && (
+        <>
+          <DownsideAnalysisPanel downside={underwriting.downside} compact animated={false} />
+          <UnderwritingSummaryCard summary={underwriting.summary} />
+        </>
+      )}
 
       {preferences.includeSummary && <InvestmentSummary summary={summary} animated={false} />}
 

@@ -9,3 +9,5 @@ export { RentSensitivityChart } from "@/components/charts/rent-sensitivity-chart
 export { RehabSensitivityChart } from "@/components/charts/rehab-sensitivity-chart";
 export { CashflowStressChart } from "@/components/charts/cashflow-stress-chart";
 export { ResilienceBreakdownChart } from "@/components/charts/resilience-breakdown-chart";
+export { VacancySensitivityChart } from "@/components/charts/vacancy-sensitivity-chart";
+export { RefinanceSensitivityChart } from "@/components/charts/refinance-sensitivity-chart";

@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, Shield } from "lucide-react";
+import { Save, Shield, Umbrella } from "lucide-react";
 import { toast } from "sonner";
 import type { AnalysisInput, RentSource } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { STORAGE_KEYS } from "@/lib/constants";
-import { dashboardPath, resiliencePath } from "@/lib/utils/routes";
+import { dashboardPath, downsidePath, resiliencePath } from "@/lib/utils/routes";
 import { createDefaultAnalysis } from "@/data/default-analysis";
 import { identityFromAnalysis, seedUnsavedAnalysis } from "@/lib/property-identity";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -196,7 +196,12 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
                   <Shield /> Resilience
                 </Link>
               </Button>
-              <ExportPdfButton input={sanitizeInput(input)} results={results} summary={summary} />
+              <Button variant="outline" asChild>
+                <Link href={downsidePath(requestedId)}>
+                  <Umbrella /> Downside
+                </Link>
+              </Button>
+              <ExportPdfButton input={sanitizeInput(input)} results={results} summary={summary} underwriting={underwriting} />
               <Button variant="gradient" onClick={() => setSaveOpen(true)}>
                 <Save /> {existing ? "Update in Portfolio" : "Save to Portfolio"}
               </Button>

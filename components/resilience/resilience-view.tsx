@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import type { AnalysisInput, CountryCode, RentSource } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { STORAGE_KEYS } from "@/lib/constants";
-import { dashboardPath, resiliencePath } from "@/lib/utils/routes";
+import { dashboardPath, downsidePath, resiliencePath } from "@/lib/utils/routes";
 import { createDefaultAnalysis } from "@/data/default-analysis";
 import { getMarketProfile, toMarketData } from "@/data/market-data";
 import { identityFromAnalysis, seedUnsavedAnalysis } from "@/lib/property-identity";
@@ -33,6 +33,7 @@ import { RefinanceValidator } from "@/components/analysis/refinance-validator";
 import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
 import { DealKillerList } from "@/components/analysis/deal-killers";
 import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
+import { DownsideAnalysisPanel, DownsideCharts } from "@/components/analysis/downside-analysis";
 import { ChartCard, CashflowStressChart, RehabSensitivityChart, RentSensitivityChart, ResilienceBreakdownChart } from "@/components/charts";
 import type { AnalysisDraft } from "@/components/dashboard/analysis-dashboard";
 
@@ -170,11 +171,18 @@ function ResilienceSession({
         title="Deal Resilience"
         description="Stress-test rent, rehab, vacancy and refinance before you offer."
         actions={
-          <Button variant="outline" asChild>
-            <Link href={requestedId ? dashboardPath(requestedId) : dashboardPath()}>
-              Standard Analysis <ArrowUpRight />
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href={requestedId ? downsidePath(requestedId) : downsidePath()}>
+                Downside Analysis <ArrowUpRight />
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={requestedId ? dashboardPath(requestedId) : dashboardPath()}>
+                Standard Analysis <ArrowUpRight />
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -228,6 +236,7 @@ function ResilienceSession({
                   <MarginOfSafetyCard margin={underwriting.margin} />
                 </div>
                 <DealResiliencePanel resilience={underwriting.resilience} />
+                <DownsideAnalysisPanel downside={underwriting.downside} compact />
                 <DealKillerList warnings={underwriting.warnings} />
               </>
             ) : (
@@ -255,6 +264,7 @@ function ResilienceSession({
                 <ResilienceBreakdownChart components={underwriting.resilience.components} />
               </ChartCard>
             </div>
+            <DownsideCharts downside={underwriting.downside} />
             <RefinanceValidator validation={underwriting.refinance} />
             <UnderwritingSummaryCard summary={underwriting.summary} />
           </div>

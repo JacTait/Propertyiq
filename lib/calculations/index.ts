@@ -12,6 +12,7 @@ export * from "@/lib/calculations/rent";
 export * from "@/lib/calculations/buy-box";
 export * from "@/lib/calculations/refinance";
 export * from "@/lib/calculations/deal-resilience";
+export * from "@/lib/calculations/downside-analysis";
 export * from "@/lib/calculations/margin-of-safety";
 export * from "@/lib/calculations/deal-killers";
 export * from "@/lib/calculations/underwriting-summary";

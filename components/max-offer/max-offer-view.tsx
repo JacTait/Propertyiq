@@ -38,6 +38,8 @@ import { MaxOfferSummaryCard } from "@/components/max-offer/max-offer-summary";
 import { BuyBoxStatusCard } from "@/components/analysis/buy-box-status";
 import { DealKillerList } from "@/components/analysis/deal-killers";
 import { OfferEvaluationCard } from "@/components/max-offer/offer-evaluation";
+import { DownsideAnalysisPanel, DownsideCharts } from "@/components/analysis/downside-analysis";
+import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
 
 export interface MaxOfferDraft {
   input: MaxOfferInputs;
@@ -164,6 +166,8 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
     : null;
   const underwriting = useUnderwriting(analysisInput, analysisResults, {
     includeSensitivity: false,
+    includeDownsideSensitivity: true,
+    desiredMonthlyCashflow: input.targets?.desiredMonthlyCashflow,
     marginPrice: askingPrice,
     marginOffers,
   });
@@ -258,6 +262,7 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
               <DealVerdict results={results} evaluating={Boolean(askingPrice)} />
               <OfferTiers results={results} />
               {underwriting && <DealKillerList warnings={underwriting.warnings} />}
+              {underwriting && <DownsideAnalysisPanel downside={underwriting.downside} compact />}
             </>
           ) : (
             <div className="space-y-4">
@@ -273,7 +278,9 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
           <MaxOfferCharts results={results} />
           <ScenarioTable results={results} />
           <BrrrrPanel form={form} results={results} />
+          {underwriting && <DownsideCharts downside={underwriting.downside} />}
           <MaxOfferSummaryCard input={sanitizeMaxOffer(input)} results={results} />
+          {underwriting && <UnderwritingSummaryCard summary={underwriting.summary} />}
         </div>
       )}
 
