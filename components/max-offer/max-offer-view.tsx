@@ -252,7 +252,16 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
             <>
               <MaxOfferKpis results={results} />
               <div className="grid gap-4 lg:grid-cols-2">
-                {underwriting && <BuyBoxStatusCard match={underwriting.buyBox} />}
+                {underwriting && (
+                  <BuyBoxStatusCard
+                    match={underwriting.buyBox}
+                    listingNote={
+                      underwriting.buyBox.inside && askingPrice && askingPrice > results.maximumOffer
+                        ? "The property fits the active Buy Box characteristics, but the current listing price does not meet your return targets."
+                        : undefined
+                    }
+                  />
+                )}
                 <OfferEvaluationCard
                   askingPrice={askingPrice}
                   results={results}

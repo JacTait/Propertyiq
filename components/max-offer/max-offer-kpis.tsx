@@ -46,15 +46,15 @@ export function MaxOfferKpis({ results }: { results: MaxOfferResults }) {
       />
       <KpiCard
         index={4}
-        label="Expected ROI"
+        label="First-year return at recommended offer"
         value={fmt.percent(m.roi)}
-        sub="cashflow + year-one principal"
+        sub="Annual cash flow plus year-one principal, divided by total cash invested."
         icon={TrendingUp}
         tone={metricTone(m.roi, { good: 12, ok: 8 })}
       />
       <KpiCard
         index={5}
-        label="Expected Cash-On-Cash"
+        label="Cash-on-cash at recommended offer"
         value={fmt.percent(m.cashOnCash)}
         sub="annual cashflow ÷ cash invested"
         icon={Percent}

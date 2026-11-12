@@ -843,6 +843,14 @@ export interface SensitivityPoint {
   dscr: number;
 }
 
+/** Rehab overruns change capital, not rental cash flow. */
+export interface RehabSensitivityPoint {
+  changePercent: number;
+  rehabCost: number;
+  totalCashInvested: number;
+  remainingRehabHeadroom: number | null;
+}
+
 export interface DealResilienceResults {
   score: number;
   grade: ResilienceGrade;
@@ -850,7 +858,7 @@ export interface DealResilienceResults {
   scenarios: ResilienceScenarioMetrics[];
   components: ResilienceComponentScore[];
   rentSensitivity: SensitivityPoint[];
-  rehabSensitivity: SensitivityPoint[];
+  rehabSensitivity: RehabSensitivityPoint[];
   generatedAt: string;
 }
 
@@ -915,7 +923,7 @@ export interface DownsideAnalysisResults {
   assessment: string;
   rentSensitivity: SensitivityPoint[];
   vacancySensitivity: SensitivityPoint[];
-  rehabSensitivity: SensitivityPoint[];
+  rehabSensitivity: RehabSensitivityPoint[];
   refinanceSensitivity: SensitivityPoint[];
   generatedAt: string;
 }

@@ -35,7 +35,13 @@ export function generateUnderwritingSummary(args: SummaryArgs): UnderwritingSumm
   const expected = resilience.scenarios.find((s) => s.key === "expected");
   const paragraphs: string[] = [];
 
-  if (buyBox.status === "inside") {
+  const asking = typeof input.financing.askingPrice === "number" ? input.financing.askingPrice : 0;
+  const listingMissesTargets = buyBox.status === "inside" && asking > 0 && downside.marginReady && downside.marginOfSafetyPercent < 0;
+  if (listingMissesTargets) {
+    paragraphs.push(
+      "The property fits the active Buy Box characteristics, but the current listing price does not meet your return targets.",
+    );
+  } else if (buyBox.status === "inside") {
     paragraphs.push(`This property meets the active Buy Box criteria${buyBox.profileName ? ` (${buyBox.profileName})` : ""}.`);
   } else if (buyBox.status === "outside") {
     const fail = buyBox.reasons.find((r) => r.tone === "fail");
@@ -55,19 +61,25 @@ export function generateUnderwritingSummary(args: SummaryArgs): UnderwritingSumm
   const expectedCf = expected?.monthlyCashflow ?? results.monthlyCashflow;
   const stressCf = stress?.monthlyCashflow ?? results.monthlyCashflow;
   if (expectedCf >= 0 && stressCf >= 0) {
-    paragraphs.push("The deal generates positive cashflow under both expected and stress-case assumptions.");
+    paragraphs.push(
+      `The deal remains cash-flow positive under the Resilience stress case (${signedMoney(stressCf)}/month).`,
+    );
   } else if (expectedCf >= 0) {
-    paragraphs.push("The deal cashflows on expected assumptions, but the stress case turns cashflow negative.");
+    paragraphs.push(
+      `The deal cashflows on expected assumptions (${signedMoney(expectedCf)}/month), but the Resilience stress case turns cash-flow negative (${signedMoney(stressCf)}/month).`,
+    );
   } else {
-    paragraphs.push("The deal does not generate positive cashflow on the expected underwrite.");
+    paragraphs.push(
+      `The deal does not generate positive cashflow on the expected underwrite (${signedMoney(expectedCf)}/month).`,
+    );
   }
 
   if (stress) {
     const stillProfit = stress.monthlyCashflow >= 0 && stress.roi >= 0;
     paragraphs.push(
       stillProfit
-        ? "Even with a 10% reduction in rent and a 15% increase in rehab costs the property remains profitable."
-        : "A 10% reduction in rent and a 15% increase in rehab costs would erase profitability.",
+        ? "Even with Resilience stress (rent −10% and rehab +15%) the property remains profitable on that case."
+        : "Resilience stress (rent −10% and rehab +15%) would erase profitability on that case.",
     );
   }
 
@@ -79,14 +91,14 @@ export function generateUnderwritingSummary(args: SummaryArgs): UnderwritingSumm
   const bullets = [
     `Underwriting rent (${rent.source}): $${money(rent.active)}/month`,
     `Expected cashflow: ${expectedCf >= 0 ? "+" : ""}$${money(expectedCf)}/month`,
-    `Expected ROI: ${(expected?.roi ?? results.roi).toFixed(1)}%`,
-    `Stress-case DSCR: ${formatDscr(stress?.dscr ?? results.dscr)}`,
+    `Leveraged first-year total return: ${(expected?.roi ?? results.roi).toFixed(1)}% (includes assumed appreciation; analysis cash-to-close basis)`,
+    `Resilience stress-case DSCR: ${formatDscr(stress?.dscr ?? results.dscr)}`,
     `Refinance: ${refinance.viable ? "appears viable" : "at risk"}`,
     `Deal Survival Score: ${downside.score}/100 · ${downside.gradeLabel}`,
     `Primary Risk: ${downside.primaryRiskLabel}`,
     `Worst-case cashflow: ${signedMoney(downside.worstCase.monthlyCashflow)}/month`,
     `Worst-case DSCR: ${formatDscr(downside.worstCase.dscr)}`,
-    `Worst-case ROI: ${worstRoiLabel}`,
+    `Bad-year total return: ${worstRoiLabel} (downside cash flow plus principal and configured appreciation)`,
     `Deal Survival Verdict: ${downside.survival.verdictLabel}`,
   ];
 

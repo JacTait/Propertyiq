@@ -1,6 +1,7 @@
 import type {
   AnalysisInput,
   DealResilienceResults,
+  RehabSensitivityPoint,
   ResilienceComponentScore,
   ResilienceGrade,
   ResilienceScenarioKey,
@@ -13,6 +14,13 @@ import { analyzeProperty } from "@/lib/calculations/analyze";
 import { applyActiveRent, normalizeAnalysisInput } from "@/lib/calculations/rent";
 import { clamp } from "@/lib/calculations/ratios";
 import { validateRefinance } from "@/lib/calculations/refinance";
+import {
+  acquisitionFees,
+  maximumTotalRehabBudget,
+  remainingRehabHeadroom,
+  totalHoldingCost,
+  totalRehabBudget,
+} from "@/lib/calculations/deal-decision";
 
 const SCENARIO_LABELS: Record<ResilienceScenarioKey, string> = {
   best: "Best Case",
@@ -172,6 +180,35 @@ function gradeFor(score: number): { grade: ResilienceGrade; gradeLabel: string }
   return { grade: "high-risk", gradeLabel: "High Risk" };
 }
 
+export function mapRehabCapitalSensitivity(input: AnalysisInput, steps: number[]): RehabSensitivityPoint[] {
+  return steps.map((changePercent) => {
+    const next = applyResilienceShocks(input, {
+      rentFactor: 1,
+      rehabFactor: 1 + changePercent / 100,
+      vacancyDelta: 0,
+      maintenanceDelta: 0,
+      arvFactor: 1,
+    });
+    const rehab = next.strategy === "fix-flip" ? next.flip.renovationBudget : next.brrrr.rehabCost;
+    const totalRehab = totalRehabBudget(rehab, next.decision.rehabContingencyPercent);
+    const holding = totalHoldingCost(next.flip.holdingCostsMonthly, next.flip.holdDurationMonths);
+    const fees = acquisitionFees(next.financing);
+    const deposit = (next.financing.purchasePrice * next.financing.depositPercent) / 100;
+    const totalCashInvested = Math.max(0, deposit + fees + totalRehab + holding);
+    const maxBudget = maximumTotalRehabBudget({
+      conservativeArv: next.decision.conservativeArv,
+      targetArvPercent: next.decision.targetArvPercent,
+      purchasePrice: next.financing.purchasePrice,
+    });
+    return {
+      changePercent,
+      rehabCost: totalRehab,
+      totalCashInvested,
+      remainingRehabHeadroom: remainingRehabHeadroom(maxBudget, totalRehab),
+    };
+  });
+}
+
 function sensitivity(
   input: AnalysisInput,
   apply: (base: AnalysisInput, factor: number) => AnalysisInput,
@@ -235,15 +272,7 @@ export function calculateDealResilience(
           arvFactor: 1,
         }), rentSteps)
       : [],
-    rehabSensitivity: includeSensitivity
-      ? sensitivity(base, (src, factor) => applyResilienceShocks(src, {
-          rentFactor: 1,
-          rehabFactor: factor,
-          vacancyDelta: 0,
-          maintenanceDelta: 0,
-          arvFactor: 1,
-        }), rehabSteps)
-      : [],
+    rehabSensitivity: includeSensitivity ? mapRehabCapitalSensitivity(base, rehabSteps) : [],
     generatedAt: new Date().toISOString(),
   };
 }

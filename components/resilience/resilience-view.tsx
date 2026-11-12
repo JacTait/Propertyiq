@@ -262,7 +262,7 @@ function ResilienceSession({
               <ChartCard title="Rent Sensitivity" description="Cashflow and ROI as rent moves ±20% from the active rent.">
                 <RentSensitivityChart data={underwriting.resilience.rentSensitivity} />
               </ChartCard>
-              <ChartCard title="Rehab Cost Sensitivity" description="How overrun or savings on rehab change returns.">
+              <ChartCard title="Rehab Cost Sensitivity" description="Rehab overruns change cash required and remaining ARV-guideline headroom. They do not change rental monthly cash flow.">
                 <RehabSensitivityChart data={underwriting.resilience.rehabSensitivity} />
               </ChartCard>
               <ChartCard title="Cashflow Stress Test" description="Monthly cashflow across best, expected, stress and worst cases.">

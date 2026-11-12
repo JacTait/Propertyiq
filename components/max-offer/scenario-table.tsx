@@ -18,7 +18,7 @@ export function ScenarioTable({ results }: { results: MaxOfferResults }) {
   const rows: { label: string; render: (s: OfferScenario) => string; highlight?: boolean }[] = [
     { label: "Purchase Price", render: (s) => fmt.currency(s.purchasePrice), highlight: true },
     { label: "Cashflow", render: (s) => fmt.signedCurrency(s.monthlyCashflow) },
-    { label: "ROI", render: (s) => fmt.percent(s.roi) },
+    { label: "First-year return", render: (s) => fmt.percent(s.roi) },
     { label: "DSCR", render: (s) => fmt.ratio(s.dscr) },
     { label: "Cap Rate", render: (s) => fmt.percent(s.capRate) },
   ];

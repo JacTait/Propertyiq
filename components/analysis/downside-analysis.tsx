@@ -71,9 +71,9 @@ export function DownsideKpiGrid({ downside }: { downside: DownsideAnalysisResult
       />
       <KpiCard
         index={1}
-        label="Worst Case ROI"
+        label="Bad-year total return"
         value={fmt.percent(wc.roi)}
-        sub="stress-case return"
+        sub="Downside cash flow plus principal and the configured appreciation assumption."
         icon={TrendingDown}
         tone={metricTone(Number.isFinite(wc.roi) ? wc.roi : wc.roi === Infinity ? 100 : 0, { good: 8, ok: 5 })}
       />
@@ -128,7 +128,7 @@ export function DealSurvivalTestCard({ downside }: { downside: DownsideAnalysisR
       value: fmt.ratio(downside.worstCase.dscr),
     },
     {
-      label: "Stress ROI ≥ 5%",
+      label: "Bad-year total return ≥ 5%",
       pass: downside.survival.roiPass,
       value: fmt.percent(downside.worstCase.roi),
     },
@@ -221,7 +221,10 @@ export function DownsideCharts({ downside }: { downside: DownsideAnalysisResults
       <ChartCard title="Vacancy Sensitivity" description="Added vacancy points on top of the current vacancy assumption.">
         <VacancySensitivityChart data={downside.vacancySensitivity} />
       </ChartCard>
-      <ChartCard title="Rehab Overrun Sensitivity" description="How rehab overruns change cashflow and ROI.">
+      <ChartCard
+        title="Rehab Overrun Sensitivity"
+        description="Rehab overruns change cash required and remaining ARV-guideline headroom. They do not change rental monthly cash flow."
+      >
         <RehabSensitivityChart data={downside.rehabSensitivity} />
       </ChartCard>
       <ChartCard title="Refinance Sensitivity" description="Post-refinance DSCR as refinance LTV moves around the current setting.">

@@ -10,7 +10,7 @@ import type {
   SensitivityPoint,
 } from "@/lib/types";
 import { DEFAULT_INVESTOR_TARGETS, DOWNSIDE_SHOCKS, DOWNSIDE_WEIGHTS } from "@/lib/constants";
-import { applyResilienceShocks, evaluateDealMetrics } from "@/lib/calculations/deal-resilience";
+import { applyResilienceShocks, evaluateDealMetrics, mapRehabCapitalSensitivity } from "@/lib/calculations/deal-resilience";
 import { marginFromAnalysis } from "@/lib/calculations/margin-of-safety";
 import { clamp } from "@/lib/calculations/ratios";
 import { normalizeAnalysisInput } from "@/lib/calculations/rent";
@@ -227,6 +227,11 @@ function roiDetail(score: number, roi: number): string {
   return `Stress-case ROI is ${roi.toFixed(1)}%.`;
 }
 
+function signedAssessmentCashflow(value: number): string {
+  const amount = Math.round(Math.abs(value)).toLocaleString("en-US");
+  return `${value >= 0 ? "+" : "-"}$${amount}`;
+}
+
 function buildAssessment(
   cashflow: number,
   primaryRiskLabel: string,
@@ -235,10 +240,10 @@ function buildAssessment(
 ): string {
   const cashflowLine =
     cashflow > 0
-      ? "The property remains cashflow positive under stress assumptions."
+      ? `The deal remains cash-flow positive under the more severe bad-year Downside case (${signedAssessmentCashflow(cashflow)}/month).`
       : cashflow === 0
-        ? "The property breaks even under stress assumptions."
-        : "The property turns cashflow negative under stress assumptions.";
+        ? "The deal breaks even under the more severe bad-year Downside case."
+        : `The deal becomes cash-flow negative under the more severe bad-year Downside case (${signedAssessmentCashflow(cashflow)}/month).`;
   const riskLine = ` ${primaryRiskLabel} is the primary risk factor.`;
   if (survival.verdict === "likely") {
     const tail =
@@ -428,17 +433,7 @@ export function calculateDownsideAnalysis(
           }),
         )
       : [],
-    rehabSensitivity: includeSensitivity
-      ? mapSensitivity(base, rehabSteps, (src, step) =>
-          applyResilienceShocks(src, {
-            rentFactor: 1,
-            rehabFactor: 1 + step / 100,
-            vacancyDelta: 0,
-            maintenanceDelta: 0,
-            arvFactor: 1,
-          }),
-        )
-      : [],
+    rehabSensitivity: includeSensitivity ? mapRehabCapitalSensitivity(base, rehabSteps) : [],
     refinanceSensitivity: includeSensitivity
       ? refinanceSteps.map((changePercent) => {
           const next = cloneInput(base);

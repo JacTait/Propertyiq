@@ -14,7 +14,7 @@ export function MaxOfferSummaryCard({ input, results }: { input: MaxOfferInputs;
   const bullets = results.feasible
     ? [
         `${fmt.signedCurrency(m.monthlyCashflow)} monthly cashflow`,
-        `${fmt.percent(m.roi)} ROI`,
+        `${fmt.percent(m.roi)} first-year return`,
         `${fmt.ratio(m.dscr)} DSCR`,
       ]
     : results.summary.bullets;

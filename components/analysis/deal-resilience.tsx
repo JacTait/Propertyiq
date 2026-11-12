@@ -57,7 +57,7 @@ export function DealResiliencePanel({
             {resilience.scenarios.map((scenario) => (
               <div key={scenario.key} className="rounded-xl border border-border bg-muted/30 p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{scenario.label}</p>
-                <p className="mt-1 text-sm font-bold tabular">{fmt.percent(scenario.roi, 1)} ROI</p>
+                <p className="mt-1 text-sm font-bold tabular">{fmt.percent(scenario.roi, 1)} total return</p>
                 <p className="text-xs tabular text-muted-foreground">{fmt.signedCurrency(scenario.monthlyCashflow)}/mo</p>
                 <p className="text-xs tabular text-muted-foreground">{fmt.ratio(scenario.dscr)} DSCR</p>
               </div>

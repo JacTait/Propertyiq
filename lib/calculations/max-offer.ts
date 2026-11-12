@@ -400,7 +400,7 @@ function buildSummary(
     headline: `Based on a rent of ${formatPlain(rent)}/month and an ARV of ${formatPlain(arv)}, PropertyIQ estimates a maximum purchase price of ${formatPlain(max)}.`,
     bullets: [
       `${formatPlain(Math.abs(m.monthlyCashflow))}/month cashflow (${m.monthlyCashflow >= 0 ? "positive" : "negative"})`,
-      `${m.roi.toFixed(1)}% ROI including year-one principal paydown`,
+      `${m.roi.toFixed(1)}% first-year return (cashflow + year-one principal)`,
       `${formatDscr(m.dscr)} DSCR`,
     ],
     closing: `A recommended target offer of ${formatPlain(rec)} would create additional protection against vacancy and maintenance risks.`,

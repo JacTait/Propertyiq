@@ -6,7 +6,13 @@ import { cn } from "@/lib/utils/cn";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-export function BuyBoxStatusCard({ match }: { match: BuyBoxMatch }) {
+export function BuyBoxStatusCard({
+  match,
+  listingNote,
+}: {
+  match: BuyBoxMatch;
+  listingNote?: string;
+}) {
   const inside = match.status === "inside";
   const none = match.status === "no-profile";
   const Icon = none ? CircleDashed : inside ? CheckCircle2 : CircleAlert;
@@ -45,6 +51,7 @@ export function BuyBoxStatusCard({ match }: { match: BuyBoxMatch }) {
             >
               {none ? "No active Buy Box" : inside ? "Inside Buy Box" : "Outside Buy Box"}
             </p>
+            {listingNote ? <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{listingNote}</p> : null}
             <ul className="mt-2 space-y-1">
               {match.reasons.map((reason) => (
                 <li
