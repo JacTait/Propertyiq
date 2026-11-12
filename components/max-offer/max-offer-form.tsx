@@ -81,6 +81,7 @@ function PropertySection() {
             prefix={symbol}
             placeholder="Optional"
             className="sm:col-span-2"
+            emptyAsZero
             hint="Optional. Leave at 0 for Discovery (recommended and maximum offer only). Enter a listing price to evaluate margin of safety, deal status, overpricing and cushion."
           />
         </FieldGrid>

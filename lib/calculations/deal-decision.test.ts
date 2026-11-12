@@ -598,22 +598,37 @@ describe("margin-for-error classification", () => {
     ).toMatch(/negative/i);
   });
 
-  it("labels negative rehab headroom as a negative underwrite even when cash flow is positive", () => {
+  it("labels negative rehab headroom as a thin margin when cash flow is positive", () => {
     const result = classifyMarginForError({
       ...base,
       remainingRehabHeadroom: -8_000,
     });
-    expect(result.label).toBe("Negative underwrite");
-    expect(result.explanation).toMatch(/rehab budget exceeds/i);
+    expect(result.label).toBe("Thin margin");
+    expect(result.explanation).toMatch(/ARV-guideline/i);
   });
 
-  it("labels all-in above the selected ARV guideline as a negative underwrite", () => {
+  it("labels all-in above the selected ARV guideline as a thin margin when cash flow is positive", () => {
     const result = classifyMarginForError({
       ...base,
       allInPctConservativeArv: 82.2,
     });
-    expect(result.label).toBe("Negative underwrite");
+    expect(result.label).toBe("Thin margin");
     expect(result.explanation).toMatch(/82\.2%.*70\.0%/);
+  });
+
+  it("labels the audited fixture as thin margin, not negative underwrite", () => {
+    const result = classifyMarginForError({
+      conservativeMonthlyCashflow: 280,
+      stressMonthlyCashflow: -40,
+      remainingRehabHeadroom: -27_000,
+      currentTotalRehabBudget: 33_000,
+      allInPctConservativeArv: 82,
+      targetArvPercent: 70,
+    });
+    expect(result.label).toBe("Thin margin");
+    expect(result.explanation).toMatch(/positive/i);
+    expect(result.explanation).toMatch(/guideline/i);
+    expect(result.explanation).toMatch(/stress/i);
   });
 
   it("labels a default stress case that turns cash flow negative as a thin margin", () => {
@@ -664,7 +679,7 @@ describe("margin-for-error classification", () => {
 
   it("attaches the classification to evaluateDealDecision", () => {
     const overGuideline = evaluateDealDecision(fixture());
-    expect(overGuideline.marginForError.label).toBe("Negative underwrite");
+    expect(overGuideline.marginForError.label).toBe("Thin margin");
     expect(overGuideline.stressUsesProductDefaults).toBe(true);
 
     const stronger = evaluateDealDecision(

@@ -31,17 +31,11 @@ export function underwriteDeal(
   const refinance = validateRefinance(normalized, results);
   const resilience = calculateDealResilience(normalized, options);
   const margin = marginFromAnalysis(normalized, options.marginPrice, options.marginOffers);
-  const asking =
-    options.marginPrice === null
-      ? 0
-      : typeof options.marginPrice === "number"
-        ? options.marginPrice
-        : normalized.financing.askingPrice;
   const downside = calculateDownsideAnalysis(normalized, {
     includeSensitivity: options.includeDownsideSensitivity !== false,
     desiredMonthlyCashflow: options.desiredMonthlyCashflow,
     maximumOffer: margin.maximumOffer,
-    askingPrice: asking,
+    askingPrice: margin.ready ? margin.currentPrice : 0,
     postRefinanceDscr: refinance.postRefiDscr,
     refinanceLoanAmount: refinance.loanAmount,
   });

@@ -400,21 +400,30 @@ export function classifyMarginForError(input: MarginForErrorInput): MarginForErr
     };
   }
 
-  if (headroom !== null && Number.isFinite(headroom) && headroom < 0) {
-    return {
-      label: "Negative underwrite",
-      explanation: "Current rehab budget exceeds this ARV-guideline threshold.",
-    };
-  }
+  const headroomFailed = headroom !== null && Number.isFinite(headroom) && headroom < 0;
+  const guidelineExceeded = allInPct !== null && allInPct > target;
+  const stressFailed = stress < 0;
 
-  if (allInPct !== null && allInPct > target) {
-    return {
-      label: "Negative underwrite",
-      explanation: `All-in cost is ${round1(allInPct)}% of conservative ARV, above the ${round1(target)}% guideline.`,
-    };
-  }
-
-  if (stress < 0) {
+  if (headroomFailed || guidelineExceeded || stressFailed) {
+    if ((headroomFailed || guidelineExceeded) && stressFailed) {
+      return {
+        label: "Thin margin",
+        explanation:
+          "Conservative cash flow is positive, but the deal exceeds your selected ARV guideline and turns negative under stress.",
+      };
+    }
+    if (headroomFailed) {
+      return {
+        label: "Thin margin",
+        explanation: "Conservative cash flow is non-negative, but current rehab exceeds the selected ARV-guideline headroom.",
+      };
+    }
+    if (guidelineExceeded) {
+      return {
+        label: "Thin margin",
+        explanation: `Conservative cash flow is non-negative, but all-in cost is ${round1(allInPct as number)}% of conservative ARV, above the selected ${round1(target)}% guideline.`,
+      };
+    }
     return {
       label: "Thin margin",
       explanation: "Conservative cash flow is non-negative, but the current stress case turns cash flow negative.",

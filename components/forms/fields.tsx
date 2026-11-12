@@ -64,6 +64,7 @@ interface NumberFieldProps {
   trailing?: React.ReactNode;
   /** Optional side-effect after the value changes (e.g. sync deposit amount). */
   onValueChange?: (value: number) => void;
+  emptyAsZero?: boolean;
 }
 
 function formatForInput(value: number): string {
@@ -82,6 +83,7 @@ export function NumberField({
   disabled,
   trailing,
   onValueChange,
+  emptyAsZero,
 }: NumberFieldProps) {
   const { control } = useFormContext<AnalysisFormValues>();
   const id = React.useId();
@@ -105,6 +107,7 @@ export function NumberField({
             disabled={disabled}
             trailing={trailing}
             value={numeric}
+            emptyAsZero={emptyAsZero}
             onBlur={field.onBlur}
             onChange={(v) => {
               field.onChange(v);
@@ -131,6 +134,8 @@ interface NumberInputProps {
   value: number;
   onChange: (value: number) => void;
   onBlur?: () => void;
+  /** Blank / incomplete input emits 0 instead of NaN. Use only on optional money fields. */
+  emptyAsZero?: boolean;
 }
 
 export function NumberInput({
@@ -147,6 +152,7 @@ export function NumberInput({
   value,
   onChange,
   onBlur,
+  emptyAsZero = false,
 }: NumberInputProps) {
   const [text, setText] = React.useState(() => formatForInput(value));
   const lastEmitted = React.useRef(value);
@@ -164,7 +170,7 @@ export function NumberInput({
     const cleaned = raw.replace(/[^0-9.\-]/g, "");
     setText(cleaned);
     const parsed = cleaned === "" || cleaned === "-" || cleaned === "." ? NaN : Number(cleaned);
-    const next = Number.isFinite(parsed) ? parsed : NaN;
+    const next = Number.isFinite(parsed) ? parsed : emptyAsZero ? 0 : NaN;
     lastEmitted.current = next;
     onChange(next);
   };

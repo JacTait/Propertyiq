@@ -57,7 +57,7 @@ const VERDICT_ICON: Record<DownsideAnalysisResults["survival"]["verdict"], strin
 export function DownsideKpiGrid({ downside }: { downside: DownsideAnalysisResults }) {
   const fmt = useFormatters();
   const wc = downside.worstCase;
-  const mos = downside.marginReady ? fmt.percent(downside.marginOfSafetyPercent, 1) : "Awaiting asking price";
+  const mos = downside.marginReady ? fmt.percent(downside.marginOfSafetyPercent, 1) : "Awaiting price";
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -105,7 +105,11 @@ export function DownsideKpiGrid({ downside }: { downside: DownsideAnalysisResult
         index={5}
         label="Margin Of Safety"
         value={mos}
-        sub={downside.marginReady ? "(max offer − asking) / max offer" : "Enter asking price to calculate"}
+        sub={
+          downside.marginReady
+            ? "(max offer − current price) / max offer"
+            : "Enter asking price, or purchase price if unlisted"
+        }
         icon={Percent}
         tone={downside.marginReady ? metricTone(downside.marginOfSafetyPercent, { good: 15, ok: 5 }) : "muted"}
       />

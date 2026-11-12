@@ -265,7 +265,7 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
                 <OfferEvaluationCard
                   askingPrice={askingPrice}
                   results={results}
-                  margin={underwriting?.margin ?? pendingMargin(results.recommendedOffer, results.maximumOffer)}
+                  margin={underwriting?.margin ?? pendingMargin(results.recommendedOffer, results.maximumOffer, "supplied")}
                 />
               </div>
               <DealVerdict results={results} evaluating={Boolean(askingPrice)} />

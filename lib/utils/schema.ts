@@ -6,6 +6,17 @@ const money = (label: string) =>
     .min(0, `${label} cannot be negative`)
     .finite();
 
+/** Optional listing price. Blank / NaN becomes 0. Negatives still fail. */
+export function coerceOptionalAskingPrice(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+const optionalAskingPrice = () =>
+  z
+    .custom<number>((value) => typeof value === "number", { message: "Asking price must be a number" })
+    .transform((value) => coerceOptionalAskingPrice(value))
+    .refine((value) => value >= 0, { message: "Asking price cannot be negative" });
+
 const percent = (label: string, max = 100) =>
   z
     .number({ message: `${label} must be a number` })
@@ -63,7 +74,7 @@ export const strategySchema = z.enum([
 
 export const financingSchema = z.object({
   purchasePrice: money("Purchase price").min(1, "Enter a purchase price"),
-  askingPrice: money("Asking price"),
+  askingPrice: optionalAskingPrice(),
   depositPercent: percent("Deposit"),
   interestRate: percent("Interest rate", 30),
   termYears: z.number().min(1).max(40),
@@ -218,7 +229,7 @@ export const maxOfferSchema = z.object({
     rehabBudget: money("Rehab budget"),
     closingCosts: money("Closing costs"),
     holdingCosts: money("Holding costs"),
-    askingPrice: money("Asking price"),
+    askingPrice: optionalAskingPrice(),
     propertyType: propertySchema.shape.propertyType,
     bedrooms: count("Bedrooms", 50),
     bathrooms: count("Bathrooms", 50),

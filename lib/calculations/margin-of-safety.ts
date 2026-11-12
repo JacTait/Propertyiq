@@ -12,6 +12,8 @@ import { resolveRent } from "@/lib/calculations/rent";
 import { resolveArv } from "@/lib/calculations/refinance";
 
 const AWAITING_DETAIL = "Enter a purchase price or asking price to calculate margin of safety.";
+const RECONSTRUCTED_CEILING = "Maximum offer is reconstructed with default investor targets, not a saved Max Offer search.";
+const SUPPLIED_CEILING = "Maximum offer comes from the supplied Max Offer run.";
 
 function finitePrice(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
@@ -25,7 +27,11 @@ function ratingFor(percent: number): { rating: SafetyRating; ratingLabel: string
   return { rating: "danger", ratingLabel: "Danger" };
 }
 
-export function pendingMargin(recommendedOffer = 0, maximumOffer = 0): MarginOfSafety {
+export function pendingMargin(
+  recommendedOffer = 0,
+  maximumOffer = 0,
+  offerCeilingSource: MarginOfSafety["offerCeilingSource"] = "reconstructed-default-targets",
+): MarginOfSafety {
   return {
     ready: false,
     priceSource: null,
@@ -34,6 +40,7 @@ export function pendingMargin(recommendedOffer = 0, maximumOffer = 0): MarginOfS
     purchasePrice: 0,
     recommendedOffer,
     maximumOffer,
+    offerCeilingSource,
     dollarCushion: 0,
     percent: 0,
     rating: null,
@@ -111,11 +118,12 @@ export function calculateMarginOfSafety(
   current: CurrentDealPrice | null,
   recommendedOffer: number,
   maximumOffer: number,
+  offerCeilingSource: MarginOfSafety["offerCeilingSource"] = "reconstructed-default-targets",
 ): MarginOfSafety {
   const rec = Math.max(0, recommendedOffer);
   const max = Math.max(0, maximumOffer);
   if (!current || current.price <= 0) {
-    return pendingMargin(rec, max);
+    return pendingMargin(rec, max, offerCeilingSource);
   }
 
   const price = current.price;
@@ -134,6 +142,8 @@ export function calculateMarginOfSafety(
     detail = "The current price is between the recommended offer and the maximum allowable offer.";
   }
 
+  const ceilingNote = offerCeilingSource === "supplied" ? SUPPLIED_CEILING : RECONSTRUCTED_CEILING;
+
   return {
     ready: true,
     priceSource: current.source,
@@ -142,11 +152,12 @@ export function calculateMarginOfSafety(
     purchasePrice: price,
     recommendedOffer: rec,
     maximumOffer: max,
+    offerCeilingSource,
     dollarCushion,
     percent,
     rating,
     ratingLabel,
-    detail,
+    detail: `${detail} ${ceilingNote}`,
   };
 }
 
@@ -156,6 +167,7 @@ export function marginFromMaxOffer(results: MaxOfferResults, askingPrice: number
     asking > 0 ? { price: asking, source: "asking", label: "Current Asking Price" } : null,
     results.recommendedOffer,
     results.maximumOffer,
+    "supplied",
   );
 }
 
@@ -171,9 +183,9 @@ export function marginFromAnalysis(
         : null
       : resolveCurrentPrice(input);
   if (offers) {
-    return calculateMarginOfSafety(current, offers.recommendedOffer, offers.maximumOffer);
+    return calculateMarginOfSafety(current, offers.recommendedOffer, offers.maximumOffer, "supplied");
   }
   const offerInput = analysisToMaxOfferInputs(input);
   const results = calculateMaxOffer(offerInput);
-  return calculateMarginOfSafety(current, results.recommendedOffer, results.maximumOffer);
+  return calculateMarginOfSafety(current, results.recommendedOffer, results.maximumOffer, "reconstructed-default-targets");
 }

@@ -968,6 +968,8 @@ export interface CurrentDealPrice {
   label: string;
 }
 
+export type OfferCeilingSource = "supplied" | "reconstructed-default-targets";
+
 export interface MarginOfSafety {
   ready: boolean;
   priceSource: MarginPriceSource | null;
@@ -977,6 +979,7 @@ export interface MarginOfSafety {
   purchasePrice: number;
   recommendedOffer: number;
   maximumOffer: number;
+  offerCeilingSource: OfferCeilingSource;
   dollarCushion: number;
   percent: number;
   rating: SafetyRating | null;

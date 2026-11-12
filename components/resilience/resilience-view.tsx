@@ -205,6 +205,7 @@ function ResilienceSession({
                   name="financing.askingPrice"
                   label="Current Asking Price"
                   prefix={symbol}
+                  emptyAsZero
                   hint="Used first for Margin of Safety. Leave at 0 to use Purchase Price."
                 />
                 <NumberField

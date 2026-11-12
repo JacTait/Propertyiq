@@ -206,7 +206,7 @@ function dscrDetail(score: number, dscr: number): string {
 }
 
 function marginDetail(score: number, percent: number | null): string {
-  if (percent === null) return "Enter an asking price and a maximum offer to score margin of safety.";
+  if (percent === null) return "Enter an asking price or purchase price, and a maximum offer, to score margin of safety.";
   if (percent < 0) return "Asking price is above the maximum allowable offer.";
   if (score === 100) return "Asking price sits 20% or more below the maximum offer.";
   return `Margin of safety is ${percent.toFixed(1)}% of the maximum offer.`;

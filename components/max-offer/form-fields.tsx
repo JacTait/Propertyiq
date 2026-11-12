@@ -17,6 +17,7 @@ export function MaxNumberField({
   placeholder,
   className,
   onValueChange,
+  emptyAsZero,
 }: {
   name: Name;
   label: string;
@@ -26,6 +27,7 @@ export function MaxNumberField({
   placeholder?: string;
   className?: string;
   onValueChange?: (value: number) => void;
+  emptyAsZero?: boolean;
 }) {
   const { control } = useFormContext<MaxOfferFormValues>();
   const id = React.useId();
@@ -46,6 +48,7 @@ export function MaxNumberField({
             placeholder={placeholder}
             className={className}
             value={numeric}
+            emptyAsZero={emptyAsZero}
             onBlur={field.onBlur}
             onChange={(v) => {
               field.onChange(v);

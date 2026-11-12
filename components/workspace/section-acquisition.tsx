@@ -170,6 +170,7 @@ export function SectionAcquisition({ decision }: SectionAcquisitionProps) {
             name="financing.askingPrice"
             label="Asking price"
             prefix={symbol}
+            emptyAsZero
             hint="Optional. Leave at 0 if you do not have a list price."
           />
           <NumberField
