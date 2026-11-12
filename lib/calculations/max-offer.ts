@@ -335,6 +335,14 @@ function buildCurve(input: MaxOfferInputs, maximumOffer: number): PriceMetricPoi
 
 function buildBrrrr(input: MaxOfferInputs, purchasePrice: number, metrics: OfferDealMetrics): MaxOfferBrrrrResults {
   const refinanceAmount = input.property.arv * (input.brrrr.refinanceLtv / 100);
+  const refinanceMonthlyPayment = calculateMonthlyPayment(
+    refinanceAmount,
+    input.brrrr.refinanceRate,
+    input.financing.termYears,
+  );
+  const annualRefinanceDebtService = refinanceMonthlyPayment * 12;
+  const postRefiMonthlyCashflow = (metrics.noi - annualRefinanceDebtService) / 12;
+  const postRefiDscr = calculateDscr(metrics.noi, annualRefinanceDebtService);
   const capital = computeBrrrrCapital({
     purchasePrice,
     rehabCost: input.property.rehabBudget,
@@ -347,8 +355,8 @@ function buildBrrrr(input: MaxOfferInputs, purchasePrice: number, metrics: Offer
   const cashLeftInDeal = Math.max(0, capital.cashLeftInDeal);
   const cashRecoveryPercent = safeDivide(Math.max(0, cashPulledOut), capital.totalCapitalInvested) * 100;
   const recoveryScore = clamp(cashRecoveryPercent / 100, 0, 1) * 70;
-  const cashflowScore = clamp(metrics.monthlyCashflow / 400, 0, 1) * 30;
-  const infiniteReturn = cashLeftInDeal <= 0 && metrics.monthlyCashflow > 0;
+  const cashflowScore = clamp(postRefiMonthlyCashflow / 400, 0, 1) * 30;
+  const infiniteReturn = cashLeftInDeal <= 0 && postRefiMonthlyCashflow > 0;
 
   return {
     totalProjectCost: capital.totalProjectCost,
@@ -357,7 +365,9 @@ function buildBrrrr(input: MaxOfferInputs, purchasePrice: number, metrics: Offer
     cashPulledOut,
     cashLeftInDeal,
     cashRecoveryPercent,
-    monthlyCashflow: metrics.monthlyCashflow,
+    monthlyCashflow: postRefiMonthlyCashflow,
+    postRefiDscr,
+    annualRefinanceDebtService,
     efficiencyScore: Math.round(recoveryScore + cashflowScore),
     infiniteReturn,
   };

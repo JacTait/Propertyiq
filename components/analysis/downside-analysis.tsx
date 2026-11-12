@@ -65,7 +65,7 @@ export function DownsideKpiGrid({ downside }: { downside: DownsideAnalysisResult
         index={0}
         label="Worst Case Cashflow"
         value={fmt.signedCurrency(wc.monthlyCashflow)}
-        sub="per month under downside shocks"
+        sub="pre-refinance, after downside shocks"
         icon={Wallet}
         tone={metricTone(wc.monthlyCashflow, { good: 1, ok: 0 })}
       />
@@ -81,7 +81,7 @@ export function DownsideKpiGrid({ downside }: { downside: DownsideAnalysisResult
         index={2}
         label="Worst Case DSCR"
         value={fmt.ratio(wc.dscr)}
-        sub="coverage after stress"
+        sub="pre-refinance coverage after downside shocks"
         icon={Scale}
         tone={metricTone(Number.isFinite(wc.dscr) ? wc.dscr : wc.dscr === Infinity ? 2 : 0, { good: 1.25, ok: 1 })}
       />
@@ -118,12 +118,12 @@ export function DealSurvivalTestCard({ downside }: { downside: DownsideAnalysisR
   const tone = VERDICT_TONE[downside.survival.verdict];
   const tests = [
     {
-      label: "Stress cashflow > 0",
+      label: "Pre-refi cashflow > 0",
       pass: downside.survival.cashflowPass,
       value: fmt.signedCurrency(downside.worstCase.monthlyCashflow),
     },
     {
-      label: "Stress DSCR ≥ 1.00x",
+      label: "Pre-refi DSCR ≥ 1.00x",
       pass: downside.survival.dscrPass,
       value: fmt.ratio(downside.worstCase.dscr),
     },

@@ -41,31 +41,43 @@ export function applyResilienceShocks(input: AnalysisInput, shocks: ResilienceSh
   return next;
 }
 
-export function evaluateDealMetrics(input: AnalysisInput): {
+export interface DealPhaseMetrics {
+  /** Pre-refinance monthly cash flow (NOI − acquisition P&I) / 12. */
   monthlyCashflow: number;
   annualCashflow: number;
   roi: number;
   cashOnCash: number;
+  /** Pre-refinance DSCR. Same debt service as `monthlyCashflow`. */
   dscr: number;
   capRate: number;
   refinanceViable: boolean;
+  preRefiMonthlyCashflow: number;
+  postRefiMonthlyCashflow: number;
+  preRefiDscr: number;
   postRefiDscr: number;
   refinanceLoanAmount: number;
-} {
+}
+
+export function evaluateDealMetrics(input: AnalysisInput): DealPhaseMetrics {
   const results = analyzeProperty(applyActiveRent(input));
   const refinance = validateRefinance(input, results, {
     arvFactor: 1,
     rentFactor: 1,
   });
   const roi = results.roi === Infinity ? Infinity : Number.isFinite(results.roi) ? results.roi : 0;
+  const preRefiMonthlyCashflow = results.monthlyCashflow;
+  const preRefiDscr = results.dscr;
   return {
-    monthlyCashflow: results.monthlyCashflow,
+    monthlyCashflow: preRefiMonthlyCashflow,
     annualCashflow: results.annualCashflow,
     roi,
     cashOnCash: results.cashOnCash,
-    dscr: refinance.loanAmount > 0 ? refinance.postRefiDscr : results.dscr,
+    dscr: preRefiDscr,
     capRate: results.capRate,
     refinanceViable: refinance.viable,
+    preRefiMonthlyCashflow,
+    postRefiMonthlyCashflow: refinance.postRefiMonthlyCashflow,
+    preRefiDscr,
     postRefiDscr: refinance.postRefiDscr,
     refinanceLoanAmount: refinance.loanAmount,
   };
@@ -79,13 +91,17 @@ function scenarioMetrics(input: AnalysisInput, key: ResilienceScenarioKey): Resi
     key,
     label: SCENARIO_LABELS[key],
     shocks,
-    monthlyCashflow: metrics.monthlyCashflow,
+    monthlyCashflow: metrics.preRefiMonthlyCashflow,
     annualCashflow: metrics.annualCashflow,
     roi: Number.isFinite(metrics.roi) ? metrics.roi : 0,
     cashOnCash: metrics.cashOnCash,
-    dscr: metrics.dscr,
+    dscr: metrics.preRefiDscr,
     capRate: metrics.capRate,
     refinanceViable: metrics.refinanceViable,
+    preRefiMonthlyCashflow: metrics.preRefiMonthlyCashflow,
+    postRefiMonthlyCashflow: metrics.postRefiMonthlyCashflow,
+    preRefiDscr: metrics.preRefiDscr,
+    postRefiDscr: metrics.postRefiDscr,
   };
 }
 

@@ -54,6 +54,7 @@ export function BrrrrPanel({ form, results }: { form: UseFormReturn<MaxOfferForm
                 value={b.infiniteReturn ? "100%+" : fmt.percent(b.cashRecoveryPercent)}
               />
               <StatRow label="Post-refi Cashflow" value={`${fmt.signedCurrency(b.monthlyCashflow)}/mo`} />
+              <StatRow label="Post-refi DSCR" value={fmt.ratio(b.postRefiDscr)} />
             </div>
           </div>
         </CardContent>

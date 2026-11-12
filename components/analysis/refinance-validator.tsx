@@ -50,6 +50,10 @@ export function RefinanceValidator({ validation, children }: { validation: Refin
             <StatRow label="Monthly Payment" value={`${fmt.currency(validation.monthlyPayment)}/mo`} />
             <StatRow label="Estimated Cash Pulled Out" value={fmt.currency(validation.cashPulledOut)} />
             <StatRow label="Estimated Cash Left In Deal" value={fmt.currency(Math.max(0, validation.cashLeftInDeal))} />
+            <StatRow
+              label="Post-Refi Cashflow"
+              value={`${fmt.signedCurrency(validation.postRefiMonthlyCashflow)}/mo`}
+            />
             <StatRow label="Post-Refi DSCR" value={fmt.ratio(validation.postRefiDscr)} emphasis />
           </div>
         </div>

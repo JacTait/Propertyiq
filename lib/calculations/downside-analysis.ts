@@ -262,9 +262,9 @@ function mapSensitivity(
     const metrics = evaluateDealMetrics(apply(input, changePercent));
     return {
       changePercent,
-      monthlyCashflow: metrics.monthlyCashflow,
+      monthlyCashflow: metrics.preRefiMonthlyCashflow,
       roi: Number.isFinite(metrics.roi) ? metrics.roi : 0,
-      dscr: metrics.dscr,
+      dscr: metrics.preRefiDscr,
     };
   });
 }
@@ -318,8 +318,8 @@ export function calculateDownsideAnalysis(
           return { postRefiDscr: refinance.postRefiDscr, loanAmount: refinance.loanAmount };
         })();
 
-  const stressCashflow = finiteOrZero(worst.monthlyCashflow);
-  const stressDscr = metricValue(worst.dscr);
+  const stressCashflow = finiteOrZero(worst.preRefiMonthlyCashflow);
+  const stressDscr = metricValue(worst.preRefiDscr);
   const stressRoi = metricValue(worst.roi);
   const postRefinanceDscr = metricValue(baseRefinance.postRefiDscr);
   const refinanceLoanAmount = Math.max(0, finiteOrZero(baseRefinance.loanAmount));
@@ -446,7 +446,7 @@ export function calculateDownsideAnalysis(
           const metrics = evaluateDealMetrics(next);
           return {
             changePercent,
-            monthlyCashflow: metrics.monthlyCashflow,
+            monthlyCashflow: metrics.postRefiMonthlyCashflow,
             roi: Number.isFinite(metrics.roi) ? metrics.roi : 0,
             dscr: metrics.postRefiDscr,
           };

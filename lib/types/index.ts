@@ -692,7 +692,10 @@ export interface MaxOfferBrrrrResults {
   cashPulledOut: number;
   cashLeftInDeal: number;
   cashRecoveryPercent: number;
+  /** Post-refinance monthly cash flow: (NOI − refinance ADS) / 12. Not acquisition cash flow. */
   monthlyCashflow: number;
+  postRefiDscr: number;
+  annualRefinanceDebtService: number;
   efficiencyScore: number;
   infiniteReturn: boolean;
 }
@@ -810,13 +813,19 @@ export interface ResilienceScenarioMetrics {
   key: ResilienceScenarioKey;
   label: string;
   shocks: ResilienceShocks;
+  /** Pre-refinance monthly cash flow. Same phase as `dscr`. */
   monthlyCashflow: number;
   annualCashflow: number;
   roi: number;
   cashOnCash: number;
+  /** Pre-refinance DSCR. Same phase as `monthlyCashflow`. */
   dscr: number;
   capRate: number;
   refinanceViable: boolean;
+  preRefiMonthlyCashflow: number;
+  postRefiMonthlyCashflow: number;
+  preRefiDscr: number;
+  postRefiDscr: number;
 }
 
 export interface ResilienceComponentScore {
