@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LandingPage } from "@/components/layout/landing-page";
 
 export const metadata: Metadata = {
-  title: "PropertyIQ — AI-Powered Property Investment Analysis",
+  title: "PropertyIQ — Know your number before you make the offer.",
 };
 
 export default function HomePage() {

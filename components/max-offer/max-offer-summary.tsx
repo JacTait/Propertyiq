@@ -29,7 +29,7 @@ export function MaxOfferSummaryCard({ input, results }: { input: MaxOfferInputs;
           <Sparkles className="size-4" />
         </span>
         <div>
-          <CardTitle>AI Investment Summary</CardTitle>
+          <CardTitle>Offer Summary</CardTitle>
           <CardDescription>Generated from your targets, rent and ARV — not a canned template.</CardDescription>
         </div>
       </CardHeader>

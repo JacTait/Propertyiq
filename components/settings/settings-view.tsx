@@ -52,7 +52,7 @@ export function SettingsView() {
       <PageHeader
         eyebrow="Preferences"
         title="Settings"
-        description="Personalise currency, theme, defaults and export behaviour. Settings are stored locally."
+        description="Currency, theme, Buy Boxes and export behaviour. Stored locally in this browser."
         actions={
           <Button
             variant="outline"
@@ -197,8 +197,8 @@ export function SettingsView() {
               onChange={(v) => updateSettings({ exportPreferences: { ...settings.exportPreferences, includeCharts: v } })}
             />
             <Toggle
-              label="Include AI summary"
-              description="Analyst narrative and final recommendation"
+              label="Include narrative summary"
+              description="Written summary and recommendation generated from the entered assumptions"
               checked={settings.exportPreferences.includeSummary}
               onChange={(v) => updateSettings({ exportPreferences: { ...settings.exportPreferences, includeSummary: v } })}
             />
@@ -228,9 +228,19 @@ export function SettingsView() {
           </div>
         </SettingsCard>
 
-        <div className="lg:col-span-2">
+        <section id="buy-boxes" className="lg:col-span-2 space-y-3">
+          <h2 className="font-heading text-lg font-medium">Buy Boxes</h2>
           <BuyBoxProfiles />
-        </div>
+        </section>
+
+        <section id="underwriting" className="lg:col-span-2 border border-border bg-card rounded-lg px-4 py-4">
+          <h2 className="font-heading text-lg font-medium">Underwriting defaults</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Cashflow targets, DSCR requirement, refinance LTV, rehab contingency, vacancy, maintenance and CapEx are
+            set on each analysis. They are not stored as global settings, so saved deals keep the assumptions they were
+            underwritten with.
+          </p>
+        </section>
 
         <SettingsCard icon={Trash2} title="Data" description="All PropertyIQ data is stored in this browser only." className="lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">

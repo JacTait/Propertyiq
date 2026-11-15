@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
 
@@ -16,12 +15,7 @@ interface ChartCardProps {
 
 export function ChartCard({ title, description, children, className, action, height = 280 }: ChartCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={cn("h-full", className)}
-    >
+    <div className={cn("h-full", className)}>
       <Card className="flex h-full flex-col">
         <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
           <div className="space-y-1">
@@ -36,7 +30,7 @@ export function ChartCard({ title, description, children, className, action, hei
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }
 
@@ -46,10 +40,10 @@ export const CHART_THEME = {
   tooltip: {
     backgroundColor: "var(--popover)",
     border: "1px solid var(--border)",
-    borderRadius: 12,
+    borderRadius: 8,
     color: "var(--popover-foreground)",
     fontSize: 12,
-    boxShadow: "0 10px 30px -10px rgba(0,0,0,0.4)",
+    boxShadow: "none",
   },
   tooltipLabel: { color: "var(--muted-foreground)", fontWeight: 600, marginBottom: 4 },
 } as const;

@@ -1,10 +1,10 @@
 "use client";
 
-import type { DealGrade, DealResilienceResults } from "@/lib/types";
-import { cn } from "@/lib/utils/cn";
+import type { DealGrade, DealResilienceResults, ResilienceScenarioMetrics } from "@/lib/types";
 import { useFormatters } from "@/hooks/useSettings";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScoreBreakdown } from "@/components/underwriting/score-breakdown";
+import { ScenarioComparison } from "@/components/underwriting/scenario-comparison";
+import { MajorMetric } from "@/components/underwriting/major-metric";
 import { DealScoreGauge } from "@/components/analysis/deal-score-gauge";
 
 const GRADE_TO_DEAL: Record<DealResilienceResults["grade"], DealGrade> = {
@@ -15,14 +15,6 @@ const GRADE_TO_DEAL: Record<DealResilienceResults["grade"], DealGrade> = {
   "high-risk": "avoid",
 };
 
-const GRADE_TONE: Record<DealResilienceResults["grade"], "success" | "primary" | "warning" | "danger"> = {
-  "very-resilient": "success",
-  resilient: "success",
-  acceptable: "primary",
-  fragile: "warning",
-  "high-risk": "danger",
-};
-
 export function DealResiliencePanel({
   resilience,
   compact = false,
@@ -31,62 +23,122 @@ export function DealResiliencePanel({
   compact?: boolean;
 }) {
   const fmt = useFormatters();
-  const tone = GRADE_TONE[resilience.grade];
+  const stress = resilience.scenarios.find((s) => s.key === "stress");
+  const worst = resilience.scenarios.find((s) => s.key === "worst");
+  const columns = resilience.scenarios
+    .filter((s) => s.key === "expected" || s.key === "stress" || s.key === "worst")
+    .map((s) => ({ key: s.key, label: s.label }));
+
+  const valueFor = (key: "expected" | "stress" | "worst", pick: (s: ResilienceScenarioMetrics) => string) => {
+    const scenario = resilience.scenarios.find((s) => s.key === key);
+    return scenario ? pick(scenario) : "—";
+  };
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
-        <div>
-          <CardTitle>Deal Resilience Analyzer</CardTitle>
-          <CardDescription>Best, expected, stress and worst-case underwrites.</CardDescription>
-        </div>
-        <Badge variant={tone}>{resilience.gradeLabel}</Badge>
-      </CardHeader>
-      <CardContent className={cn("grid gap-6", compact ? "lg:grid-cols-[auto_1fr]" : "xl:grid-cols-[auto_1fr]")}>
-        <div className="flex flex-col items-center gap-2">
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <MajorMetric
+          label="Survives Stress"
+          value={stress && stress.monthlyCashflow >= 0 && Number.isFinite(stress.dscr) && stress.dscr >= 1 ? "Yes" : "No"}
+          tone={stress && stress.monthlyCashflow >= 0 && stress.dscr >= 1 ? "success" : "danger"}
+        />
+        <MajorMetric
+          label="Worst-Case Cashflow"
+          value={worst ? fmt.signedCurrency(worst.monthlyCashflow) : "—"}
+          tone={worst && worst.monthlyCashflow >= 0 ? "success" : "danger"}
+        />
+        <MajorMetric
+          label="Primary Risk"
+          value={resilience.components.slice().sort((a, b) => a.score - b.score)[0]?.label ?? "—"}
+          tone="warning"
+        />
+      </div>
+      <ScenarioComparison
+        title="Expected · Stress · Worst"
+        columns={columns}
+        rows={[
+          {
+            key: "rent",
+            label: "Rent factor",
+            values: {
+              expected: valueFor("expected", (s) => fmt.percent((s.shocks.rentFactor - 1) * 100, 0)),
+              stress: valueFor("stress", (s) => fmt.percent((s.shocks.rentFactor - 1) * 100, 0)),
+              worst: valueFor("worst", (s) => fmt.percent((s.shocks.rentFactor - 1) * 100, 0)),
+            },
+          },
+          {
+            key: "rehab",
+            label: "Rehab factor",
+            values: {
+              expected: valueFor("expected", (s) => fmt.percent((s.shocks.rehabFactor - 1) * 100, 0)),
+              stress: valueFor("stress", (s) => fmt.percent((s.shocks.rehabFactor - 1) * 100, 0)),
+              worst: valueFor("worst", (s) => fmt.percent((s.shocks.rehabFactor - 1) * 100, 0)),
+            },
+          },
+          {
+            key: "cashflow",
+            label: "Cashflow",
+            emphasize: true,
+            values: {
+              expected: valueFor("expected", (s) => fmt.signedCurrency(s.monthlyCashflow)),
+              stress: valueFor("stress", (s) => fmt.signedCurrency(s.monthlyCashflow)),
+              worst: valueFor("worst", (s) => fmt.signedCurrency(s.monthlyCashflow)),
+            },
+          },
+          {
+            key: "roi",
+            label: "ROI",
+            values: {
+              expected: valueFor("expected", (s) => fmt.percent(s.roi)),
+              stress: valueFor("stress", (s) => fmt.percent(s.roi)),
+              worst: valueFor("worst", (s) => fmt.percent(s.roi)),
+            },
+          },
+          {
+            key: "dscr",
+            label: "DSCR",
+            values: {
+              expected: valueFor("expected", (s) => fmt.ratio(s.dscr)),
+              stress: valueFor("stress", (s) => fmt.ratio(s.dscr)),
+              worst: valueFor("worst", (s) => fmt.ratio(s.dscr)),
+            },
+          },
+          {
+            key: "cashleft",
+            label: "Cash Left In Deal",
+            values: { expected: "—", stress: "—", worst: "—" },
+          },
+          {
+            key: "refi",
+            label: "Refinance Status",
+            values: {
+              expected: valueFor("expected", (s) => (s.refinanceViable ? "Viable" : "At risk")),
+              stress: valueFor("stress", (s) => (s.refinanceViable ? "Viable" : "At risk")),
+              worst: valueFor("worst", (s) => (s.refinanceViable ? "Viable" : "At risk")),
+            },
+          },
+        ]}
+      />
+      <div className={compact ? "grid gap-4 lg:grid-cols-[160px_1fr]" : "grid gap-4 lg:grid-cols-[200px_1fr]"}>
+        <div className="border border-border bg-card rounded-lg px-4 py-3">
           <DealScoreGauge
             score={resilience.score}
             grade={GRADE_TO_DEAL[resilience.grade]}
             label="Resilience"
             idPrefix="resilience"
-            size={compact ? 168 : 200}
           />
         </div>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {resilience.scenarios.map((scenario) => (
-              <div key={scenario.key} className="rounded-xl border border-border bg-muted/30 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{scenario.label}</p>
-                <p className="mt-1 text-sm font-bold tabular">{fmt.percent(scenario.roi, 1)} total return</p>
-                <p className="text-xs tabular text-muted-foreground">{fmt.signedCurrency(scenario.monthlyCashflow)}/mo</p>
-                <p className="text-xs tabular text-muted-foreground">{fmt.ratio(scenario.dscr)} DSCR</p>
-              </div>
-            ))}
-          </div>
-          <div className="space-y-2">
-            {resilience.components.map((component) => (
-              <div key={component.key} className="grid grid-cols-[1fr_auto] items-center gap-3 text-xs">
-                <div>
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <p className="font-semibold">{component.label}</p>
-                    <p className="tabular text-muted-foreground">{Math.round(component.score)}/100</p>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn(
-                        "h-full rounded-full",
-                        component.score >= 80 ? "bg-success" : component.score >= 60 ? "bg-warning" : "bg-destructive",
-                      )}
-                      style={{ width: `${component.score}%` }}
-                    />
-                  </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{component.detail}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        <ScoreBreakdown
+          title="Component scores"
+          score={resilience.score}
+          grade={resilience.gradeLabel}
+          components={resilience.components.map((component) => ({
+            key: component.key,
+            label: component.label,
+            score: component.score,
+          }))}
+        />
+      </div>
+    </div>
   );
 }

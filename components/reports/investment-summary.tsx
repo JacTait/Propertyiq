@@ -23,12 +23,12 @@ export function InvestmentSummary({ summary, animated = true }: { summary: Inves
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
         <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-lg shadow-indigo-500/30">
-            <Bot className="size-5" />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-muted text-muted-foreground">
+            <Bot className="size-4" />
           </span>
           <div>
-            <CardTitle>AI Investment Summary</CardTitle>
-            <CardDescription>Analyst-style report generated from your inputs · {fmt.dateTime(summary.generatedAt)}</CardDescription>
+            <CardTitle>Investment Summary</CardTitle>
+            <CardDescription>Narrative generated from the assumptions entered · {fmt.dateTime(summary.generatedAt)}</CardDescription>
           </div>
         </div>
         <Badge variant={tone} className="px-3 py-1 text-sm">

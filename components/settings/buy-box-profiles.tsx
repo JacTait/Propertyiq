@@ -133,7 +133,7 @@ export function BuyBoxProfiles() {
                 <div
                   key={profile.id}
                   className={cn(
-                    "rounded-2xl border p-4",
+                    "rounded-lg border p-4",
                     isActive ? "border-primary/40 bg-primary/8" : "border-border bg-card/40",
                   )}
                 >

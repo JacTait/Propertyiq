@@ -31,7 +31,7 @@ export function PortfolioToolbar({ filters, onChange, resultCount }: PortfolioTo
   const hasFilters = filters.search || filters.strategy !== "all" || filters.minScore > 0;
 
   return (
-    <div className="glass flex flex-col gap-3 rounded-2xl p-3 lg:flex-row lg:items-center">
+    <div className="flex flex-col gap-3 border border-border bg-card p-3 lg:flex-row lg:items-center">
       <div className="relative flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input

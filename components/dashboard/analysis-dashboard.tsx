@@ -46,8 +46,8 @@ export function AnalysisDashboardSkeleton() {
     <>
       <PageHeader
         eyebrow="Deal Workspace"
-        title="Don’t just calculate the deal."
-        description="Stress-test it. Enter the full underwrite on one page."
+        title="Standard Analysis"
+        description="Guided underwrite in the order the deal happens: buy, operate, refinance."
       />
       <div className="grid gap-6 xl:grid-cols-12">
         <div className="min-w-0 space-y-4 xl:col-span-7">
@@ -185,8 +185,8 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
     <>
       <PageHeader
         eyebrow="Deal Workspace"
-        title="Don’t just calculate the deal."
-        description="Stress-test it. Enter the full underwrite on one page — acquisition through financing."
+        title="Standard Analysis"
+        description="Guided underwrite in the order the deal happens: buy, operate, refinance."
         actions={
           results && input && summary ? (
             <>
@@ -201,7 +201,7 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
                 </Link>
               </Button>
               <ExportPdfButton input={sanitizeInput(input)} results={results} summary={summary} underwriting={underwriting} />
-              <Button variant="gradient" onClick={() => setSaveOpen(true)}>
+              <Button onClick={() => setSaveOpen(true)}>
                 <Save /> {existing ? "Update in Portfolio" : "Save to Portfolio"}
               </Button>
             </>

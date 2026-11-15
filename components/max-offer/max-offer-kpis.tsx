@@ -1,81 +1,68 @@
 "use client";
 
-import { BadgeDollarSign, Landmark, Percent, Shield, TrendingUp, Wallet } from "lucide-react";
 import type { MaxOfferResults } from "@/lib/types";
 import { metricTone } from "@/lib/utils/labels";
 import { useFormatters } from "@/hooks/useSettings";
-import { KpiCard } from "@/components/dashboard/kpi-card";
+import { MajorMetric } from "@/components/underwriting/major-metric";
+import { FinancialDataRow } from "@/components/underwriting/financial-data-row";
+import { FinancialSection } from "@/components/underwriting/financial-section";
 
-export function MaxOfferKpis({ results }: { results: MaxOfferResults }) {
+export function MaxOfferKpis({ results, askingPrice = 0 }: { results: MaxOfferResults; askingPrice?: number }) {
   const fmt = useFormatters();
   const m = results.atRecommended.purchasePrice > 0 ? results.atRecommended : results.atMaximum;
+  const limiting = results.constraints.find((c) => c.isLimiting);
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <KpiCard
-        index={0}
-        label="Maximum Offer Price"
-        value={fmt.currency(results.maximumOffer, { compact: true })}
-        sub="highest price you can pay and still hit every target"
-        icon={BadgeDollarSign}
-        tone={results.feasible ? "success" : "danger"}
-      />
-      <KpiCard
-        index={1}
-        label="Recommended Offer"
-        value={fmt.currency(results.recommendedOffer, { compact: true })}
-        sub={`${fmt.percent(results.safetyMarginPercent)} below the ceiling`}
-        icon={Shield}
-        tone="primary"
-      />
-      <KpiCard
-        index={2}
-        label="Safety Margin"
-        value={fmt.currency(results.safetyMargin, { compact: true })}
-        sub="maximum minus recommended"
-        icon={Shield}
-        tone={results.safetyMargin > 0 ? "success" : "warning"}
-      />
-      <KpiCard
-        index={3}
-        label="Expected Monthly Cashflow"
-        value={fmt.signedCurrency(m.monthlyCashflow)}
-        sub="at the recommended offer"
-        icon={Wallet}
-        tone={metricTone(m.monthlyCashflow, { good: 300, ok: 0 })}
-      />
-      <KpiCard
-        index={4}
-        label="First-year return at recommended offer"
-        value={fmt.percent(m.roi)}
-        sub="Annual cash flow plus year-one principal, divided by total cash invested."
-        icon={TrendingUp}
-        tone={metricTone(m.roi, { good: 12, ok: 8 })}
-      />
-      <KpiCard
-        index={5}
-        label="Cash-on-cash at recommended offer"
-        value={fmt.percent(m.cashOnCash)}
-        sub="annual cashflow ÷ cash invested"
-        icon={Percent}
-        tone={metricTone(m.cashOnCash, { good: 8, ok: 4 })}
-      />
-      <KpiCard
-        index={6}
-        label="DSCR"
-        value={fmt.ratio(m.dscr)}
-        sub="NOI ÷ annual debt service"
-        icon={Landmark}
-        tone={metricTone(m.dscr, { good: 1.25, ok: 1 })}
-      />
-      <KpiCard
-        index={7}
-        label="Cap Rate"
-        value={fmt.percent(m.capRate)}
-        sub="NOI ÷ purchase price"
-        icon={TrendingUp}
-        tone={metricTone(m.capRate, { good: 6, ok: 4 })}
-      />
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MajorMetric
+          label="Target Offer"
+          value={fmt.currency(results.recommendedOffer)}
+          detail={`${fmt.percent(results.safetyMarginPercent)} below the ceiling`}
+          tone="primary"
+          size="major"
+        />
+        <MajorMetric
+          label="Maximum Offer"
+          value={fmt.currency(results.maximumOffer)}
+          detail={limiting ? `Limited by ${limiting.label}` : results.feasible ? "All targets cleared" : "No feasible offer"}
+          tone={results.feasible ? "success" : "danger"}
+          size="major"
+        />
+        <MajorMetric
+          label="Current Ask"
+          value={askingPrice > 0 ? fmt.currency(askingPrice) : "—"}
+          detail={askingPrice > 0 ? "Listing price entered" : "No asking price entered"}
+          tone={askingPrice > 0 && askingPrice > results.maximumOffer ? "danger" : "default"}
+        />
+        <MajorMetric
+          label="Margin of Safety"
+          value={fmt.percent(results.safetyMarginPercent)}
+          detail={fmt.currency(results.safetyMargin)}
+          tone={results.safetyMargin > 0 ? "success" : "warning"}
+        />
+      </div>
+      <FinancialSection title="Limiting constraint">
+        <p className="mb-3 text-sm">
+          {limiting
+            ? `The final maximum offer is set by ${limiting.label}.`
+            : "No single constraint is binding because the offer is not feasible on the current targets."}
+        </p>
+        {results.constraints.map((constraint) => (
+          <FinancialDataRow
+            key={constraint.key}
+            label={constraint.label}
+            value={fmt.currency(constraint.maxPurchasePrice)}
+            emphasis={constraint.isLimiting}
+            tone={constraint.isLimiting ? "warning" : "default"}
+            status={constraint.isLimiting ? "warn" : "pass"}
+          />
+        ))}
+        <FinancialDataRow label="Cashflow at recommended" value={fmt.signedCurrency(m.monthlyCashflow)} />
+        <FinancialDataRow label="ROI at recommended" value={fmt.percent(m.roi)} tone={metricTone(m.roi, { good: 12, ok: 8 })} />
+        <FinancialDataRow label="DSCR at recommended" value={fmt.ratio(m.dscr)} tone={metricTone(m.dscr, { good: 1.25, ok: 1 })} />
+        <FinancialDataRow label="Cash-on-cash at recommended" value={fmt.percent(m.cashOnCash)} />
+      </FinancialSection>
     </div>
   );
 }

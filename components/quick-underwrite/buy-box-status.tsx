@@ -84,7 +84,7 @@ export function QuickBuyBoxPanel({ match }: { match: BuyBoxMatch }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <select
-          className="h-10 min-w-[180px] flex-1 rounded-lg border border-input bg-background/60 px-3 text-sm"
+          className="h-9 min-w-[180px] flex-1 rounded-sm border border-input bg-background px-3 text-sm"
           value={active?.id ?? ""}
           onChange={(event) => setActiveId(event.target.value || null)}
           aria-label="Active Buy Box"

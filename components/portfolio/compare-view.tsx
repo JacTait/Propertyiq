@@ -70,7 +70,7 @@ export function CompareView() {
           title="Save at least two properties to compare"
           description="Head to the dashboard, analyse a deal and save it. Once you have two or more, they will appear here."
           action={
-            <Button variant="gradient" asChild>
+            <Button asChild>
               <Link href={dashboardPath()}>
                 <Plus /> Analyse a property
               </Link>

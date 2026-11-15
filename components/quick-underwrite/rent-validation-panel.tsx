@@ -28,14 +28,14 @@ export function RentValidationPanel({ rent }: { rent: QuickRentResolution }) {
         <SectionTitle title="Rent validation" description={rent.label} />
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active rent basis</p>
-          <div className="flex rounded-full border border-border p-0.5">
+          <div className="flex rounded-sm border border-border p-0.5">
             {BASES.map((item) => (
               <button
                 key={item.value}
                 type="button"
                 onClick={() => setValue("income.rentSource", item.value, { shouldDirty: true, shouldValidate: true })}
                 className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold",
+                  "rounded-sm px-3 py-1 text-xs font-medium",
                   source === item.value ? "bg-primary text-primary-foreground" : "text-muted-foreground",
                 )}
               >

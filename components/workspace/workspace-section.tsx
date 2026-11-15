@@ -36,7 +36,7 @@ export function WorkspaceSection({
 }: WorkspaceSectionProps) {
   const panelId = `${id}-panel`;
   return (
-    <section id={id} className="scroll-mt-28 rounded-2xl border border-border bg-card shadow-sm shadow-black/5 dark:shadow-black/30">
+    <section id={id} className="scroll-mt-28 rounded-lg border border-border bg-card">
       <h2 className="text-base font-semibold">
         <button
           type="button"
@@ -45,7 +45,7 @@ export function WorkspaceSection({
           aria-controls={panelId}
           onClick={() => onOpenChange(!open)}
         >
-          <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-bold text-primary">
+          <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-sm bg-primary/12 text-xs font-medium text-primary">
             {number}
           </span>
           <span className="min-w-0 flex-1">

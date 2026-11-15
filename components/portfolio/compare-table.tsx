@@ -1,198 +1,172 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Crown, Trophy } from "lucide-react";
 import type { PortfolioProperty } from "@/lib/types";
-import { formatPropertySpecs, gradeTone, strategyLabel } from "@/lib/utils/labels";
+import { formatPropertySpecs, strategyLabel } from "@/lib/utils/labels";
 import { cn } from "@/lib/utils/cn";
 import { analysisOpenPath } from "@/lib/utils/routes";
 import { useFormatters } from "@/hooks/useSettings";
 import type { Formatters } from "@/lib/utils/format";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusIndicator } from "@/components/underwriting/status-indicator";
 
 interface CompareRow {
   key: string;
   label: string;
-  value: (p: PortfolioProperty) => number;
-  format: (v: number, fmt: Formatters) => string;
-  /** true when a lower value wins (e.g. price) */
+  value: (p: PortfolioProperty) => number | string;
+  format?: (v: number, fmt: Formatters) => string;
   lowerIsBetter?: boolean;
+  numeric?: boolean;
 }
 
-const ROWS: CompareRow[] = [
-  { key: "asking", label: "Asking Price", value: (p) => p.input.financing.askingPrice, format: (v, f) => f.currency(v), lowerIsBetter: true },
-  { key: "offer", label: "Proposed Offer", value: (p) => p.snapshot.proposedOffer ?? p.input.financing.proposedOffer ?? 0, format: (v, f) => f.currency(v), lowerIsBetter: true },
-  { key: "allin", label: "All-In Cost", value: (p) => p.snapshot.allInCost ?? 0, format: (v, f) => (v ? f.currency(v) : "—"), lowerIsBetter: true },
-  { key: "arv", label: "ARV", value: (p) => p.input.brrrr.afterRepairValue, format: (v, f) => f.currency(v) },
-  { key: "verified", label: "Verified Rent", value: (p) => p.snapshot.verifiedRent ?? p.input.income.verifiedRent, format: (v, f) => f.currency(v) },
-  { key: "price", label: "Purchase Price", value: (p) => p.snapshot.purchasePrice, format: (v, f) => f.currency(v), lowerIsBetter: true },
-  { key: "roi", label: "ROI", value: (p) => p.snapshot.roi, format: (v, f) => (v >= 999 ? "∞" : f.percent(v)) },
-  { key: "coc", label: "Cash-on-Cash", value: (p) => p.snapshot.cashOnCash, format: (v, f) => f.percent(v) },
-  { key: "cap", label: "Cap Rate", value: (p) => p.snapshot.capRate, format: (v, f) => f.percent(v) },
-  { key: "gross", label: "Gross Yield", value: (p) => p.snapshot.grossYield, format: (v, f) => f.percent(v) },
-  { key: "net", label: "Net Yield", value: (p) => p.snapshot.netYield, format: (v, f) => f.percent(v) },
-  { key: "cashflow", label: "Monthly Cashflow", value: (p) => p.snapshot.monthlyCashflow, format: (v, f) => f.signedCurrency(v) },
-  { key: "annual", label: "Annual Cashflow", value: (p) => p.snapshot.annualCashflow, format: (v, f) => f.signedCurrency(v) },
-  { key: "dscr", label: "DSCR", value: (p) => p.snapshot.dscr, format: (v, f) => f.ratio(v) },
-  { key: "postRefi", label: "Post-Refinance DSCR", value: (p) => p.snapshot.postRefinanceDscr ?? p.snapshot.dscr, format: (v, f) => (Number.isFinite(v) ? f.ratio(v) : "N/A") },
-  { key: "recovered", label: "Cash Recovered", value: (p) => Math.max(0, (p.snapshot.allInCost ?? 0) - (p.snapshot.cashLeftInDeal ?? 0)), format: (v, f) => f.currency(v) },
-  { key: "cashLeft", label: "Cash Left In Deal", value: (p) => p.snapshot.cashLeftInDeal ?? 0, format: (v, f) => f.currency(v), lowerIsBetter: true },
-  { key: "appr", label: "Appreciation", value: (p) => p.snapshot.appreciationRate, format: (v, f) => f.percent(v) },
-  { key: "score", label: "Deal Score", value: (p) => p.snapshot.dealScore, format: (v) => `${Math.round(v)}/100` },
-  { key: "resilience", label: "Resilience Score", value: (p) => p.snapshot.resilienceScore ?? 0, format: (v) => `${Math.round(v)}/100` },
-  { key: "survival", label: "Deal Survival Score", value: (p) => p.snapshot.dealSurvivalScore ?? 0, format: (v) => `${Math.round(v)}/100` },
-  { key: "wcCashflow", label: "Worst-Case Cashflow", value: (p) => p.snapshot.worstCaseCashflow ?? 0, format: (v, f) => f.signedCurrency(v) },
-  { key: "wcDscr", label: "Worst-Case DSCR", value: (p) => p.snapshot.worstCaseDscr ?? 0, format: (v, f) => f.ratio(v) },
-  { key: "wcRoi", label: "Worst-Case ROI", value: (p) => p.snapshot.worstCaseRoi ?? 0, format: (v, f) => (v >= 999 ? "∞" : f.percent(v)) },
-  { key: "mos", label: "Margin of Safety", value: (p) => p.snapshot.marginOfSafetyPercent ?? 0, format: (v, f) => f.percent(v) },
+interface CompareGroup {
+  label: string;
+  rows: CompareRow[];
+}
+
+const GROUPS: CompareGroup[] = [
+  {
+    label: "Acquisition",
+    rows: [
+      { key: "asking", label: "Asking Price", value: (p) => p.input.financing.askingPrice, format: (v, f) => f.currency(v), lowerIsBetter: true, numeric: true },
+      { key: "offer", label: "Proposed Offer", value: (p) => p.snapshot.proposedOffer ?? p.input.financing.proposedOffer ?? 0, format: (v, f) => f.currency(v), lowerIsBetter: true, numeric: true },
+      { key: "price", label: "Purchase Price", value: (p) => p.snapshot.purchasePrice, format: (v, f) => f.currency(v), lowerIsBetter: true, numeric: true },
+      { key: "rehab", label: "Rehab", value: (p) => p.input.brrrr.rehabCost, format: (v, f) => f.currency(v), lowerIsBetter: true, numeric: true },
+      { key: "allin", label: "All-In Cost", value: (p) => p.snapshot.allInCost ?? 0, format: (v, f) => (v ? f.currency(v) : "—"), lowerIsBetter: true, numeric: true },
+      { key: "max", label: "Maximum Offer", value: (p) => p.snapshot.guidelineMaxOffer ?? 0, format: (v, f) => (v ? f.currency(v) : "—"), numeric: true },
+    ],
+  },
+  {
+    label: "Operations",
+    rows: [
+      { key: "verified", label: "Verified Rent", value: (p) => p.snapshot.verifiedRent ?? p.input.income.verifiedRent, format: (v, f) => (v ? f.currency(v) : "—"), numeric: true },
+      { key: "cashflow", label: "Cashflow", value: (p) => p.snapshot.monthlyCashflow, format: (v, f) => f.signedCurrency(v), numeric: true },
+      { key: "cap", label: "Cap Rate", value: (p) => p.snapshot.capRate, format: (v, f) => f.percent(v), numeric: true },
+    ],
+  },
+  {
+    label: "Refinance",
+    rows: [
+      { key: "arv", label: "ARV", value: (p) => p.input.brrrr.afterRepairValue, format: (v, f) => f.currency(v), numeric: true },
+      { key: "loan", label: "Supported Loan", value: (p) => p.snapshot.supportedRefinanceLoan ?? 0, format: (v, f) => (v ? f.currency(v) : "—"), numeric: true },
+      { key: "dscr", label: "DSCR", value: (p) => p.snapshot.postRefinanceDscr ?? p.snapshot.dscr, format: (v, f) => (Number.isFinite(v) ? f.ratio(v) : "N/A"), numeric: true },
+      { key: "recovered", label: "Cash Recovered", value: (p) => Math.max(0, (p.snapshot.allInCost ?? 0) - (p.snapshot.cashLeftInDeal ?? 0)), format: (v, f) => f.currency(v), numeric: true },
+      { key: "cashLeft", label: "Cash Left In Deal", value: (p) => p.snapshot.cashLeftInDeal ?? 0, format: (v, f) => f.currency(v), lowerIsBetter: true, numeric: true },
+    ],
+  },
+  {
+    label: "Risk",
+    rows: [
+      { key: "buybox", label: "Buy Box Status", value: (p) => p.snapshot.buyBoxStatus ?? "no-profile" },
+      { key: "survival", label: "Survival Score", value: (p) => p.snapshot.dealSurvivalScore ?? 0, format: (v) => `${Math.round(v)}/100`, numeric: true },
+      { key: "risk", label: "Primary Risk", value: (p) => p.snapshot.primaryRisk ?? "—" },
+      { key: "wcCashflow", label: "Downside Cashflow", value: (p) => p.snapshot.worstCaseCashflow ?? 0, format: (v, f) => f.signedCurrency(v), numeric: true },
+      { key: "verdict", label: "Verdict", value: (p) => p.snapshot.quickVerdict ?? p.snapshot.recommendation },
+    ],
+  },
 ];
+
+function displayValue(row: CompareRow, property: PortfolioProperty, fmt: Formatters): string {
+  const raw = row.value(property);
+  if (typeof raw === "string") {
+    if (row.key === "buybox") {
+      return raw === "inside" ? "Inside" : raw === "outside" ? "Outside" : "Not set";
+    }
+    if (row.key === "verdict") {
+      if (raw === "worth-pursuing") return "Worth Pursuing";
+      if (raw === "investigate") return "Investigate Further";
+      if (raw === "walk-away") return "Walk Away";
+      if (raw === "insufficient-data") return "Insufficient Data";
+    }
+    return raw;
+  }
+  if (!row.format) return String(raw);
+  return row.format(raw, fmt);
+}
 
 export function CompareTable({ properties }: { properties: PortfolioProperty[] }) {
   const fmt = useFormatters();
   if (properties.length === 0) return null;
 
   const winnerFor = (row: CompareRow): string | null => {
-    if (properties.length < 2) return null;
-    const values = properties.map((p) => ({ id: p.id, v: row.value(p) }));
+    if (!row.numeric || properties.length < 2) return null;
+    const values = properties.map((p) => ({ id: p.id, v: Number(row.value(p)) }));
+    if (values.some((item) => !Number.isFinite(item.v))) return null;
+    if (row.key === "allin" || row.key === "max" || row.key === "loan" || row.key === "recovered") {
+      if (values.every((item) => item.v === 0)) return null;
+    }
     const sorted = [...values].sort((a, b) => (row.lowerIsBetter ? a.v - b.v : b.v - a.v));
     if (sorted.length > 1 && sorted[0].v === sorted[1].v) return null;
     return sorted[0].id;
   };
 
-  const wins = new Map<string, number>();
-  ROWS.forEach((row) => {
-    const w = winnerFor(row);
-    if (w) wins.set(w, (wins.get(w) ?? 0) + 1);
-  });
-
-  const best = [...properties].sort((a, b) => b.snapshot.dealScore - a.snapshot.dealScore)[0];
-
   return (
-    <div className="space-y-4">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl border border-success/30 bg-gradient-to-r from-success/15 via-card to-card p-5"
-      >
-        <div className="absolute -right-10 -top-10 size-40 rounded-full bg-success/20 blur-3xl" />
-        <div className="relative flex flex-wrap items-center gap-4">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-success text-success-foreground shadow-lg shadow-success/30">
-            <Trophy className="size-6" />
-          </span>
-          <div className="flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-success">Best Investment</p>
-            <h3 className="text-xl font-bold">
-              <Link href={analysisOpenPath(best)} className="hover:text-primary hover:underline">
-                {best.name}
-              </Link>
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Highest deal score ({best.snapshot.dealScore}/100) · {best.snapshot.recommendation} · wins {wins.get(best.id) ?? 0} of{" "}
-              {ROWS.length} metrics
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {formatPropertySpecs(best.input.property)} · {best.regionName} · {strategyLabel(best.strategy, true)}
-            </p>
-          </div>
-          <Badge variant={gradeTone(best.snapshot.grade)} className="px-3 py-1 text-sm">
-            {strategyLabel(best.strategy, true)} · {best.regionName}
-          </Badge>
-        </div>
-      </motion.div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Side-by-Side Comparison</CardTitle>
-          <CardDescription>Winning values are highlighted per metric.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto scrollbar-thin rounded-xl border border-border">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="bg-muted/50">
-                  <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Metric</th>
-                  {properties.map((p) => (
-                    <th key={p.id} className="px-3 py-3 text-right">
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="flex items-center gap-1 font-bold">
-                          {p.id === best.id && <Crown className="size-3.5 text-success" />}
-                          <Link href={analysisOpenPath(p)} className="hover:text-primary hover:underline">
-                            {p.name}
-                          </Link>
-                        </span>
-                        <span className="text-[11px] font-normal text-muted-foreground">
-                          {formatPropertySpecs(p.input.property)}
-                        </span>
-                        <span className="text-[11px] font-normal text-muted-foreground">
-                          {p.regionName} · {strategyLabel(p.strategy, true)}
-                        </span>
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {ROWS.map((row) => {
-                  const winner = winnerFor(row);
-                  return (
-                    <tr key={row.key} className="border-t border-border/60">
-                      <td className="px-3 py-2.5 font-medium text-muted-foreground">{row.label}</td>
-                      {properties.map((p) => {
-                        const isWinner = winner === p.id;
-                        return (
-                          <td
-                            key={p.id}
-                            className={cn(
-                              "px-3 py-2.5 text-right tabular",
-                              isWinner && "bg-success/10 font-bold text-success",
-                            )}
-                          >
-                            {row.format(row.value(p), fmt)}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-                <tr className="border-t border-border/60">
-                  <td className="px-3 py-2.5 font-medium text-muted-foreground">Final Verdict</td>
-                  {properties.map((p) => (
-                    <td key={p.id} className="px-3 py-2.5 text-right text-sm">
-                      {p.snapshot.quickVerdict === "worth-pursuing"
-                        ? "Worth pursuing"
-                        : p.snapshot.quickVerdict === "investigate"
-                          ? "Investigate further"
-                          : p.snapshot.quickVerdict === "walk-away"
-                            ? "Walk away"
-                            : p.snapshot.quickVerdict === "insufficient-data"
-                              ? "Insufficient data"
-                              : "—"}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-t border-border/60">
-                  <td className="px-3 py-2.5 font-medium text-muted-foreground">Primary Risk</td>
-                  {properties.map((p) => (
-                    <td key={p.id} className="px-3 py-2.5 text-right text-sm">
-                      {p.snapshot.primaryRisk ?? "—"}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-t border-border bg-muted/30">
-                  <td className="px-3 py-2.5 font-semibold">Metrics won</td>
-                  {properties.map((p) => (
-                    <td key={p.id} className="px-3 py-2.5 text-right font-bold tabular">
-                      {wins.get(p.id) ?? 0}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="overflow-x-auto border border-border bg-card">
+      <table className="w-full min-w-[560px] text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            <th className="px-3 py-3 text-left text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Metric</th>
+            {properties.map((p) => (
+              <th key={p.id} className="px-3 py-3 text-right">
+                <div className="flex flex-col items-end gap-1">
+                  <Link href={analysisOpenPath(p)} className="font-medium hover:text-primary">
+                    {p.name}
+                  </Link>
+                  <span className="text-[11px] font-normal text-muted-foreground">{formatPropertySpecs(p.input.property)}</span>
+                  <span className="text-[11px] font-normal text-muted-foreground">
+                    {p.regionName} · {strategyLabel(p.strategy, true)}
+                  </span>
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {GROUPS.map((group) => (
+            <Fragment key={group.label}>
+              <tr className="border-t border-border bg-muted/40">
+                <th
+                  colSpan={properties.length + 1}
+                  className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  {group.label}
+                </th>
+              </tr>
+              {group.rows.map((row) => {
+                const winner = winnerFor(row);
+                return (
+                  <tr key={row.key} className="border-t border-border">
+                    <td className="px-3 py-2.5 text-muted-foreground">{row.label}</td>
+                    {properties.map((p) => {
+                      const isWinner = winner === p.id;
+                      const text = displayValue(row, p, fmt);
+                      return (
+                        <td
+                          key={p.id}
+                          className={cn(
+                            "px-3 py-2.5 text-right font-figure tabular-nums",
+                            isWinner && "text-success",
+                          )}
+                        >
+                          {row.key === "buybox" ? (
+                            <StatusIndicator
+                              level={p.snapshot.buyBoxStatus === "inside" ? "pass" : p.snapshot.buyBoxStatus === "outside" ? "fail" : "neutral"}
+                            >
+                              {text}
+                            </StatusIndicator>
+                          ) : (
+                            text
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

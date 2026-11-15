@@ -12,7 +12,8 @@ import type {
 } from "@/lib/types";
 
 export const APP_NAME = "PropertyIQ";
-export const APP_TAGLINE = "AI-powered property investment analysis";
+export const APP_TAGLINE = "Know your number before you make the offer.";
+export const APP_VERSION = "0.1.0";
 
 export const STORAGE_KEYS = {
   portfolio: "propertyiq:portfolio:v1",
@@ -110,18 +111,18 @@ export const DEAL_SCORE_WEIGHTS = {
 } as const;
 
 export const CHART_COLORS = {
-  primary: "#6366f1",
-  primaryLight: "#818cf8",
-  secondary: "#3b82f6",
-  success: "#22c55e",
-  warning: "#f59e0b",
-  danger: "#ef4444",
-  muted: "#64748b",
-  violet: "#8b5cf6",
-  cyan: "#06b6d4",
-  pink: "#ec4899",
-  teal: "#14b8a6",
-  orange: "#f97316",
+  primary: "#3B82F6",
+  primaryLight: "#5594F8",
+  secondary: "#3B82F6",
+  success: "#35C987",
+  warning: "#E9A23B",
+  danger: "#EB5757",
+  muted: "#747C85",
+  violet: "#3B82F6",
+  cyan: "#35C987",
+  pink: "#E9A23B",
+  teal: "#35C987",
+  orange: "#E9A23B",
 } as const;
 
 export const EXPENSE_PALETTE: string[] = [

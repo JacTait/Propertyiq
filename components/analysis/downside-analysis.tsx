@@ -262,8 +262,15 @@ export function DownsideAnalysisPanel({
       <Card>
         <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
           <div>
-            <CardTitle>Downside Analysis</CardTitle>
-            <CardDescription>Deal survival under a bad year — cashflow, DSCR, margin, refinance and ROI durability.</CardDescription>
+            <CardTitle>Can this deal survive a bad year?</CardTitle>
+            <CardDescription>
+              {downside.survival.verdict === "likely"
+                ? "Likely to Survive"
+                : downside.survival.verdict === "significant-risk"
+                  ? "Significant Risk"
+                  : "Unlikely to Survive"}
+              . Cashflow, DSCR, margin, refinance and ROI under the configured downside shocks.
+            </CardDescription>
           </div>
           <Badge variant={tone}>{downside.gradeLabel}</Badge>
         </CardHeader>

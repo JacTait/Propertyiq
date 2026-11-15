@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Bot, Landmark, LineChart, Shield, Target, Umbrella } from "lucide-react";
+import { BarChart3, FileText, Landmark, LineChart, Shield, Target, Umbrella } from "lucide-react";
 import type { AnalysisInput, AnalysisResults, InvestmentSummary as InvestmentSummaryType, RentSource, UnderwritingPack } from "@/lib/types";
 import { useProjectionAnalysis } from "@/hooks/useProjectionAnalysis";
 import { useFormatters } from "@/hooks/useSettings";
@@ -12,6 +12,8 @@ import { DealScoreCard } from "@/components/analysis/deal-score-card";
 import { StrategyPanel } from "@/components/analysis/strategy-panel";
 import { ProjectionTable } from "@/components/analysis/projection-table";
 import { PropertySummaryCard } from "@/components/analysis/property-summary-card";
+import { StandardUnderwritingWorksheets } from "@/components/analysis/standard-worksheets";
+import { PropertyContextHeader } from "@/components/underwriting/property-context-header";
 import { InvestmentSummary } from "@/components/reports/investment-summary";
 import { BuyBoxStatusCard } from "@/components/analysis/buy-box-status";
 import { RentSourceToggle } from "@/components/analysis/rent-source-toggle";
@@ -46,6 +48,8 @@ export function ResultsPanel({ input, results, summary, underwriting, onRentSour
 
   return (
     <div className="space-y-4">
+      <PropertyContextHeader input={input} buyBox={underwriting?.buyBox} />
+      <StandardUnderwritingWorksheets input={input} results={results} underwriting={underwriting} />
       <PropertySummaryCard input={input} />
       <DealScoreCard dealScore={results.dealScore} />
       {underwriting && onRentSourceChange && <RentSourceToggle rent={underwriting.rent} onChange={onRentSourceChange} />}
@@ -84,7 +88,7 @@ export function ResultsPanel({ input, results, summary, underwriting, onRentSour
             </TabsTrigger>
           )}
           <TabsTrigger value="summary">
-            <Bot /> AI Summary
+            <FileText /> Summary
           </TabsTrigger>
         </TabsList>
 

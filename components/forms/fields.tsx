@@ -301,7 +301,7 @@ export function SelectField<V extends string>({
 /* ------------------------------------------------------------------ */
 
 export function FieldGrid({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2", className)}>{children}</div>;
+  return <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3", className)}>{children}</div>;
 }
 
 export function TextAreaField({

@@ -1,7 +1,4 @@
-"use client";
-
 import type { ReactNode } from "react";
-import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { Tone } from "@/lib/utils/labels";
@@ -18,35 +15,27 @@ interface KpiCardProps {
   children?: ReactNode;
 }
 
-const toneClasses: Record<Tone, { icon: string; value: string; ring: string }> = {
-  success: { icon: "bg-success/15 text-success", value: "text-success", ring: "from-success/20" },
-  warning: { icon: "bg-warning/15 text-warning", value: "text-warning", ring: "from-warning/20" },
-  danger: { icon: "bg-destructive/15 text-destructive", value: "text-destructive", ring: "from-destructive/20" },
-  primary: { icon: "bg-primary/15 text-primary", value: "text-foreground", ring: "from-primary/20" },
-  muted: { icon: "bg-muted text-muted-foreground", value: "text-foreground", ring: "from-muted/40" },
+const VALUE_TONE: Record<Tone, string> = {
+  success: "text-success",
+  warning: "text-warning",
+  danger: "text-destructive",
+  primary: "text-foreground",
+  muted: "text-foreground",
 };
 
-export function KpiCard({ label, value, sub, icon: Icon, tone = "primary", hint, index = 0, children }: KpiCardProps) {
-  const t = toneClasses[tone];
+export function KpiCard({ label, value, sub, icon: Icon, tone = "primary", hint, children }: KpiCardProps) {
   const card = (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.04 }}
-      whileHover={{ y: -2 }}
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/40"
-    >
-      <div className={cn("pointer-events-none absolute -right-8 -top-8 size-28 rounded-full bg-gradient-to-br to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100", t.ring)} />
-      <div className="relative flex items-start justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-        <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", t.icon)}>
-          <Icon className="size-4" />
-        </span>
+    <div className="border border-border bg-card px-4 py-3 rounded-lg">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+        <Icon className="size-3.5 text-muted-foreground" aria-hidden />
       </div>
-      <p className={cn("relative mt-2 text-xl font-bold tracking-tight tabular sm:text-2xl", t.value)}>{value}</p>
-      {sub && <p className="relative mt-1 truncate text-xs text-muted-foreground">{sub}</p>}
+      <p className={cn("mt-2 font-figure text-[22px] font-medium leading-none tabular-nums sm:text-[26px]", VALUE_TONE[tone])}>
+        {value}
+      </p>
+      {sub && <p className="mt-1.5 truncate text-xs text-muted-foreground">{sub}</p>}
       {children}
-    </motion.div>
+    </div>
   );
 
   if (!hint) return card;

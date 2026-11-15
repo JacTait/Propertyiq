@@ -5,7 +5,6 @@ import type { AnalysisInput } from "@/lib/types";
 import { conditionLabel, countryName, propertyTypeLabel, strategyLabel } from "@/lib/utils/labels";
 import { getRegionName } from "@/data/market-data";
 import { useFormatters } from "@/hooks/useSettings";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function PropertySummaryCard({ input }: { input: AnalysisInput }) {
@@ -18,10 +17,11 @@ export function PropertySummaryCard({ input }: { input: AnalysisInput }) {
       <CardContent className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-bold">{property.name || "Untitled property"}</h3>
-              <Badge variant="primary">{strategyLabel(strategy, true)}</Badge>
-              <Badge variant="muted">{propertyTypeLabel(property.propertyType)}</Badge>
+            <div>
+              <h3 className="font-heading text-lg font-medium">{property.name || "Untitled property"}</h3>
+              <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                {propertyTypeLabel(property.propertyType)} · {strategyLabel(strategy, true)}
+              </p>
             </div>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="size-3.5" />
@@ -32,7 +32,7 @@ export function PropertySummaryCard({ input }: { input: AnalysisInput }) {
           </div>
           <div className="text-right">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Purchase Price</p>
-            <p className="text-2xl font-bold tabular">{fmt.currency(financing.purchasePrice)}</p>
+            <p className="font-figure text-2xl font-medium tabular-nums">{fmt.currency(financing.purchasePrice)}</p>
           </div>
         </div>
 

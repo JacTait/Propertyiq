@@ -223,17 +223,17 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
     <>
       <PageHeader
         eyebrow="Offer Engine"
-        title="Max Offer Analyzer"
+        title="Work backwards to the offer."
         description={
           askingPrice
-            ? "Asking price is in. Score the listing against the recommended and maximum offers your targets allow."
-            : "Find what you can pay before you offer. ARV, rent, rehab, expenses and targets are enough — no purchase price required."
+            ? "The listing is scored against the target and maximum offers your return requirements allow."
+            : "Enter rent, ARV, rehab and return requirements. No purchase price is required."
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={askingPrice ? "primary" : "muted"}>{askingPrice ? "Evaluation" : "Discovery"}</Badge>
             {results ? (
-              <Button variant="gradient" onClick={() => setSaveOpen(true)}>
+              <Button onClick={() => setSaveOpen(true)}>
                 <Save /> {existing ? "Update in Portfolio" : "Save to Portfolio"}
               </Button>
             ) : null}
@@ -250,7 +250,7 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
         <div className="min-w-0 space-y-4 xl:col-span-7 2xl:col-span-8">
           {results ? (
             <>
-              <MaxOfferKpis results={results} />
+              <MaxOfferKpis results={results} askingPrice={askingPrice ?? 0} />
               <div className="grid gap-4 lg:grid-cols-2">
                 {underwriting && (
                   <BuyBoxStatusCard
@@ -269,7 +269,7 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
                 />
               </div>
               <DealVerdict results={results} evaluating={Boolean(askingPrice)} />
-              <OfferTiers results={results} />
+              <OfferTiers results={results} askingPrice={askingPrice ?? undefined} />
               {underwriting && <DealKillerList warnings={underwriting.warnings} />}
               {underwriting && <DownsideAnalysisPanel downside={underwriting.downside} compact />}
             </>

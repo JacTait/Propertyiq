@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AnimatePresence } from "framer-motion";
 import { Briefcase, GitCompareArrows, Plus, SearchX } from "lucide-react";
 import { toast } from "sonner";
 import type { PortfolioProperty } from "@/lib/types";
 import { STORAGE_KEYS, MAX_COMPARE } from "@/lib/constants";
-import { dashboardPath } from "@/lib/utils/routes";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Button } from "@/components/ui/button";
@@ -22,9 +20,9 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { PortfolioCard } from "@/components/portfolio/portfolio-card";
 import { PortfolioToolbar } from "@/components/portfolio/portfolio-toolbar";
 import { PortfolioStats } from "@/components/portfolio/portfolio-stats";
+import { PortfolioTable } from "@/components/portfolio/portfolio-table";
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
@@ -34,6 +32,7 @@ export function PortfolioView() {
   const { properties, filtered, filters, setFilters, hydrated, stats, deleteProperty } = usePortfolio();
   const [compareIds, setCompareIds] = useLocalStorage<string[]>(STORAGE_KEYS.compare, [], isStringArray);
   const [pendingDelete, setPendingDelete] = useState<PortfolioProperty | null>(null);
+  const [view, setView] = useState<"list" | "cards">("list");
 
   const validCompareIds = compareIds.filter((id) => properties.some((p) => p.id === id));
 
@@ -60,8 +59,8 @@ export function PortfolioView() {
     <>
       <PageHeader
         eyebrow="Portfolio"
-        title="Saved Properties"
-        description="Every analysis you save lives here, stored locally in your browser."
+        title="Deal pipeline"
+        description="Saved underwrites stored locally in this browser."
         actions={
           <>
             <Button variant="outline" asChild disabled={validCompareIds.length < 2}>
@@ -69,9 +68,9 @@ export function PortfolioView() {
                 <GitCompareArrows /> Compare ({validCompareIds.length}/{MAX_COMPARE})
               </Link>
             </Button>
-            <Button variant="gradient" asChild>
-              <Link href={dashboardPath()}>
-                <Plus /> New Analysis
+            <Button asChild>
+              <Link href="/quick-underwrite">
+                <Plus /> New Underwrite
               </Link>
             </Button>
           </>
@@ -82,15 +81,11 @@ export function PortfolioView() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-28 rounded-2xl" />
+              <Skeleton key={i} className="h-28 rounded-lg" />
             ))}
           </div>
-          <Skeleton className="h-16 rounded-2xl" />
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-64 rounded-2xl" />
-            ))}
-          </div>
+          <Skeleton className="h-16 rounded-lg" />
+          <Skeleton className="h-64 rounded-lg" />
         </div>
       ) : properties.length === 0 ? (
         <EmptyState
@@ -98,9 +93,9 @@ export function PortfolioView() {
           title="Your portfolio is empty"
           description="Analyse a property on the dashboard and hit “Save to Portfolio” to start building your pipeline."
           action={
-            <Button variant="gradient" asChild>
-              <Link href={dashboardPath()}>
-                <Plus /> Analyse your first deal
+            <Button asChild>
+              <Link href="/quick-underwrite">
+                <Plus /> Underwrite a property
               </Link>
             </Button>
           }
@@ -117,22 +112,15 @@ export function PortfolioView() {
               className="py-12"
             />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <AnimatePresence mode="popLayout">
-                {filtered.map((p, i) => (
-                  <PortfolioCard
-                    key={p.id}
-                    property={p}
-                    index={i}
-                    onDelete={setPendingDelete}
-                    selectable
-                    selected={validCompareIds.includes(p.id)}
-                    selectDisabled={validCompareIds.length >= MAX_COMPARE}
-                    onToggleSelect={toggleCompare}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
+            <PortfolioTable
+              properties={filtered}
+              compareIds={validCompareIds}
+              onToggleSelect={toggleCompare}
+              selectDisabled={validCompareIds.length >= MAX_COMPARE}
+              onDelete={setPendingDelete}
+              view={view}
+              onViewChange={setView}
+            />
           )}
         </div>
       )}
