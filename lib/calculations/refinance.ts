@@ -1,7 +1,7 @@
-import type { AnalysisInput, AnalysisResults, RefinanceValidation } from "@/lib/types";
+import type { AnalysisInput, AnalysisResults, RefinanceLimitFactor, RefinanceValidation } from "@/lib/types";
 import { DEFAULT_REFINANCE_DSCR } from "@/lib/constants";
-import { calculateMonthlyPayment } from "@/lib/calculations/mortgage";
-import { calculateDscr, clamp, formatDscr, safeDivide } from "@/lib/calculations/ratios";
+import { calculateMonthlyPayment, loanPrincipalFromPayment } from "@/lib/calculations/mortgage";
+import { calculateDscr, clamp, formatDscr, nullableDivide, safeDivide } from "@/lib/calculations/ratios";
 import { resolveRent } from "@/lib/calculations/rent";
 import { calculateIncome, calculateOperatingExpenses } from "@/lib/calculations/cashflow";
 import {
@@ -15,6 +15,89 @@ export function resolveArv(input: AnalysisInput): number {
   if (input.brrrr.afterRepairValue > 0) return input.brrrr.afterRepairValue;
   if (input.flip.expectedSalePrice > 0) return input.flip.expectedSalePrice;
   return input.financing.purchasePrice;
+}
+
+export interface SupportedRefinanceInput {
+  arv: number;
+  refinanceLtv: number;
+  interestRate: number;
+  termYears: number;
+  requiredDscr: number;
+  monthlyNoi: number;
+}
+
+export interface SupportedRefinanceResult {
+  ltvBasedMaximumLoan: number;
+  dscrSupportedMaximumLoan: number | null;
+  supportedRefinanceLoan: number;
+  limitingFactor: RefinanceLimitFactor;
+  limitingLabel: string;
+  monthlyPayment: number;
+  postRefiDscr: number | null;
+}
+
+export function formatDscrOrNA(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "Not applicable";
+  if (value <= 0) return `${(0).toFixed(2)}x`;
+  return `${value.toFixed(2)}x`;
+}
+
+/**
+ * Size the refinance loan to the lesser of LTV and DSCR capacity.
+ * Does not claim the full LTV loan is viable when rent cannot support the payment.
+ */
+export function sizeSupportedRefinance(input: SupportedRefinanceInput): SupportedRefinanceResult {
+  const arv = Number.isFinite(input.arv) && input.arv > 0 ? input.arv : 0;
+  const ltv = clamp(input.refinanceLtv, 0, 100);
+  const rate = Number.isFinite(input.interestRate) ? input.interestRate : 0;
+  const termYears = Number.isFinite(input.termYears) && input.termYears > 0 ? input.termYears : 0;
+  const requiredDscr = input.requiredDscr > 0 && Number.isFinite(input.requiredDscr) ? input.requiredDscr : 0;
+  const monthlyNoi = Number.isFinite(input.monthlyNoi) ? input.monthlyNoi : 0;
+
+  const ltvBasedMaximumLoan = arv * (ltv / 100);
+  const maxMonthlyDebtService =
+    requiredDscr > 0 && monthlyNoi > 0 ? monthlyNoi / requiredDscr : 0;
+  const dscrSupportedMaximumLoan =
+    maxMonthlyDebtService > 0 && termYears > 0
+      ? loanPrincipalFromPayment(maxMonthlyDebtService, rate, termYears)
+      : requiredDscr > 0
+        ? 0
+        : null;
+
+  let supportedRefinanceLoan = 0;
+  let limitingFactor: RefinanceLimitFactor = "none";
+  let limitingLabel = "No refinance loan sized";
+
+  const dscrCap = dscrSupportedMaximumLoan;
+  if (ltvBasedMaximumLoan > 0 && dscrCap !== null) {
+    if (dscrCap < ltvBasedMaximumLoan) {
+      supportedRefinanceLoan = Math.max(0, dscrCap);
+      limitingFactor = "dscr";
+      limitingLabel = "DSCR-Limited";
+    } else {
+      supportedRefinanceLoan = ltvBasedMaximumLoan;
+      limitingFactor = "ltv";
+      limitingLabel = "LTV-Limited";
+    }
+  } else if (ltvBasedMaximumLoan > 0) {
+    supportedRefinanceLoan = ltvBasedMaximumLoan;
+    limitingFactor = "ltv";
+    limitingLabel = "LTV-Limited";
+  }
+
+  const monthlyPayment = calculateMonthlyPayment(supportedRefinanceLoan, rate, termYears);
+  const postRefiDscr =
+    monthlyPayment <= 0 ? null : nullableDivide(monthlyNoi, monthlyPayment);
+
+  return {
+    ltvBasedMaximumLoan,
+    dscrSupportedMaximumLoan: dscrCap,
+    supportedRefinanceLoan,
+    limitingFactor,
+    limitingLabel,
+    monthlyPayment,
+    postRefiDscr,
+  };
 }
 
 export function validateRefinance(

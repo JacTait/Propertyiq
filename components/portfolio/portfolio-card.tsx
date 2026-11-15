@@ -100,6 +100,11 @@ export function PortfolioCard({
 
         <div className="flex flex-wrap items-center gap-1.5">
           {property.kind === "max-offer" && <Badge variant="primary">Max Offer</Badge>}
+          {property.kind === "quick-underwrite" && <Badge variant="primary">Quick Underwrite</Badge>}
+          {s.quickVerdict === "worth-pursuing" && <Badge variant="success">Worth pursuing</Badge>}
+          {s.quickVerdict === "investigate" && <Badge variant="warning">Investigate</Badge>}
+          {s.quickVerdict === "walk-away" && <Badge variant="danger">Walk away</Badge>}
+          {s.quickVerdict === "insufficient-data" && <Badge variant="muted">Insufficient data</Badge>}
           <Badge variant={property.kind === "max-offer" ? "muted" : "primary"}>{strategyLabel(property.strategy, true)}</Badge>
           <Badge variant={tone}>{s.recommendation}</Badge>
           {s.buyBoxStatus === "inside" && <Badge variant="success">Inside Buy Box</Badge>}
@@ -128,6 +133,31 @@ export function PortfolioCard({
             tone={metricTone(decision.conservativeMonthlyCashflow ?? s.monthlyCashflow, { good: 300, ok: 0 })}
           />
         </div>
+        {property.kind === "quick-underwrite" ? (
+          <details className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+            <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Quick Underwrite details</summary>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <Metric label="All-in" value={s.allInCost ? fmt.currency(s.allInCost, { compact: true }) : "—"} />
+              <Metric label="Verified rent" value={s.verifiedRent ? fmt.currency(s.verifiedRent, { compact: true }) : "—"} />
+              <Metric
+                label="Supported refi"
+                value={s.supportedRefinanceLoan ? fmt.currency(s.supportedRefinanceLoan, { compact: true }) : "—"}
+              />
+              <Metric
+                label="Post-refi DSCR"
+                value={s.postRefinanceDscr == null || !Number.isFinite(s.postRefinanceDscr) ? "N/A" : fmt.ratio(s.postRefinanceDscr)}
+              />
+              <Metric
+                label="Cash left in"
+                value={typeof s.cashLeftInDeal === "number" ? fmt.currency(s.cashLeftInDeal, { compact: true }) : "—"}
+              />
+              <Metric
+                label="Survival"
+                value={typeof s.dealSurvivalScore === "number" ? `${Math.round(s.dealSurvivalScore)}/100` : "—"}
+              />
+            </div>
+          </details>
+        ) : null}
         {decision.allInCost !== null ? (
           <div className="grid grid-cols-3 gap-2">
             <Metric label="All-in" value={fmt.currency(decision.allInCost, { compact: true })} />

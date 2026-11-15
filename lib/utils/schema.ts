@@ -42,8 +42,9 @@ export const locationSchema = z.object({
 });
 
 export const propertySchema = z.object({
-  name: z.string().trim().min(1, "Give the property a name").max(80),
+  name: z.string().trim().max(80),
   address: z.string().trim().max(160),
+  city: z.string().trim().max(80),
   zipCode: z.string().trim().max(16),
   propertyType: z.enum([
     "single-family",
@@ -73,8 +74,9 @@ export const strategySchema = z.enum([
 ]);
 
 export const financingSchema = z.object({
-  purchasePrice: money("Purchase price").min(1, "Enter a purchase price"),
+  purchasePrice: money("Purchase price"),
   askingPrice: optionalAskingPrice(),
+  proposedOffer: optionalAskingPrice(),
   depositPercent: percent("Deposit"),
   interestRate: percent("Interest rate", 30),
   termYears: z.number().min(1).max(40),
@@ -99,6 +101,19 @@ export const incomeSchema = z.object({
   rentEntryMode: z.enum(["total", "units"]),
   units: z.array(rentUnitSchema),
   rentSource: z.enum(["listing", "verified", "conservative"]),
+  rentSourceKind: z.enum([
+    "housing-authority",
+    "property-manager",
+    "local-comparable",
+    "lease",
+    "listing",
+    "appraisal",
+    "user-estimate",
+    "other",
+  ]),
+  rentSourceNotes: z.string().trim().max(400),
+  dateVerified: z.string().trim().max(40),
+  verificationStatus: z.enum(["unverified", "user-verified", "third-party-verified"]),
   otherMonthlyIncome: money("Other income"),
   rentGrowthRate: z.number().min(-10).max(20),
   nightlyRate: money("Nightly rate"),
@@ -132,7 +147,8 @@ export const flipSchema = z.object({
   sellingCostsPercent: percent("Selling costs", 20),
   realtorFeePercent: percent("Realtor fee", 20),
   expectedSalePrice: money("Expected sale price"),
-  holdDurationMonths: z.number().min(1).max(60),
+  holdDurationMonths: z.number().min(0).max(60),
+  holdingCostOverride: money("Holding cost override"),
 });
 
 export const brrrrSchema = z.object({
@@ -142,7 +158,11 @@ export const brrrrSchema = z.object({
   refinanceRate: percent("Refinance rate", 30),
   refinanceTermYears: z.number().min(1).max(40),
   expectedRent: money("Expected rent"),
-  refinanceDscrMin: z.number({ message: "DSCR must be a number" }).min(0).max(5),
+  refinanceDscrMin: z.number({ message: "DSCR must be a number" }).gt(0, "DSCR threshold must be greater than zero").max(5),
+  otherRehabCosts: money("Other rehab costs"),
+  refinanceClosingCosts: money("Refinance closing costs"),
+  refinanceNotes: z.string().trim().max(400),
+  loanPayoffAmount: money("Loan payoff"),
 });
 
 const propertyTypeEnum = z.enum([
@@ -205,6 +225,22 @@ export const decisionSchema = z.object({
     conservative: scenarioAssumptionsSchema,
     stress: scenarioAssumptionsSchema,
   }),
+  capRateBasis: z.enum(["purchase", "proposed-offer", "asking", "all-in", "arv"]),
+  targetCashLeftInDeal: money("Cash left in deal target"),
+});
+
+export const neighbourhoodSchema = z.object({
+  name: z.string().trim().max(80),
+  zipCode: z.string().trim().max(16),
+  userEnteredMarketRent: money("Market rent"),
+  typicalRentLow: money("Typical rent low"),
+  typicalRentHigh: money("Typical rent high"),
+  propertyTaxEstimate: money("Property tax estimate"),
+  insuranceEstimate: money("Insurance estimate"),
+  vacancyAssumption: percent("Vacancy assumption", 80),
+  investorNotes: z.string().trim().max(800),
+  dataSourceLabel: z.string().trim().max(80),
+  lastUpdated: z.string().trim().max(40),
 });
 
 export const analysisSchema = z.object({
@@ -217,6 +253,7 @@ export const analysisSchema = z.object({
   flip: flipSchema,
   brrrr: brrrrSchema,
   decision: decisionSchema,
+  neighbourhood: neighbourhoodSchema,
 });
 
 export type AnalysisFormValues = z.infer<typeof analysisSchema>;

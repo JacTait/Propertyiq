@@ -6,6 +6,11 @@ export function dashboardPath(propertyId?: string | null): string {
   return `/dashboard?id=${encodeURIComponent(propertyId)}`;
 }
 
+export function quickUnderwritePath(propertyId?: string | null): string {
+  if (!propertyId) return "/quick-underwrite";
+  return `/quick-underwrite?id=${encodeURIComponent(propertyId)}`;
+}
+
 export function maxOfferPath(propertyId?: string | null): string {
   if (!propertyId) return "/max-offer";
   return `/max-offer?id=${encodeURIComponent(propertyId)}`;
@@ -25,6 +30,12 @@ export function isMaxOfferProperty(property: Pick<PortfolioProperty, "kind">): b
   return property.kind === "max-offer";
 }
 
+export function isQuickUnderwriteProperty(property: Pick<PortfolioProperty, "kind">): boolean {
+  return property.kind === "quick-underwrite";
+}
+
 export function analysisOpenPath(property: Pick<PortfolioProperty, "id" | "kind">): string {
-  return isMaxOfferProperty(property) ? maxOfferPath(property.id) : dashboardPath(property.id);
+  if (isMaxOfferProperty(property)) return maxOfferPath(property.id);
+  if (isQuickUnderwriteProperty(property)) return quickUnderwritePath(property.id);
+  return dashboardPath(property.id);
 }

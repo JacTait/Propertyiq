@@ -300,6 +300,7 @@ describe("configurable ARV guideline and rehab headroom", () => {
       {
         purchasePrice: 200_000,
         askingPrice: 0,
+        proposedOffer: 0,
         depositPercent: 25,
         interestRate: 6,
         termYears: 30,

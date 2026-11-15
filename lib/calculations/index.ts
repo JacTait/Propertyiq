@@ -19,3 +19,5 @@ export * from "@/lib/calculations/margin-of-safety";
 export * from "@/lib/calculations/deal-killers";
 export * from "@/lib/calculations/underwriting-summary";
 export * from "@/lib/calculations/underwrite";
+export * from "@/lib/calculations/cash-recovery";
+export * from "@/lib/calculations/quick-underwrite";

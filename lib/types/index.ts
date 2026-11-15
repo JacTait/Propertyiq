@@ -68,6 +68,24 @@ export type InvestmentStrategy =
 
 export type RentSource = "listing" | "verified" | "conservative";
 
+export type RentSourceKind =
+  | "housing-authority"
+  | "property-manager"
+  | "local-comparable"
+  | "lease"
+  | "listing"
+  | "appraisal"
+  | "user-estimate"
+  | "other";
+
+export type RentVerificationStatus = "unverified" | "user-verified" | "third-party-verified";
+
+export type CapRateBasis = "purchase" | "proposed-offer" | "asking" | "all-in" | "arv";
+
+export type RefinanceLimitFactor = "ltv" | "dscr" | "none";
+
+export type QuickUnderwriteVerdict = "worth-pursuing" | "investigate" | "walk-away" | "insufficient-data";
+
 export interface LocationInputs {
   country: CountryCode;
   region: string;
@@ -77,6 +95,7 @@ export interface LocationInputs {
 export interface Property {
   name: string;
   address: string;
+  city: string;
   zipCode: string;
   propertyType: PropertyType;
   bedrooms: number;
@@ -87,7 +106,7 @@ export interface Property {
   condition: PropertyCondition;
 }
 
-/** Identity fields shared across Deal Workspace, Max Offer and Deal Resilience. */
+/** Identity fields shared across Deal Workspace, Max Offer, Quick Underwrite and Deal Resilience. */
 export interface PropertyIdentity {
   name: string;
   propertyType: PropertyType;
@@ -96,6 +115,8 @@ export interface PropertyIdentity {
   country: CountryCode;
   region: string;
   zipCode: string;
+  city: string;
+  address: string;
   strategy: InvestmentStrategy;
 }
 
@@ -112,6 +133,8 @@ export interface FinancingInputs {
   purchasePrice: number;
   /** Seller asking price. 0 means not provided — never inferred from defaults. */
   askingPrice: number;
+  /** Optional bid the investor is considering. 0 means not provided. */
+  proposedOffer: number;
   depositPercent: number;
   interestRate: number;
   termYears: number;
@@ -173,6 +196,10 @@ export interface IncomeInputs {
   rentEntryMode: RentEntryMode;
   units: RentUnit[];
   rentSource: RentSource;
+  rentSourceKind: RentSourceKind;
+  rentSourceNotes: string;
+  dateVerified: string;
+  verificationStatus: RentVerificationStatus;
   otherMonthlyIncome: number;
   rentGrowthRate: number;
   /* Short-term rental */
@@ -209,6 +236,8 @@ export interface FlipInputs {
   realtorFeePercent: number;
   expectedSalePrice: number;
   holdDurationMonths: number;
+  /** 0 means use duration × monthly holding cost. */
+  holdingCostOverride: number;
 }
 
 export interface BrrrrInputs {
@@ -219,6 +248,11 @@ export interface BrrrrInputs {
   refinanceTermYears: number;
   expectedRent: number;
   refinanceDscrMin: number;
+  otherRehabCosts: number;
+  refinanceClosingCosts: number;
+  refinanceNotes: string;
+  /** 0 means derive from the acquisition loan. */
+  loanPayoffAmount: number;
 }
 
 export interface GuidelineAdditionalCosts {
@@ -255,6 +289,23 @@ export interface DealDecisionInputs {
   guidelineAdditionalCosts: GuidelineAdditionalCosts;
   acquisitionCostMode: AcquisitionCostMode;
   scenarios: Record<DealScenarioKey, ScenarioAssumptions>;
+  capRateBasis: CapRateBasis;
+  /** 0 means no cash-left-in-deal target is configured. */
+  targetCashLeftInDeal: number;
+}
+
+export interface NeighbourhoodInputs {
+  name: string;
+  zipCode: string;
+  userEnteredMarketRent: number;
+  typicalRentLow: number;
+  typicalRentHigh: number;
+  propertyTaxEstimate: number;
+  insuranceEstimate: number;
+  vacancyAssumption: number;
+  investorNotes: string;
+  dataSourceLabel: string;
+  lastUpdated: string;
 }
 
 export interface AnalysisInput {
@@ -267,6 +318,7 @@ export interface AnalysisInput {
   flip: FlipInputs;
   brrrr: BrrrrInputs;
   decision: DealDecisionInputs;
+  neighbourhood: NeighbourhoodInputs;
 }
 
 /* ------------------------------------------------------------------ */
@@ -446,6 +498,12 @@ export interface PortfolioSnapshot {
   guidelineMaxOffer?: number | null;
   /** Descriptive Deal Workspace margin status. Absent on legacy records. */
   marginForErrorLabel?: string;
+  quickVerdict?: QuickUnderwriteVerdict;
+  verifiedRent?: number;
+  supportedRefinanceLoan?: number;
+  postRefinanceDscr?: number | null;
+  cashLeftInDeal?: number;
+  proposedOffer?: number;
   dealSurvivalScore?: number;
   primaryRisk?: string;
   worstCaseCashflow?: number;
@@ -453,7 +511,7 @@ export interface PortfolioSnapshot {
   worstCaseRoi?: number;
 }
 
-export type PortfolioKind = "analysis" | "max-offer";
+export type PortfolioKind = "analysis" | "max-offer" | "quick-underwrite";
 
 export interface PortfolioProperty {
   id: string;
@@ -767,6 +825,7 @@ export interface BuyBoxSubject {
   propertyType?: PropertyType;
   bedrooms?: number;
   purchasePrice: number;
+  askingPrice?: number;
   monthlyRent: number;
   arv: number;
   zipCode?: string;
@@ -1024,4 +1083,148 @@ export interface UnderwritingPack {
   margin: MarginOfSafety;
   warnings: DealKillerWarning[];
   summary: UnderwritingSummary;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Quick Underwrite                                                   */
+/* ------------------------------------------------------------------ */
+
+export interface QuickRentResolution {
+  listing: number;
+  verified: number;
+  conservative: number;
+  source: RentSource;
+  active: number;
+  label: string;
+  basisLabel: string;
+}
+
+export interface PriceSource {
+  value: number | null;
+  source: "purchase" | "proposed-offer" | "asking" | "none";
+  label: string;
+}
+
+export interface AllInCostBreakdown {
+  ready: boolean;
+  acquisitionPriceUsed: number | null;
+  acquisitionPriceSource: PriceSource;
+  estimatedRehab: number;
+  rehabContingencyAmount: number;
+  adjustedRehabBudget: number;
+  otherRehabCosts: number;
+  closingCosts: number;
+  inspectionCosts: number;
+  legalFees: number;
+  loanFees: number;
+  calculatedHoldingCost: number;
+  holdingCostOverride: number;
+  holdingCostsUsed: number;
+  holdingCostSource: "calculated" | "override";
+  otherAcquisitionCosts: number;
+  total: number | null;
+  message: string | null;
+}
+
+export interface QuickOperatingStatement {
+  activeMonthlyRent: number;
+  vacancyAllowance: number;
+  effectiveMonthlyIncome: number;
+  managementCost: number;
+  maintenanceReserve: number;
+  capexReserve: number;
+  monthlyPropertyTax: number;
+  monthlyInsurance: number;
+  monthlyHoa: number;
+  monthlyUtilities: number;
+  otherMonthlyExpenses: number;
+  totalMonthlyOperatingExpenses: number;
+  monthlyNoi: number;
+  annualNoi: number;
+}
+
+export interface QuickRefinanceResults {
+  arv: number;
+  refinanceLtv: number;
+  interestRate: number;
+  termYears: number;
+  requiredDscr: number;
+  refinanceClosingCosts: number;
+  ltvBasedMaximumLoan: number;
+  dscrSupportedMaximumLoan: number | null;
+  supportedRefinanceLoan: number;
+  limitingFactor: RefinanceLimitFactor;
+  limitingLabel: string;
+  monthlyPayment: number;
+  postRefiDscr: number | null;
+  postRefiDscrLabel: string;
+  loanPayoffAmount: number;
+  loanPayoffDerived: boolean;
+}
+
+export interface CashRecoveryResults {
+  totalCapitalInvested: number;
+  grossRefinanceProceeds: number;
+  netRefinanceProceeds: number;
+  cashRecovered: number;
+  excessCashOut: number;
+  cashLeftInDeal: number;
+  cashRecoveryPercent: number | null;
+}
+
+export interface QuickVerdictRule {
+  key: string;
+  label: string;
+  passed: boolean;
+  applicable: boolean;
+  detail: string;
+}
+
+export interface QuickUnderwriteVerdictResult {
+  verdict: QuickUnderwriteVerdict;
+  label: string;
+  summary: string;
+  rules: QuickVerdictRule[];
+}
+
+export interface UnderwritingWarning {
+  key: string;
+  severity: DealKillerSeverity;
+  title: string;
+  detail: string;
+}
+
+export interface QuickDownsideSnapshot {
+  expectedCashflow: number;
+  stressCashflow: number;
+  expectedDscr: number;
+  stressDscr: number;
+  expectedRoi: number;
+  stressRoi: number;
+  dealSurvivalScore: number;
+  primaryRisk: string;
+}
+
+export interface QuickUnderwriteResults {
+  rent: QuickRentResolution;
+  acquisitionPrice: PriceSource;
+  allIn: AllInCostBreakdown;
+  operating: QuickOperatingStatement;
+  acquisitionMonthlyPayment: number;
+  monthlyCashflow: number | null;
+  annualCashflow: number | null;
+  capRate: number | null;
+  capRateBasis: CapRateBasis;
+  capRateBasisLabel: string;
+  cashOnCash: number | null;
+  refinance: QuickRefinanceResults;
+  cashRecovery: CashRecoveryResults | null;
+  buyBox: BuyBoxMatch;
+  marginOfSafetyPercent: number | null;
+  maximumOffer: number | null;
+  downside: QuickDownsideSnapshot | null;
+  verdict: QuickUnderwriteVerdictResult;
+  warnings: UnderwritingWarning[];
+  missing: string[];
+  generatedAt: string;
 }

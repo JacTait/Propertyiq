@@ -49,6 +49,8 @@ export function defaultPropertyIdentity(country: CountryCode = "US"): PropertyId
     country,
     region: defaultRegion(country),
     zipCode: "",
+    city: "",
+    address: "",
     strategy: "buy-hold",
   };
 }
@@ -67,6 +69,8 @@ export function isPropertyIdentity(value: unknown): value is PropertyIdentity {
     typeof v.region === "string" &&
     v.region.length > 0 &&
     typeof v.zipCode === "string" &&
+    (v.city === undefined || typeof v.city === "string") &&
+    (v.address === undefined || typeof v.address === "string") &&
     STRATEGIES.includes(v.strategy)
   );
 }
@@ -80,6 +84,8 @@ export function identityFromAnalysis(input: AnalysisInput): PropertyIdentity {
     country: COUNTRIES.includes(input.location.country) ? input.location.country : "US",
     region: input.location.region || defaultRegion(input.location.country),
     zipCode: typeof input.property.zipCode === "string" ? input.property.zipCode : "",
+    city: typeof input.property.city === "string" ? input.property.city : "",
+    address: typeof input.property.address === "string" ? input.property.address : "",
     strategy: STRATEGIES.includes(input.strategy) ? input.strategy : "buy-hold",
   };
 }
@@ -94,6 +100,8 @@ export function identityFromMaxOffer(input: MaxOfferInputs, fallbackCountry: Cou
     country,
     region: input.location?.region || defaultRegion(country),
     zipCode: typeof input.property.zipCode === "string" ? input.property.zipCode : "",
+    city: "",
+    address: "",
     strategy: STRATEGIES.includes(input.strategy) ? input.strategy : "brrrr",
   };
 }
@@ -117,6 +125,8 @@ export function applyIdentityToAnalysis(input: AnalysisInput, identity: Property
       bedrooms: identity.bedrooms,
       bathrooms: identity.bathrooms,
       zipCode: identity.zipCode,
+      city: typeof identity.city === "string" ? identity.city : (input.property.city ?? ""),
+      address: typeof identity.address === "string" ? identity.address : (input.property.address ?? ""),
     },
   };
 }
@@ -185,7 +195,13 @@ export function resolvePropertyIdentity(fallbackCountry: CountryCode): PropertyI
   const stored = readStorage<PropertyIdentity | null>(STORAGE_KEYS.propertyIdentity, null, (v): v is PropertyIdentity =>
     v === null ? false : isPropertyIdentity(v),
   );
-  if (stored) return stored;
+  if (stored) {
+    return {
+      ...stored,
+      city: typeof stored.city === "string" ? stored.city : "",
+      address: typeof stored.address === "string" ? stored.address : "",
+    };
+  }
   const analysis = readUnsavedAnalysis();
   if (analysis?.property && analysis.location) return identityFromAnalysis(analysis);
   const maxOffer = readUnsavedMaxOffer();

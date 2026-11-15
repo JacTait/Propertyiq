@@ -115,7 +115,14 @@ export function matchBuyBox(profile: BuyBoxProfile | null | undefined, subject: 
   }
 
   if (profile.maxPurchasePrice > 0) {
-    if (subject.purchasePrice > profile.maxPurchasePrice) {
+    const asking = typeof subject.askingPrice === "number" && Number.isFinite(subject.askingPrice) ? subject.askingPrice : 0;
+    if (asking > 0 && asking > profile.maxPurchasePrice) {
+      reasons.push({
+        key: "price",
+        tone: "fail",
+        message: "Asking price exceeds the maximum purchase price.",
+      });
+    } else if (subject.purchasePrice > profile.maxPurchasePrice) {
       reasons.push({
         key: "price",
         tone: "fail",
@@ -125,7 +132,7 @@ export function matchBuyBox(profile: BuyBoxProfile | null | undefined, subject: 
       reasons.push({
         key: "price",
         tone: "pass",
-        message: "Purchase price is within the Buy Box ceiling.",
+        message: asking > 0 ? "Asking price is within the Buy Box ceiling." : "Purchase price is within the Buy Box ceiling.",
       });
     }
   }

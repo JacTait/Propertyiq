@@ -1,13 +1,17 @@
 import type {
   AcquisitionCostMode,
   AnalysisInput,
+  CapRateBasis,
   DealDecisionInputs,
   DealScenarioKey,
   GuidelineAdditionalCosts,
   InsuranceSource,
+  NeighbourhoodInputs,
   RentEntryMode,
   RentSource,
+  RentSourceKind,
   RentUnit,
+  RentVerificationStatus,
   ScenarioAssumptions,
 } from "@/lib/types";
 import {
@@ -149,6 +153,76 @@ function normalizeDecision(rawInput: AnalysisInput, clean: AnalysisInput): DealD
     guidelineAdditionalCosts: normalizeGuidelineCosts(record.guidelineAdditionalCosts),
     acquisitionCostMode: "itemised" satisfies AcquisitionCostMode,
     scenarios,
+    capRateBasis: normalizeCapRateBasis(record.capRateBasis),
+    targetCashLeftInDeal: hasOwnFinite(record, "targetCashLeftInDeal")
+      ? Math.max(0, finite(record.targetCashLeftInDeal))
+      : 0,
+  };
+}
+
+function normalizeCapRateBasis(raw: unknown): CapRateBasis {
+  if (
+    raw === "purchase" ||
+    raw === "proposed-offer" ||
+    raw === "asking" ||
+    raw === "all-in" ||
+    raw === "arv"
+  ) {
+    return raw;
+  }
+  return "purchase";
+}
+
+function normalizeRentSourceKind(raw: unknown): RentSourceKind {
+  const allowed: RentSourceKind[] = [
+    "housing-authority",
+    "property-manager",
+    "local-comparable",
+    "lease",
+    "listing",
+    "appraisal",
+    "user-estimate",
+    "other",
+  ];
+  return allowed.includes(raw as RentSourceKind) ? (raw as RentSourceKind) : "user-estimate";
+}
+
+function normalizeVerificationStatus(raw: unknown): RentVerificationStatus {
+  if (raw === "user-verified" || raw === "third-party-verified" || raw === "unverified") return raw;
+  return "unverified";
+}
+
+export function emptyNeighbourhood(): NeighbourhoodInputs {
+  return {
+    name: "",
+    zipCode: "",
+    userEnteredMarketRent: 0,
+    typicalRentLow: 0,
+    typicalRentHigh: 0,
+    propertyTaxEstimate: 0,
+    insuranceEstimate: 0,
+    vacancyAssumption: 0,
+    investorNotes: "",
+    dataSourceLabel: "",
+    lastUpdated: "",
+  };
+}
+
+function normalizeNeighbourhood(raw: unknown, zipCode: string): NeighbourhoodInputs {
+  const record = isRecord(raw) ? raw : {};
+  const base = emptyNeighbourhood();
+  return {
+    name: typeof record.name === "string" ? record.name : base.name,
+    zipCode: typeof record.zipCode === "string" && record.zipCode ? record.zipCode : zipCode,
+    userEnteredMarketRent: Math.max(0, finite(record.userEnteredMarketRent)),
+    typicalRentLow: Math.max(0, finite(record.typicalRentLow)),
+    typicalRentHigh: Math.max(0, finite(record.typicalRentHigh)),
+    propertyTaxEstimate: Math.max(0, finite(record.propertyTaxEstimate)),
+    insuranceEstimate: Math.max(0, finite(record.insuranceEstimate)),
+    vacancyAssumption: Math.max(0, finite(record.vacancyAssumption)),
+    investorNotes: typeof record.investorNotes === "string" ? record.investorNotes : "",
+    dataSourceLabel: typeof record.dataSourceLabel === "string" ? record.dataSourceLabel : "",
+    lastUpdated: typeof record.lastUpdated === "string" ? record.lastUpdated : "",
   };
 }
 
@@ -183,6 +257,8 @@ export function normalizeAnalysisInput(input: AnalysisInput): AnalysisInput {
     ...clean,
     property: {
       ...clean.property,
+      address: typeof clean.property.address === "string" ? clean.property.address : "",
+      city: typeof (clean.property as { city?: unknown }).city === "string" ? (clean.property as { city: string }).city : "",
       zipCode: typeof clean.property.zipCode === "string" ? clean.property.zipCode : "",
     },
     income: {
@@ -194,10 +270,25 @@ export function normalizeAnalysisInput(input: AnalysisInput): AnalysisInput {
       rentEntryMode: normalizeRentEntryMode((raw.income as { rentEntryMode?: unknown } | undefined)?.rentEntryMode),
       units: normalizeUnits((raw.income as { units?: unknown } | undefined)?.units),
       rentSource: source,
+      rentSourceKind: normalizeRentSourceKind((raw.income as { rentSourceKind?: unknown } | undefined)?.rentSourceKind),
+      rentSourceNotes:
+        typeof (raw.income as { rentSourceNotes?: unknown } | undefined)?.rentSourceNotes === "string"
+          ? ((raw.income as { rentSourceNotes: string }).rentSourceNotes)
+          : "",
+      dateVerified:
+        typeof (raw.income as { dateVerified?: unknown } | undefined)?.dateVerified === "string"
+          ? (raw.income as { dateVerified: string }).dateVerified
+          : "",
+      verificationStatus: normalizeVerificationStatus(
+        (raw.income as { verificationStatus?: unknown } | undefined)?.verificationStatus,
+      ),
     },
     financing: {
       ...clean.financing,
       askingPrice: Math.max(0, finite(clean.financing.askingPrice)),
+      proposedOffer: hasOwnFinite(raw.financing, "proposedOffer")
+        ? Math.max(0, finite((raw.financing as { proposedOffer?: unknown }).proposedOffer))
+        : 0,
       otherAcquisitionCosts: hasOwnFinite(raw.financing, "otherAcquisitionCosts")
         ? Math.max(0, finite(raw.financing.otherAcquisitionCosts))
         : 0,
@@ -214,10 +305,34 @@ export function normalizeAnalysisInput(input: AnalysisInput): AnalysisInput {
       sharedUtilitiesMonthly,
       utilitiesMonthly,
     },
+    flip: {
+      ...clean.flip,
+      holdDurationMonths: Math.max(0, finite(clean.flip.holdDurationMonths)),
+      holdingCostOverride: hasOwnFinite(raw.flip, "holdingCostOverride")
+        ? Math.max(0, finite((raw.flip as { holdingCostOverride?: unknown }).holdingCostOverride))
+        : 0,
+    },
     brrrr: {
       ...clean.brrrr,
-      refinanceDscrMin: dscrMin > 0 ? clamp(dscrMin, 0, 5) : 1.25,
+      refinanceDscrMin: dscrMin > 0 ? clamp(dscrMin, 0.01, 5) : 1.25,
+      otherRehabCosts: hasOwnFinite(raw.brrrr, "otherRehabCosts")
+        ? Math.max(0, finite((raw.brrrr as { otherRehabCosts?: unknown }).otherRehabCosts))
+        : 0,
+      refinanceClosingCosts: hasOwnFinite(raw.brrrr, "refinanceClosingCosts")
+        ? Math.max(0, finite((raw.brrrr as { refinanceClosingCosts?: unknown }).refinanceClosingCosts))
+        : 0,
+      refinanceNotes:
+        typeof (raw.brrrr as { refinanceNotes?: unknown } | undefined)?.refinanceNotes === "string"
+          ? (raw.brrrr as { refinanceNotes: string }).refinanceNotes
+          : "",
+      loanPayoffAmount: hasOwnFinite(raw.brrrr, "loanPayoffAmount")
+        ? Math.max(0, finite((raw.brrrr as { loanPayoffAmount?: unknown }).loanPayoffAmount))
+        : 0,
     },
     decision: normalizeDecision(raw, clean),
+    neighbourhood: normalizeNeighbourhood(
+      (raw as { neighbourhood?: unknown }).neighbourhood,
+      typeof clean.property.zipCode === "string" ? clean.property.zipCode : "",
+    ),
   };
 }

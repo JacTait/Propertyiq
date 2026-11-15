@@ -17,6 +17,22 @@ export function calculateMonthlyPayment(
   return (principal * r * factor) / (factor - 1);
 }
 
+/** Invert the standard amortising payment formula to a supported principal. */
+export function loanPrincipalFromPayment(
+  monthlyPayment: number,
+  annualRatePercent: number,
+  termYears: number,
+): number {
+  if (!(monthlyPayment > 0) || termYears <= 0) return 0;
+  const n = Math.round(termYears * 12);
+  if (n <= 0) return 0;
+  const r = annualRatePercent / 100 / 12;
+  if (r === 0) return monthlyPayment * n;
+  const factor = Math.pow(1 + r, n);
+  const principal = (monthlyPayment * (factor - 1)) / (r * factor);
+  return Number.isFinite(principal) && principal > 0 ? principal : 0;
+}
+
 export function buildAmortizationSchedule(
   principal: number,
   annualRatePercent: number,

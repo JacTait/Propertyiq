@@ -5,6 +5,7 @@ import {
   DEFAULT_SCENARIO_ASSUMPTIONS,
   DEFAULT_TARGET_ARV_PERCENT,
 } from "@/lib/constants/deal-workspace";
+import { emptyNeighbourhood } from "@/lib/calculations/normalize-input";
 
 export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInput {
   const regionCode = country === "US" ? "FL" : country === "GB" ? "NW" : country === "CA" ? "AB" : "QLD";
@@ -23,6 +24,7 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
     property: {
       name: "Sample Investment Property",
       address: "",
+      city: "",
       zipCode: "",
       propertyType: "single-family",
       bedrooms: 3,
@@ -36,6 +38,7 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
     financing: {
       purchasePrice,
       askingPrice: 0,
+      proposedOffer: 0,
       depositPercent: 25,
       interestRate: 6.5,
       termYears: 30,
@@ -53,6 +56,10 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
       rentEntryMode: "total",
       units: [],
       rentSource: "verified",
+      rentSourceKind: "user-estimate",
+      rentSourceNotes: "",
+      dateVerified: "",
+      verificationStatus: "unverified",
       otherMonthlyIncome: 0,
       rentGrowthRate: 3,
       nightlyRate: Math.round(monthlyRent / 12),
@@ -85,6 +92,7 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
       realtorFeePercent: 5,
       expectedSalePrice: Math.round(purchasePrice * 1.3),
       holdDurationMonths: 6,
+      holdingCostOverride: 0,
     },
     brrrr: {
       rehabCost: Math.round(purchasePrice * 0.15),
@@ -94,6 +102,10 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
       refinanceTermYears: 30,
       expectedRent: Math.round(monthlyRent * 1.15),
       refinanceDscrMin: 1.25,
+      otherRehabCosts: 0,
+      refinanceClosingCosts: 0,
+      refinanceNotes: "",
+      loanPayoffAmount: 0,
     },
     decision: {
       advertisedArv: Math.round(purchasePrice * 1.35),
@@ -108,6 +120,126 @@ export function createDefaultAnalysis(country: CountryCode = "US"): AnalysisInpu
         conservative: { ...DEFAULT_SCENARIO_ASSUMPTIONS.conservative },
         stress: { ...DEFAULT_SCENARIO_ASSUMPTIONS.stress },
       },
+      capRateBasis: "purchase",
+      targetCashLeftInDeal: 0,
     },
+    neighbourhood: emptyNeighbourhood(),
+  };
+}
+
+/** Empty deal for Quick Underwrite. Does not copy sample price, rent, ARV or location. */
+export function createBlankAnalysis(country: CountryCode = "US"): AnalysisInput {
+  const regionCode = country === "US" ? "FL" : country === "GB" ? "NW" : country === "CA" ? "AB" : "QLD";
+  const profile = getMarketProfile(country, regionCode);
+  const market = profile ? toMarketData(profile) : DEFAULT_MARKET_DATA;
+  return {
+    location: {
+      country,
+      region: regionCode,
+      market,
+    },
+    property: {
+      name: "",
+      address: "",
+      city: "",
+      zipCode: "",
+      propertyType: "single-family",
+      bedrooms: 3,
+      bathrooms: 2,
+      squareFootage: 0,
+      lotSize: 0,
+      yearBuilt: 2000,
+      condition: "good",
+    },
+    strategy: "brrrr",
+    financing: {
+      purchasePrice: 0,
+      askingPrice: 0,
+      proposedOffer: 0,
+      depositPercent: 25,
+      interestRate: 7,
+      termYears: 30,
+      closingCosts: 0,
+      legalFees: 0,
+      inspectionCosts: 0,
+      loanFees: 0,
+      otherAcquisitionCosts: 0,
+    },
+    income: {
+      monthlyRent: 0,
+      verifiedRent: 0,
+      conservativeRent: 0,
+      currentMonthlyRent: 0,
+      rentEntryMode: "total",
+      units: [],
+      rentSource: "verified",
+      rentSourceKind: "user-estimate",
+      rentSourceNotes: "",
+      dateVerified: "",
+      verificationStatus: "unverified",
+      otherMonthlyIncome: 0,
+      rentGrowthRate: 3,
+      nightlyRate: 0,
+      occupancyRate: 65,
+      cleaningCostsMonthly: 0,
+      platformFeePercent: 3,
+    },
+    expenses: {
+      propertyTaxAnnual: 0,
+      insuranceAnnual: 0,
+      insuranceSource: "estimate",
+      hoaMonthly: 0,
+      managementPercent: 8,
+      vacancyPercent: 8,
+      maintenancePercent: 6,
+      capexPercent: 5,
+      waterMonthly: 0,
+      sewerMonthly: 0,
+      trashMonthly: 0,
+      sharedUtilitiesMonthly: 0,
+      utilitiesMonthly: 0,
+      otherMonthly: 0,
+      expenseGrowthRate: 2.5,
+    },
+    flip: {
+      renovationBudget: 0,
+      holdingCostsMonthly: 0,
+      financingCosts: 0,
+      sellingCostsPercent: 2,
+      realtorFeePercent: 5,
+      expectedSalePrice: 0,
+      holdDurationMonths: 0,
+      holdingCostOverride: 0,
+    },
+    brrrr: {
+      rehabCost: 0,
+      afterRepairValue: 0,
+      refinanceLtv: 75,
+      refinanceRate: 7,
+      refinanceTermYears: 30,
+      expectedRent: 0,
+      refinanceDscrMin: 1.25,
+      otherRehabCosts: 0,
+      refinanceClosingCosts: 0,
+      refinanceNotes: "",
+      loanPayoffAmount: 0,
+    },
+    decision: {
+      advertisedArv: 0,
+      conservativeArv: 0,
+      rehabContingencyPercent: 10,
+      targetArvPercent: DEFAULT_TARGET_ARV_PERCENT,
+      includeAdditionalCostsInGuideline: false,
+      guidelineAdditionalCosts: { ...DEFAULT_GUIDELINE_ADDITIONAL_COSTS },
+      acquisitionCostMode: "itemised",
+      scenarios: {
+        base: { ...DEFAULT_SCENARIO_ASSUMPTIONS.base },
+        conservative: { ...DEFAULT_SCENARIO_ASSUMPTIONS.conservative },
+        stress: { ...DEFAULT_SCENARIO_ASSUMPTIONS.stress },
+      },
+      capRateBasis: "purchase",
+      targetCashLeftInDeal: 0,
+    },
+    neighbourhood: emptyNeighbourhood(),
   };
 }

@@ -22,6 +22,11 @@ interface CompareRow {
 }
 
 const ROWS: CompareRow[] = [
+  { key: "asking", label: "Asking Price", value: (p) => p.input.financing.askingPrice, format: (v, f) => f.currency(v), lowerIsBetter: true },
+  { key: "offer", label: "Proposed Offer", value: (p) => p.snapshot.proposedOffer ?? p.input.financing.proposedOffer ?? 0, format: (v, f) => f.currency(v), lowerIsBetter: true },
+  { key: "allin", label: "All-In Cost", value: (p) => p.snapshot.allInCost ?? 0, format: (v, f) => (v ? f.currency(v) : "—"), lowerIsBetter: true },
+  { key: "arv", label: "ARV", value: (p) => p.input.brrrr.afterRepairValue, format: (v, f) => f.currency(v) },
+  { key: "verified", label: "Verified Rent", value: (p) => p.snapshot.verifiedRent ?? p.input.income.verifiedRent, format: (v, f) => f.currency(v) },
   { key: "price", label: "Purchase Price", value: (p) => p.snapshot.purchasePrice, format: (v, f) => f.currency(v), lowerIsBetter: true },
   { key: "roi", label: "ROI", value: (p) => p.snapshot.roi, format: (v, f) => (v >= 999 ? "∞" : f.percent(v)) },
   { key: "coc", label: "Cash-on-Cash", value: (p) => p.snapshot.cashOnCash, format: (v, f) => f.percent(v) },
@@ -31,6 +36,9 @@ const ROWS: CompareRow[] = [
   { key: "cashflow", label: "Monthly Cashflow", value: (p) => p.snapshot.monthlyCashflow, format: (v, f) => f.signedCurrency(v) },
   { key: "annual", label: "Annual Cashflow", value: (p) => p.snapshot.annualCashflow, format: (v, f) => f.signedCurrency(v) },
   { key: "dscr", label: "DSCR", value: (p) => p.snapshot.dscr, format: (v, f) => f.ratio(v) },
+  { key: "postRefi", label: "Post-Refinance DSCR", value: (p) => p.snapshot.postRefinanceDscr ?? p.snapshot.dscr, format: (v, f) => (Number.isFinite(v) ? f.ratio(v) : "N/A") },
+  { key: "recovered", label: "Cash Recovered", value: (p) => Math.max(0, (p.snapshot.allInCost ?? 0) - (p.snapshot.cashLeftInDeal ?? 0)), format: (v, f) => f.currency(v) },
+  { key: "cashLeft", label: "Cash Left In Deal", value: (p) => p.snapshot.cashLeftInDeal ?? 0, format: (v, f) => f.currency(v), lowerIsBetter: true },
   { key: "appr", label: "Appreciation", value: (p) => p.snapshot.appreciationRate, format: (v, f) => f.percent(v) },
   { key: "score", label: "Deal Score", value: (p) => p.snapshot.dealScore, format: (v) => `${Math.round(v)}/100` },
   { key: "resilience", label: "Resilience Score", value: (p) => p.snapshot.resilienceScore ?? 0, format: (v) => `${Math.round(v)}/100` },
@@ -148,6 +156,22 @@ export function CompareTable({ properties }: { properties: PortfolioProperty[] }
                     </tr>
                   );
                 })}
+                <tr className="border-t border-border/60">
+                  <td className="px-3 py-2.5 font-medium text-muted-foreground">Final Verdict</td>
+                  {properties.map((p) => (
+                    <td key={p.id} className="px-3 py-2.5 text-right text-sm">
+                      {p.snapshot.quickVerdict === "worth-pursuing"
+                        ? "Worth pursuing"
+                        : p.snapshot.quickVerdict === "investigate"
+                          ? "Investigate further"
+                          : p.snapshot.quickVerdict === "walk-away"
+                            ? "Walk away"
+                            : p.snapshot.quickVerdict === "insufficient-data"
+                              ? "Insufficient data"
+                              : "—"}
+                    </td>
+                  ))}
+                </tr>
                 <tr className="border-t border-border/60">
                   <td className="px-3 py-2.5 font-medium text-muted-foreground">Primary Risk</td>
                   {properties.map((p) => (

@@ -1,6 +1,14 @@
-import { BarChart3, Briefcase, GitCompareArrows, Settings, Shield, Target, Umbrella, type LucideIcon } from "lucide-react";
+import { BarChart3, Briefcase, GitCompareArrows, Gauge, Settings, Shield, Target, Umbrella, type LucideIcon } from "lucide-react";
 
-export type NavHref = "/dashboard" | "/portfolio" | "/compare" | "/max-offer" | "/resilience" | "/downside" | "/settings";
+export type NavHref =
+  | "/quick-underwrite"
+  | "/dashboard"
+  | "/portfolio"
+  | "/compare"
+  | "/max-offer"
+  | "/resilience"
+  | "/downside"
+  | "/settings";
 
 export interface NavItem {
   href: NavHref;
@@ -19,7 +27,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Analysis",
     items: [
-      { href: "/dashboard", label: "Deal Workspace", short: "Workspace", description: "Guided deal underwrite", icon: BarChart3 },
+      { href: "/quick-underwrite", label: "Quick Underwrite", short: "Quick", description: "One-screen deal decision", icon: Gauge },
+      { href: "/dashboard", label: "Standard Analysis", short: "Workspace", description: "Guided deal underwrite", icon: BarChart3 },
       { href: "/max-offer", label: "Max Offer", short: "Offer", description: "Maximum allowable bid", icon: Target },
       { href: "/resilience", label: "Deal Resilience", short: "Stress", description: "Stress-test the deal", icon: Shield },
       { href: "/downside", label: "Downside Analysis", short: "Downside", description: "Deal survival under stress", icon: Umbrella },

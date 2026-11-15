@@ -304,6 +304,44 @@ export function FieldGrid({ children, className }: { children: React.ReactNode; 
   return <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2", className)}>{children}</div>;
 }
 
+export function TextAreaField({
+  name,
+  label,
+  placeholder,
+  hint,
+  className,
+  rows = 3,
+}: {
+  name: Name;
+  label: string;
+  placeholder?: string;
+  hint?: string;
+  className?: string;
+  rows?: number;
+}) {
+  const { control } = useFormContext<AnalysisFormValues>();
+  const id = React.useId();
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field, fieldState }) => (
+        <FieldWrapper label={label} htmlFor={id} hint={hint} error={fieldState.error?.message} className={className}>
+          <textarea
+            id={id}
+            rows={rows}
+            placeholder={placeholder}
+            value={typeof field.value === "string" ? field.value : ""}
+            onChange={(e) => field.onChange(e.target.value)}
+            onBlur={field.onBlur}
+            className="flex min-h-[80px] w-full rounded-lg border border-input bg-background/60 px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+          />
+        </FieldWrapper>
+      )}
+    />
+  );
+}
+
 export function SectionTitle({ title, description }: { title: string; description?: string }) {
   return (
     <div className="mb-4 space-y-1">

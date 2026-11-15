@@ -1,10 +1,13 @@
 import type {
   AppSettings,
+  CapRateBasis,
   Country,
   CurrencyCode,
   InvestmentStrategy,
   PropertyCondition,
   PropertyType,
+  RentSourceKind,
+  RentVerificationStatus,
   ResilienceShocks,
 } from "@/lib/types";
 
@@ -159,6 +162,33 @@ export const MAX_OFFER_CASHFLOW_PRESETS = [100, 200, 300, 400, 500, 750, 1000] a
 export const MAX_OFFER_ROI_PRESETS = [5, 8, 10, 12, 15, 20] as const;
 
 export const DEFAULT_REFINANCE_DSCR = 1.25;
+
+export const REFINANCE_LTV_PRESETS = [70, 75, 80] as const;
+
+export const RENT_SOURCE_KINDS: { value: RentSourceKind; label: string }[] = [
+  { value: "housing-authority", label: "Housing Authority" },
+  { value: "property-manager", label: "Property Manager" },
+  { value: "local-comparable", label: "Local Comparable" },
+  { value: "lease", label: "Lease" },
+  { value: "listing", label: "Listing" },
+  { value: "appraisal", label: "Appraisal" },
+  { value: "user-estimate", label: "User Estimate" },
+  { value: "other", label: "Other" },
+];
+
+export const RENT_VERIFICATION_STATUSES: { value: RentVerificationStatus; label: string }[] = [
+  { value: "unverified", label: "Unverified" },
+  { value: "user-verified", label: "User Verified" },
+  { value: "third-party-verified", label: "Third-Party Verified" },
+];
+
+export const CAP_RATE_BASIS_OPTIONS: { value: CapRateBasis; label: string }[] = [
+  { value: "purchase", label: "Purchase Price" },
+  { value: "proposed-offer", label: "Proposed Offer" },
+  { value: "asking", label: "Current Asking Price" },
+  { value: "all-in", label: "All-In Cost" },
+  { value: "arv", label: "ARV" },
+];
 
 export const DEFAULT_INVESTOR_TARGETS = {
   desiredMonthlyCashflow: 200,

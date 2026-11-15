@@ -9,8 +9,10 @@ import type {
   InvestmentStrategy,
   MaxOfferInputs,
   MaxOfferResults,
+  PortfolioKind,
   PortfolioProperty,
   PortfolioSnapshot,
+  QuickUnderwriteResults,
   Recommendation,
   UnderwritingPack,
 } from "@/lib/types";
@@ -79,31 +81,40 @@ export function buildSnapshot(
   input: AnalysisInput,
   results: AnalysisResults,
   underwriting?: UnderwritingPack | null,
+  quick?: QuickUnderwriteResults | null,
 ): PortfolioSnapshot {
+  const decision = decisionSnapshotFields(input);
   return {
     purchasePrice: input.financing.purchasePrice,
     roi: results.roi,
     cashOnCash: results.cashOnCash,
-    capRate: results.capRate,
+    capRate: quick?.capRate ?? results.capRate,
     grossYield: results.grossYield,
     netYield: results.netYield,
-    monthlyCashflow: results.monthlyCashflow,
-    annualCashflow: results.annualCashflow,
-    dscr: results.dscr,
+    monthlyCashflow: quick?.monthlyCashflow ?? results.monthlyCashflow,
+    annualCashflow: quick?.annualCashflow ?? results.annualCashflow,
+    dscr: quick?.refinance.postRefiDscr ?? results.dscr,
     appreciationRate: input.location.market.appreciationRate,
     dealScore: results.dealScore.score,
     grade: results.dealScore.grade,
     recommendation: results.dealScore.recommendation,
     resilienceScore: underwriting?.resilience.score,
-    marginOfSafetyPercent: underwriting?.margin.ready ? underwriting.margin.percent : undefined,
+    marginOfSafetyPercent: quick?.marginOfSafetyPercent ?? (underwriting?.margin.ready ? underwriting.margin.percent : undefined),
     refinanceStatus: underwriting?.refinance.status,
-    buyBoxStatus: underwriting?.buyBox.status,
-    dealSurvivalScore: underwriting?.downside.score,
-    primaryRisk: underwriting?.downside.primaryRiskLabel,
+    buyBoxStatus: quick?.buyBox.status ?? underwriting?.buyBox.status,
+    dealSurvivalScore: quick?.downside?.dealSurvivalScore ?? underwriting?.downside.score,
+    primaryRisk: quick?.downside?.primaryRisk ?? underwriting?.downside.primaryRiskLabel,
     worstCaseCashflow: underwriting?.downside.worstCase.monthlyCashflow,
     worstCaseDscr: underwriting?.downside.worstCase.dscr,
     worstCaseRoi: underwriting?.downside.worstCase.roi,
-    ...decisionSnapshotFields(input),
+    ...decision,
+    quickVerdict: quick?.verdict.verdict,
+    verifiedRent: quick?.rent.verified,
+    supportedRefinanceLoan: quick?.refinance.supportedRefinanceLoan,
+    postRefinanceDscr: quick?.refinance.postRefiDscr ?? undefined,
+    cashLeftInDeal: quick?.cashRecovery?.cashLeftInDeal,
+    proposedOffer: input.financing.proposedOffer,
+    allInCost: quick?.allIn.total ?? decision.allInCost,
   };
 }
 
@@ -122,15 +133,16 @@ export function usePortfolio() {
       name?: string,
       existingId?: string,
       underwriting?: UnderwritingPack | null,
+      extras?: { kind?: PortfolioKind; quick?: QuickUnderwriteResults | null },
     ): PortfolioProperty => {
       const now = new Date().toISOString();
       const regionName = getRegionName(input.location.country, input.location.region);
-      const snapshot = buildSnapshot(input, results, underwriting);
+      const snapshot = buildSnapshot(input, results, underwriting, extras?.quick);
       const existing = existingId ? properties.find((p) => p.id === existingId) : undefined;
 
       const saved: PortfolioProperty = {
         id: existing?.id ?? createId(),
-        name: name?.trim() || input.property.name,
+        name: name?.trim() || input.property.name || "Untitled property",
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
         country: input.location.country,
@@ -139,6 +151,7 @@ export function usePortfolio() {
         strategy: input.strategy,
         input,
         snapshot,
+        kind: extras?.kind ?? existing?.kind ?? "analysis",
       };
 
       setProperties((prev) =>

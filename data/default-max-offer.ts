@@ -118,6 +118,7 @@ export function maxOfferToAnalysisInput(
       otherMonthly: input.expenses.otherMonthly,
     },
     brrrr: {
+      ...base.brrrr,
       rehabCost: input.property.rehabBudget,
       afterRepairValue: input.property.arv,
       refinanceLtv: input.brrrr.refinanceLtv,
