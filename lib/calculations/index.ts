@@ -16,6 +16,7 @@ export * from "@/lib/calculations/refinance";
 export * from "@/lib/calculations/deal-resilience";
 export * from "@/lib/calculations/downside-analysis";
 export * from "@/lib/calculations/margin-of-safety";
+export * from "@/lib/calculations/underwritten-price";
 export * from "@/lib/calculations/deal-killers";
 export * from "@/lib/calculations/underwriting-summary";
 export * from "@/lib/calculations/underwrite";

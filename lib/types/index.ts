@@ -959,6 +959,9 @@ export interface DownsideComponentScore {
   score: number;
   weight: number;
   detail: string;
+  rawInput: string;
+  threshold: string;
+  contribution: number;
 }
 
 export interface DownsideWorstCase {
@@ -1032,12 +1035,34 @@ export interface RefinanceValidation {
 
 export type SafetyRating = "excellent" | "strong" | "good" | "weak" | "danger";
 
-export type MarginPriceSource = "asking" | "purchase";
+export type UnderwrittenPriceSource = "purchase" | "proposed" | "asking";
+
+export type MarginPriceSource = UnderwrittenPriceSource;
+
+export interface UnderwrittenPrice {
+  value: number | null;
+  source: UnderwrittenPriceSource | null;
+  label: string;
+}
 
 export interface CurrentDealPrice {
   price: number;
   source: MarginPriceSource;
   label: string;
+}
+
+export type PriceVsMaximumStatus = "above-maximum" | "below-maximum" | "at-maximum" | "not-entered";
+
+export interface PriceVsMaximumOffer {
+  key: "asking" | "proposed" | "purchase";
+  label: string;
+  differenceLabel: string;
+  price: number;
+  entered: boolean;
+  maximumOffer: number | null;
+  difference: number | null;
+  status: PriceVsMaximumStatus;
+  statusLabel: string;
 }
 
 export type OfferCeilingSource = "supplied" | "reconstructed-default-targets";
@@ -1176,6 +1201,8 @@ export interface QuickRefinanceResults {
 }
 
 export interface CashRecoveryResults {
+  totalProjectCost: number;
+  investorCashInvested: number;
   totalCapitalInvested: number;
   grossRefinanceProceeds: number;
   netRefinanceProceeds: number;
@@ -1216,11 +1243,15 @@ export interface QuickDownsideSnapshot {
   stressRoi: number;
   dealSurvivalScore: number;
   primaryRisk: string;
+  components: DownsideComponentScore[];
 }
 
 export interface QuickUnderwriteResults {
   rent: QuickRentResolution;
   acquisitionPrice: PriceSource;
+  underwrittenPrice: number | null;
+  underwrittenPriceSource: UnderwrittenPriceSource | null;
+  priceComparisons: PriceVsMaximumOffer[];
   allIn: AllInCostBreakdown;
   operating: QuickOperatingStatement;
   acquisitionMonthlyPayment: number;

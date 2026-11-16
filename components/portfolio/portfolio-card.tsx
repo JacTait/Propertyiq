@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Calendar, ExternalLink, MapPin, Trash2 } from "lucide-react";
@@ -12,6 +13,7 @@ import { readDecisionSnapshot } from "@/lib/calculations/portfolio-snapshot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DealSurvivalInfo, dealSurvivalInfoFromScore } from "@/components/underwriting/deal-survival-info";
 
 interface PortfolioCardProps {
   property: PortfolioProperty;
@@ -154,6 +156,7 @@ export function PortfolioCard({
               <Metric
                 label="Survival"
                 value={typeof s.dealSurvivalScore === "number" ? `${Math.round(s.dealSurvivalScore)}/100` : "—"}
+                action={<DealSurvivalInfo {...dealSurvivalInfoFromScore(s.dealSurvivalScore, s.primaryRisk)} />}
               />
             </div>
           </details>
@@ -183,6 +186,7 @@ export function PortfolioCard({
               label="Survival"
               value={`${Math.round(s.dealSurvivalScore)}/100`}
               tone={metricTone(s.dealSurvivalScore, { good: 80, ok: 60 })}
+              action={<DealSurvivalInfo {...dealSurvivalInfoFromScore(s.dealSurvivalScore, s.primaryRisk)} />}
             />
             <Metric
               label="WC Cashflow"
@@ -219,10 +223,25 @@ export function PortfolioCard({
   );
 }
 
-function Metric({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: ReturnType<typeof metricTone> }) {
+function Metric({
+  label,
+  value,
+  sub,
+  tone,
+  action,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: ReturnType<typeof metricTone>;
+  action?: ReactNode;
+}) {
   return (
     <div className="rounded-lg bg-muted/40 px-2.5 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span>{label}</span>
+        {action}
+      </div>
       <p
         className={cn(
           "truncate text-sm font-bold tabular",

@@ -12,6 +12,7 @@ interface KpiCardProps {
   tone?: Tone;
   hint?: string;
   index?: number;
+  action?: ReactNode;
   children?: ReactNode;
 }
 
@@ -23,12 +24,15 @@ const VALUE_TONE: Record<Tone, string> = {
   muted: "text-foreground",
 };
 
-export function KpiCard({ label, value, sub, icon: Icon, tone = "primary", hint, children }: KpiCardProps) {
+export function KpiCard({ label, value, sub, icon: Icon, tone = "primary", hint, action, children }: KpiCardProps) {
   const card = (
     <div className="border border-border bg-card px-4 py-3 rounded-lg">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-        <Icon className="size-3.5 text-muted-foreground" aria-hidden />
+        <div className="flex min-w-0 items-center gap-1">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+          {action}
+        </div>
+        <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       </div>
       <p className={cn("mt-2 font-figure text-[22px] font-medium leading-none tabular-nums sm:text-[26px]", VALUE_TONE[tone])}>
         {value}

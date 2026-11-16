@@ -30,6 +30,12 @@ import { calculateMaxOffer } from "@/lib/calculations/max-offer";
 import { analysisToMaxOfferInputs, marginFromAnalysis } from "@/lib/calculations/margin-of-safety";
 import { applyActiveRent } from "@/lib/calculations/rent";
 import { rehabContingencyAmount, totalRehabBudget } from "@/lib/calculations/deal-decision";
+import {
+  buildPriceComparisons,
+  formatMoneyAmount,
+  resolveUnderwrittenPrice,
+  toPriceSource,
+} from "@/lib/calculations/underwritten-price";
 
 function money(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
@@ -67,11 +73,7 @@ export function resolveQuickRent(input: AnalysisInput): QuickRentResolution {
 }
 
 export function resolveAcquisitionPrice(input: AnalysisInput): PriceSource {
-  const purchase = money(input.financing.purchasePrice);
-  const proposed = money(input.financing.proposedOffer);
-  if (purchase > 0) return { value: purchase, source: "purchase", label: "Purchase Price" };
-  if (proposed > 0) return { value: proposed, source: "proposed-offer", label: "Proposed Offer" };
-  return { value: null, source: "none", label: "No acquisition price entered" };
+  return toPriceSource(resolveUnderwrittenPrice(input));
 }
 
 export function resolveHoldingCost(input: AnalysisInput): {
@@ -119,7 +121,7 @@ export function buildAllInCost(input: AnalysisInput, acquisition: PriceSource): 
       holdingCostSource: holding.source,
       otherAcquisitionCosts: otherAcquisition,
       total: null,
-      message: "All-in cost will be available after entering a proposed offer or purchase price.",
+      message: "Enter an asking price, proposed offer, or purchase price to calculate all-in cost.",
     };
   }
 
@@ -223,7 +225,10 @@ function defaultCapRateBasis(input: AnalysisInput): CapRateBasis {
   if (stored === "proposed-offer" || stored === "asking" || stored === "all-in" || stored === "arv" || stored === "purchase") {
     return stored;
   }
-  return money(input.financing.purchasePrice) > 0 ? "purchase" : "proposed-offer";
+  const source = resolveUnderwrittenPrice(input).source;
+  if (source === "purchase") return "purchase";
+  if (source === "asking") return "asking";
+  return "proposed-offer";
 }
 
 export function buildQuickRefinance(
@@ -286,11 +291,25 @@ function collectWarnings(args: {
   buyBox: BuyBoxMatch;
   downsideCashflow: number | null;
   asking: number;
+  proposed: number;
+  underwritten: PriceSource;
   maximumOffer: number | null;
   marginPercent: number | null;
   cashLeft: number | null;
 }): UnderwritingWarning[] {
-  const { input, rent, refinance, buyBox, downsideCashflow, asking, maximumOffer, marginPercent, cashLeft } = args;
+  const {
+    input,
+    rent,
+    refinance,
+    buyBox,
+    downsideCashflow,
+    asking,
+    proposed,
+    underwritten,
+    maximumOffer,
+    marginPercent,
+    cashLeft,
+  } = args;
   const warnings: UnderwritingWarning[] = [];
   const push = (warning: UnderwritingWarning) => {
     if (!warnings.some((item) => item.key === warning.key)) warnings.push(warning);
@@ -328,20 +347,34 @@ function collectWarnings(args: {
       detail: `${refinance.postRefiDscrLabel} versus a ${formatDscrOrNA(refinance.requiredDscr)} requirement.`,
     });
   }
-  if (marginPercent !== null && marginPercent < 0) {
+  const max = maximumOffer !== null && maximumOffer > 0 ? maximumOffer : null;
+  const underwrittenAboveMax =
+    underwritten.value !== null && max !== null && underwritten.value > max;
+  if (underwrittenAboveMax && underwritten.value !== null && max !== null) {
+    push({
+      key: "underwritten-above-max",
+      severity: "critical",
+      title: `The price currently being underwritten is ${formatMoneyAmount(underwritten.value - max)} above the calculated maximum offer.`,
+      detail: `${underwritten.label} of ${formatMoneyAmount(underwritten.value)} is the price used for the verdict.`,
+    });
+  } else if (marginPercent !== null && marginPercent < 0) {
     push({
       key: "negative-mos",
       severity: "warning",
       title: "Margin of safety is negative.",
-      detail: "The asking or acquisition price sits above the calculated maximum offer.",
+      detail: "The price currently being underwritten sits above the calculated maximum offer.",
     });
   }
-  if (asking > 0 && maximumOffer !== null && asking > maximumOffer) {
+  if (asking > 0 && max !== null && asking > max && !underwrittenAboveMax) {
+    const proposedNote =
+      proposed > 0 && proposed <= max
+        ? ` Proposed offer is ${formatMoneyAmount(max - proposed)} below the calculated maximum offer.`
+        : "";
     push({
       key: "asking-above-max",
-      severity: "critical",
-      title: "Asking price exceeds the calculated maximum offer.",
-      detail: "The listing is above the price that still meets the current return targets.",
+      severity: "warning",
+      title: `Asking price is ${formatMoneyAmount(asking - max)} above the calculated maximum offer.`,
+      detail: proposedNote.trim() || "The listing is above the price that still meets the current return targets.",
     });
   }
   if (input.decision.rehabContingencyPercent < 10 && money(input.brrrr.rehabCost) > 0) {
@@ -396,7 +429,7 @@ function buildVerdict(args: {
   refinance: QuickRefinanceResults;
   monthlyCashflow: number | null;
   downsideCashflow: number | null;
-  asking: number;
+  underwritten: number | null;
   maximumOffer: number | null;
   marginPercent: number | null;
   criticalWarnings: boolean;
@@ -407,7 +440,7 @@ function buildVerdict(args: {
     refinance,
     monthlyCashflow,
     downsideCashflow,
-    asking,
+    underwritten,
     maximumOffer,
     marginPercent,
     criticalWarnings,
@@ -433,7 +466,8 @@ function buildVerdict(args: {
     refinance.postRefiDscr !== null && refinance.postRefiDscr + 1e-9 >= refinance.requiredDscr;
   const expectedPositive = monthlyCashflow !== null && monthlyCashflow > 0;
   const downsideOk = downsideCashflow !== null && downsideCashflow >= 0;
-  const askingAboveMax = asking > 0 && maximumOffer !== null && asking > maximumOffer;
+  const underwrittenAboveMax =
+    underwritten !== null && maximumOffer !== null && maximumOffer > 0 && underwritten > maximumOffer;
   const negativeMos = marginPercent !== null && marginPercent < 0;
   const refiNotViable =
     refinance.postRefiDscr !== null && (refinance.postRefiDscr < 1 || refinance.supportedRefinanceLoan <= 0);
@@ -489,7 +523,7 @@ function buildVerdict(args: {
     dscrBelowOne,
     expectedNegative,
     downsideNegative,
-    askingAboveMax,
+    underwrittenAboveMax,
     negativeMos,
     refiNotViable,
   ].filter(Boolean).length;
@@ -543,27 +577,37 @@ export function calculateQuickUnderwrite(
     input.financing.interestRate,
     input.financing.termYears,
   );
-  const monthlyCashflow = Number.isFinite(operating.monthlyNoi - acquisitionMonthlyPayment)
-    ? operating.monthlyNoi - acquisitionMonthlyPayment
-    : null;
+  const monthlyCashflow =
+    acquisition.value === null
+      ? null
+      : Number.isFinite(operating.monthlyNoi - acquisitionMonthlyPayment)
+        ? operating.monthlyNoi - acquisitionMonthlyPayment
+        : null;
   const annualCashflow = monthlyCashflow === null ? null : monthlyCashflow * 12;
   const capRateBasis = defaultCapRateBasis(input);
   const capBasisValue = capRateValue(capRateBasis, input, acquisition, allIn);
   const capRate =
     capBasisValue && capBasisValue > 0 ? calculateCapRate(operating.annualNoi, capBasisValue) : null;
-  const cashOnCash =
-    allIn.total && allIn.total > 0 && annualCashflow !== null
-      ? calculateCashOnCash(annualCashflow, allIn.total)
-      : null;
   const refinance = buildQuickRefinance(input, operating, acquisition);
-  const cashRecovery: CashRecoveryResults | null = allIn.total
-    ? computeCashRecovery({
-        totalCapitalInvested: allIn.total,
-        grossRefinanceProceeds: refinance.supportedRefinanceLoan,
-        refinanceClosingCosts: refinance.refinanceClosingCosts,
-        loanPayoffAmount: refinance.loanPayoffAmount,
-      })
-    : null;
+  const investorCashInvested =
+    allIn.total === null ? null : Math.max(0, allIn.total - loanAmount);
+  const cashOnCash =
+    investorCashInvested && investorCashInvested > 0 && annualCashflow !== null
+      ? calculateCashOnCash(annualCashflow, investorCashInvested)
+      : null;
+  const cashRecovery: CashRecoveryResults | null =
+    allIn.total === null || investorCashInvested === null
+      ? null
+      : {
+          ...computeCashRecovery({
+            totalCapitalInvested: investorCashInvested,
+            grossRefinanceProceeds: refinance.supportedRefinanceLoan,
+            refinanceClosingCosts: refinance.refinanceClosingCosts,
+            loanPayoffAmount: refinance.loanPayoffAmount,
+          }),
+          totalProjectCost: allIn.total,
+          investorCashInvested,
+        };
 
   const buyBoxMatch = matchBuyBox(buyBox, {
     propertyType: input.property.propertyType,
@@ -578,7 +622,7 @@ export function calculateQuickUnderwrite(
 
   const missing: string[] = [];
   if (rent.active <= 0) missing.push("Active rent is missing");
-  if (!acquisition.value) missing.push("Enter a proposed offer or purchase price");
+  if (!acquisition.value) missing.push("Enter an asking price, proposed offer, or purchase price");
   if (money(input.brrrr.afterRepairValue) <= 0) missing.push("ARV is missing");
 
   let maximumOffer: number | null = null;
@@ -592,22 +636,23 @@ export function calculateQuickUnderwrite(
     offerInput.property.askingPrice = money(input.financing.askingPrice);
     const maxOffer = calculateMaxOffer(offerInput);
     maximumOffer = maxOffer.feasible ? maxOffer.maximumOffer : 0;
-    const margin = marginFromAnalysis(
-      mapped,
-      money(input.financing.askingPrice) || acquisition.value,
-      { recommendedOffer: maxOffer.recommendedOffer, maximumOffer: maxOffer.maximumOffer },
-    );
+    const margin = marginFromAnalysis(input, null, {
+      recommendedOffer: maxOffer.recommendedOffer,
+      maximumOffer: maxOffer.maximumOffer,
+    });
     marginPercent = margin.ready ? margin.percent : null;
 
     const resilience = calculateDealResilience(mapped, { includeSensitivity: false });
     const expected = resilience.scenarios.find((item) => item.key === "expected");
     const stress = resilience.scenarios.find((item) => item.key === "stress");
-    const down = calculateDownsideAnalysis(mapped, {
+    const down = calculateDownsideAnalysis(input, {
       includeSensitivity: false,
       maximumOffer: maxOffer.maximumOffer,
-      askingPrice: money(input.financing.askingPrice) || acquisition.value || 0,
+      askingPrice: acquisition.value,
       postRefinanceDscr: refinance.postRefiDscr ?? undefined,
       refinanceLoanAmount: refinance.supportedRefinanceLoan,
+      refinanceLimitingFactor: refinance.limitingFactor,
+      requiredDscr: refinance.requiredDscr,
     });
     downside = {
       expectedCashflow: expected?.monthlyCashflow ?? 0,
@@ -618,8 +663,11 @@ export function calculateQuickUnderwrite(
       stressRoi: stress?.roi ?? 0,
       dealSurvivalScore: down.score,
       primaryRisk: down.primaryRiskLabel,
+      components: down.components,
     };
   }
+
+  const priceComparisons = buildPriceComparisons(input, maximumOffer);
 
   const warnings = collectWarnings({
     input,
@@ -628,6 +676,8 @@ export function calculateQuickUnderwrite(
     buyBox: buyBoxMatch,
     downsideCashflow: downside?.stressCashflow ?? null,
     asking: money(input.financing.askingPrice),
+    proposed: money(input.financing.proposedOffer),
+    underwritten: acquisition,
     maximumOffer,
     marginPercent,
     cashLeft: cashRecovery?.cashLeftInDeal ?? null,
@@ -639,15 +689,20 @@ export function calculateQuickUnderwrite(
     refinance,
     monthlyCashflow,
     downsideCashflow: downside?.stressCashflow ?? null,
-    asking: money(input.financing.askingPrice),
+    underwritten: acquisition.value,
     maximumOffer,
     marginPercent,
     criticalWarnings: warnings.some((item) => item.severity === "critical"),
   });
 
+  const resolved = resolveUnderwrittenPrice(input);
+
   return {
     rent,
     acquisitionPrice: acquisition,
+    underwrittenPrice: resolved.value,
+    underwrittenPriceSource: resolved.source,
+    priceComparisons,
     allIn,
     operating,
     acquisitionMonthlyPayment,

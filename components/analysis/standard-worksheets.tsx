@@ -24,7 +24,26 @@ export function StandardUnderwritingWorksheets({
       <FinancialSection eyebrow="Stage 1" title="Buy">
         <FinancialDataRow label="Asking Price" value={input.financing.askingPrice > 0 ? fmt.currency(input.financing.askingPrice) : "—"} />
         <FinancialDataRow label="Proposed Offer" value={input.financing.proposedOffer > 0 ? fmt.currency(input.financing.proposedOffer) : "—"} />
-        <FinancialDataRow label="Purchase Price" value={fmt.currency(input.financing.purchasePrice)} />
+        <FinancialDataRow
+          label="Purchase Price"
+          value={input.financing.purchasePrice > 0 ? fmt.currency(input.financing.purchasePrice) : "—"}
+          detail={input.financing.purchasePrice > 0 ? undefined : "Not Purchased / Not Entered"}
+        />
+        {underwriting?.margin.ready ? (
+          <FinancialDataRow
+            label="Underwritten Price"
+            value={fmt.currency(underwriting.margin.currentPrice)}
+            detail={`Based on ${underwriting.margin.priceSourceLabel}`}
+            emphasis
+            tone="primary"
+          />
+        ) : (
+          <FinancialDataRow
+            label="Underwritten Price"
+            value="—"
+            detail="No price entered yet."
+          />
+        )}
         <FinancialDataRow label="Rehab" value={fmt.currency(input.brrrr.rehabCost)} />
         <FinancialDataRow label="Closing Costs" value={fmt.currency(input.financing.closingCosts)} />
         <SectionDivider />

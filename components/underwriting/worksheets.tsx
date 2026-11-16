@@ -27,9 +27,11 @@ export function BuyWorksheet({
       <FinancialDataRow label="Asking Price" value={asking > 0 ? fmt.currency(asking) : "—"} />
       <FinancialDataRow label="Proposed Offer" value={offer > 0 ? fmt.currency(offer) : "—"} />
       <FinancialDataRow
-        label="Purchase Price Used"
+        label="Underwritten Price"
         value={used.value ? fmt.currency(used.value) : "—"}
-        detail={used.label}
+        detail={used.value ? `Based on ${used.label}` : "No price entered yet."}
+        emphasis
+        tone="primary"
       />
       <FinancialDataRow label="Rehab" value={fmt.currency(allIn.estimatedRehab)} />
       <FinancialDataRow label="Contingency" value={fmt.currency(allIn.rehabContingencyAmount)} />
@@ -42,6 +44,7 @@ export function BuyWorksheet({
       <FinancialDataRow
         label="All-In Cost"
         value={allIn.total === null ? "—" : fmt.currency(allIn.total)}
+        detail={allIn.total === null ? allIn.message ?? undefined : undefined}
         emphasis
         tone="primary"
       />
@@ -52,7 +55,8 @@ export function BuyWorksheet({
       />
       <FinancialDataRow
         label="Margin of Safety"
-        value={mos == null ? "—" : fmt.percent(mos)}
+        value={mos == null ? "No price entered yet." : fmt.percent(mos)}
+        detail={mos == null ? "Enter an asking price, proposed offer, or purchase price to calculate margin of safety." : used.value ? `Based on ${used.label}` : undefined}
         tone={mos == null ? "muted" : mos >= 5 ? "success" : mos >= 0 ? "warning" : "danger"}
       />
     </FinancialSection>
@@ -204,7 +208,8 @@ export function CashRecoverySummary({ results }: { results: QuickUnderwriteResul
   }
   return (
     <FinancialSection title="Cash Recovery">
-      <FinancialDataRow label="Capital Invested" value={fmt.currency(recovery.totalCapitalInvested)} />
+      <FinancialDataRow label="Total Project Cost" value={fmt.currency(recovery.totalProjectCost)} />
+      <FinancialDataRow label="Investor Cash Invested" value={fmt.currency(recovery.investorCashInvested)} />
       <FinancialDataRow label="Net Proceeds" value={fmt.currency(recovery.netRefinanceProceeds)} />
       <FinancialDataRow label="Cash Recovered" value={fmt.currency(recovery.cashRecovered)} emphasis />
       <FinancialDataRow label="Cash Left In Deal" value={fmt.currency(recovery.cashLeftInDeal)} />

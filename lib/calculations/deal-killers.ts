@@ -11,6 +11,7 @@ import type {
 import { analyzeProperty } from "@/lib/calculations/analyze";
 import { applyActiveRent } from "@/lib/calculations/rent";
 import { formatDscr } from "@/lib/calculations/ratios";
+import { formatMoneyAmount, resolveUnderwrittenPrice } from "@/lib/calculations/underwritten-price";
 
 interface KillerArgs {
   input: AnalysisInput;
@@ -104,7 +105,32 @@ export function collectDealKillers(args: KillerArgs): DealKillerWarning[] {
     });
   }
 
-  if (margin.ready && (margin.rating === "danger" || margin.rating === "weak")) {
+  const underwritten = resolveUnderwrittenPrice(input);
+  const asking = typeof input.financing.askingPrice === "number" && Number.isFinite(input.financing.askingPrice) ? input.financing.askingPrice : 0;
+  const proposed = typeof input.financing.proposedOffer === "number" && Number.isFinite(input.financing.proposedOffer) ? input.financing.proposedOffer : 0;
+  const max = margin.maximumOffer > 0 ? margin.maximumOffer : 0;
+  const underwrittenAboveMax = underwritten.value !== null && max > 0 && underwritten.value > max;
+
+  if (underwrittenAboveMax && underwritten.value !== null) {
+    warnings.push({
+      key: "underwritten-above-max",
+      severity: "critical",
+      title: `The price currently being underwritten is ${formatMoneyAmount(underwritten.value - max)} above the calculated maximum offer.`,
+      detail: `${underwritten.label} is the price used for the verdict.`,
+    });
+  } else if (asking > 0 && max > 0 && asking > max) {
+    warnings.push({
+      key: "asking-above-max",
+      severity: "warning",
+      title: `Asking price is ${formatMoneyAmount(asking - max)} above the calculated maximum offer.`,
+      detail:
+        proposed > 0 && proposed <= max
+          ? `Proposed offer is ${formatMoneyAmount(max - proposed)} below the calculated maximum offer.`
+          : "The listing is above the price that still meets the current return targets.",
+    });
+  }
+
+  if (margin.ready && (margin.rating === "danger" || margin.rating === "weak") && !underwrittenAboveMax) {
     warnings.push({
       key: "mos",
       severity: margin.rating === "danger" ? "critical" : "warning",

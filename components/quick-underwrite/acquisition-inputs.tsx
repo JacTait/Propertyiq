@@ -12,7 +12,11 @@ export function AcquisitionInputs({ usedPrice }: { usedPrice: PriceSource }) {
       <CardContent className="pt-5 sm:pt-6">
         <SectionTitle
           title="Acquisition"
-          description={`Price used in calculations: ${usedPrice.label}${usedPrice.value ? "" : "."}`}
+          description={
+            usedPrice.value
+              ? `Underwritten Price ${usedPrice.value.toLocaleString()} · Based on ${usedPrice.label}`
+              : "Underwritten Price is not set. Enter an asking price, proposed offer, or purchase price."
+          }
         />
         <FieldGrid>
           <NumberField name="financing.askingPrice" label="Current Asking Price" prefix={symbol} emptyAsZero hint="Optional. 0 means no listing price." />

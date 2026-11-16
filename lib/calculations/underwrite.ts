@@ -8,6 +8,9 @@ import { calculateDownsideAnalysis } from "@/lib/calculations/downside-analysis"
 import { marginFromAnalysis } from "@/lib/calculations/margin-of-safety";
 import { collectDealKillers } from "@/lib/calculations/deal-killers";
 import { generateUnderwritingSummary } from "@/lib/calculations/underwriting-summary";
+import { sizeSupportedRefinance, resolveArv } from "@/lib/calculations/refinance";
+import { clamp } from "@/lib/calculations/ratios";
+import { DEFAULT_REFINANCE_DSCR } from "@/lib/constants";
 
 export function analyzeWithRent(input: AnalysisInput): AnalysisResults {
   return analyzeProperty(applyActiveRent(normalizeAnalysisInput(input)));
@@ -31,13 +34,25 @@ export function underwriteDeal(
   const refinance = validateRefinance(normalized, results);
   const resilience = calculateDealResilience(normalized, options);
   const margin = marginFromAnalysis(normalized, options.marginPrice, options.marginOffers);
+  const requiredDscr =
+    normalized.brrrr.refinanceDscrMin > 0 ? normalized.brrrr.refinanceDscrMin : DEFAULT_REFINANCE_DSCR;
+  const sized = sizeSupportedRefinance({
+    arv: resolveArv(normalized),
+    refinanceLtv: clamp(normalized.brrrr.refinanceLtv || 75, 0, 100),
+    interestRate: normalized.brrrr.refinanceRate || normalized.financing.interestRate,
+    termYears: normalized.brrrr.refinanceTermYears || normalized.financing.termYears,
+    requiredDscr,
+    monthlyNoi: results.noi / 12,
+  });
   const downside = calculateDownsideAnalysis(normalized, {
     includeSensitivity: options.includeDownsideSensitivity !== false,
     desiredMonthlyCashflow: options.desiredMonthlyCashflow,
     maximumOffer: margin.maximumOffer,
     askingPrice: margin.ready ? margin.currentPrice : 0,
-    postRefinanceDscr: refinance.postRefiDscr,
-    refinanceLoanAmount: refinance.loanAmount,
+    postRefinanceDscr: sized.postRefiDscr ?? 0,
+    refinanceLoanAmount: sized.supportedRefinanceLoan,
+    refinanceLimitingFactor: sized.limitingFactor,
+    requiredDscr,
   });
   const warnings = collectDealKillers({
     input: normalized,
@@ -55,6 +70,7 @@ export function underwriteDeal(
     refinance,
     resilience,
     downside,
+    maximumOffer: margin.maximumOffer,
   });
   return { rent, buyBox: buyBoxMatch, refinance, resilience, downside, margin, warnings, summary };
 }

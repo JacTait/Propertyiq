@@ -75,7 +75,11 @@ export const QuickUnderwriteReport = forwardRef<
           <h2 className="text-lg font-bold">Acquisition</h2>
           <p className="text-sm">Asking {fmt.currency(input.financing.askingPrice)}</p>
           <p className="text-sm">Proposed offer {fmt.currency(input.financing.proposedOffer)}</p>
-          <p className="text-sm">Purchase used {quick.acquisitionPrice.value ? fmt.currency(quick.acquisitionPrice.value) : "—"} ({quick.acquisitionPrice.label})</p>
+          <p className="text-sm">
+            Underwritten Price{" "}
+            {quick.underwrittenPrice ? fmt.currency(quick.underwrittenPrice) : "—"}
+            {quick.underwrittenPriceSource ? ` · Based on ${quick.acquisitionPrice.label}` : ""}
+          </p>
         </div>
         <div>
           <h2 className="text-lg font-bold">All-in cost</h2>
@@ -108,6 +112,8 @@ export const QuickUnderwriteReport = forwardRef<
         <h2 className="text-lg font-bold">Cash recovery</h2>
         {quick.cashRecovery ? (
           <>
+            <p className="text-sm">Total project cost {fmt.currency(quick.cashRecovery.totalProjectCost)}</p>
+            <p className="text-sm">Investor cash invested {fmt.currency(quick.cashRecovery.investorCashInvested)}</p>
             <p className="text-sm">Gross refinance loan {fmt.currency(quick.cashRecovery.grossRefinanceProceeds)}</p>
             <p className="text-sm">Net proceeds {fmt.currency(quick.cashRecovery.netRefinanceProceeds)}</p>
             <p className="text-sm">Cash recovered {fmt.currency(quick.cashRecovery.cashRecovered)}</p>

@@ -1,6 +1,7 @@
 import type { AnalysisInput, AnalysisResults } from "@/lib/types";
 import { PROJECTION_YEARS } from "@/lib/constants";
 import { applyActiveRent, normalizeAnalysisInput } from "@/lib/calculations/rent";
+import { applyUnderwrittenPrice } from "@/lib/calculations/underwritten-price";
 import { calculateMortgage } from "@/lib/calculations/mortgage";
 import {
   calculateBreakEvenOccupancy,
@@ -29,7 +30,7 @@ import { calculateDealScore, type DealScoreInputs } from "@/lib/calculations/dea
  * Pure function — safe to call on every form change.
  */
 export function analyzeProperty(raw: AnalysisInput): AnalysisResults {
-  const input = applyActiveRent(normalizeAnalysisInput(raw));
+  const input = applyUnderwrittenPrice(applyActiveRent(normalizeAnalysisInput(raw)));
   const { financing, income, expenses, strategy, location } = input;
 
   const mortgage = calculateMortgage({

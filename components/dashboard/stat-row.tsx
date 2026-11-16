@@ -8,8 +8,19 @@ interface StatRowProps {
   className?: string;
   tone?: DataRowTone;
   detail?: ReactNode;
+  labelAccessory?: ReactNode;
 }
 
-export function StatRow({ label, value, emphasis = false, className, tone, detail }: StatRowProps) {
-  return <FinancialDataRow label={label} value={value} emphasis={emphasis} className={className} tone={tone} detail={detail} />;
+export function StatRow({ label, value, emphasis = false, className, tone, detail, labelAccessory }: StatRowProps) {
+  return (
+    <FinancialDataRow
+      label={label}
+      value={value}
+      emphasis={emphasis}
+      className={className}
+      tone={tone}
+      detail={detail}
+      labelAccessory={labelAccessory}
+    />
+  );
 }

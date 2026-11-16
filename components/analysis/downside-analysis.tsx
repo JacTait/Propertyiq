@@ -25,6 +25,12 @@ import {
   ResilienceBreakdownChart,
   VacancySensitivityChart,
 } from "@/components/charts";
+import {
+  DealSurvivalInfo,
+  DealSurvivalTitle,
+  dealSurvivalInfoFromDownside,
+} from "@/components/underwriting/deal-survival-info";
+import { dealSurvivalCategories, describeDownsideShocks } from "@/lib/calculations/deal-survival-explain";
 
 const GRADE_TO_DEAL: Record<DownsideAnalysisResults["grade"], DealGrade> = {
   "very-defensive": "elite",
@@ -92,6 +98,7 @@ export function DownsideKpiGrid({ downside }: { downside: DownsideAnalysisResult
         sub={downside.gradeLabel}
         icon={Umbrella}
         tone={GRADE_TONE[downside.grade]}
+        action={<DealSurvivalInfo {...dealSurvivalInfoFromDownside(downside)} />}
       />
       <KpiCard
         index={4}
@@ -144,7 +151,9 @@ export function DealSurvivalTestCard({ downside }: { downside: DownsideAnalysisR
         <div>
           <CardTitle>Can This Deal Survive A Bad Year?</CardTitle>
           <CardDescription>
-            Rent −15%, vacancy +10 pts, maintenance +20 pts, rehab +20%, tax +10%, insurance +15%.
+            {`${describeDownsideShocks(downside.shocks)
+              .map((item) => `${item.label} ${item.detail}`)
+              .join(" · ")}.`}
           </CardDescription>
         </div>
         <Badge variant={tone}>
@@ -178,9 +187,13 @@ export function DownsideScoreBreakdown({ downside }: { downside: DownsideAnalysi
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Deal Survival Breakdown</CardTitle>
+        <CardTitle>
+          <DealSurvivalTitle title="Deal Survival Breakdown" {...dealSurvivalInfoFromDownside(downside)} />
+        </CardTitle>
         <CardDescription>
-          Cashflow 30% · DSCR 25% · Margin 20% · Refinance 15% · ROI 10%. Score {downside.score}/100.
+          {`${dealSurvivalCategories()
+            .map((category) => `${category.label} ${category.weightPercent}%`)
+            .join(" · ")}. Score ${downside.score}/100.`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -208,6 +221,10 @@ export function DownsideScoreBreakdown({ downside }: { downside: DownsideAnalysi
                 />
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">{component.detail}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {component.rawInput} · {component.threshold} · {Math.round(component.weight * 100)}% weight ·{" "}
+                {component.contribution.toFixed(1)} pts
+              </p>
             </div>
           </div>
         ))}
@@ -239,6 +256,7 @@ export function DownsideCharts({ downside }: { downside: DownsideAnalysisResults
         description="How cashflow, DSCR, margin, refinance and ROI produced the survival score."
         className="lg:col-span-2"
         height={240}
+        action={<DealSurvivalInfo {...dealSurvivalInfoFromDownside(downside)} />}
       >
         <ResilienceBreakdownChart components={downside.components} />
       </ChartCard>
@@ -283,6 +301,7 @@ export function DownsideAnalysisPanel({
               idPrefix="survival"
               size={compact ? 168 : 200}
               animated={animated}
+              action={<DealSurvivalInfo {...dealSurvivalInfoFromDownside(downside)} />}
             />
             <p className="text-sm font-semibold">{downside.score}/100 · {downside.gradeLabel}</p>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">

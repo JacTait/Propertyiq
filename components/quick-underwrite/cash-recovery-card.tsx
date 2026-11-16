@@ -39,6 +39,8 @@ export function CashRecoveryCard({ results }: { results: QuickUnderwriteResults 
         />
         {recovery ? (
           <>
+            <StatRow label="Total project cost" value={fmt.currency(recovery.totalProjectCost)} />
+            <StatRow label="Investor cash invested" value={fmt.currency(recovery.investorCashInvested)} emphasis />
             <StatRow label="Gross refinance loan" value={fmt.currency(recovery.grossRefinanceProceeds)} />
             <StatRow label="Net refinance proceeds" value={fmt.currency(recovery.netRefinanceProceeds)} />
             <StatRow label="Cash recovered" value={fmt.currency(recovery.cashRecovered)} emphasis />

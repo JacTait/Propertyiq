@@ -16,7 +16,11 @@ export function DecisionNumbers({ input, results }: { input: AnalysisInput; resu
         <CardContent>
           <StatRow label="Asking Price" value={fmt.currency(input.financing.askingPrice)} />
           <StatRow label="Proposed Offer" value={fmt.currency(input.financing.proposedOffer)} />
-          <StatRow label="Purchase Price Used" value={results.acquisitionPrice.value ? fmt.currency(results.acquisitionPrice.value) : "—"} />
+          <StatRow
+            label="Underwritten Price"
+            value={results.underwrittenPrice ? fmt.currency(results.underwrittenPrice) : "—"}
+            detail={results.underwrittenPriceSource ? `Based on ${results.acquisitionPrice.label}` : "No price entered yet."}
+          />
           <StatRow label="Rehab Cost" value={fmt.currency(results.allIn.estimatedRehab)} />
           <StatRow label="Adjusted Rehab Budget" value={fmt.currency(results.allIn.adjustedRehabBudget)} />
           <StatRow label="All-In Cost" value={results.allIn.total === null ? "—" : fmt.currency(results.allIn.total)} emphasis />
@@ -44,6 +48,14 @@ export function DecisionNumbers({ input, results }: { input: AnalysisInput; resu
           <StatRow label="Supported Refinance Loan" value={fmt.currency(results.refinance.supportedRefinanceLoan)} emphasis />
           <StatRow label="Refinance Payment" value={`${fmt.currency(results.refinance.monthlyPayment)}/mo`} />
           <StatRow label="Post-Refinance DSCR" value={results.refinance.postRefiDscrLabel} emphasis />
+          <StatRow
+            label="Total Project Cost"
+            value={results.cashRecovery ? fmt.currency(results.cashRecovery.totalProjectCost) : "—"}
+          />
+          <StatRow
+            label="Investor Cash Invested"
+            value={results.cashRecovery ? fmt.currency(results.cashRecovery.investorCashInvested) : "—"}
+          />
           <StatRow label="Cash Recovered" value={fmt.currency(results.cashRecovery?.cashRecovered ?? 0)} />
           <StatRow label="Cash Left In Deal" value={fmt.currency(results.cashRecovery?.cashLeftInDeal ?? 0)} />
           <StatRow

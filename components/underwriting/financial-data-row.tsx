@@ -15,6 +15,7 @@ export interface FinancialDataRowProps {
   tone?: DataRowTone;
   status?: DataRowStatus;
   tooltip?: string;
+  labelAccessory?: ReactNode;
   className?: string;
 }
 
@@ -43,6 +44,7 @@ export function FinancialDataRow({
   tone = "default",
   status,
   tooltip,
+  labelAccessory,
   className,
 }: FinancialDataRowProps) {
   const statusMeta = status ? STATUS[status] : null;
@@ -63,6 +65,7 @@ export function FinancialDataRow({
           </span>
         ) : null}
         <span className={cn(emphasis && "uppercase tracking-[0.12em] text-[11px]")}>{label}</span>
+        {labelAccessory}
         {tooltip ? (
           <Tooltip>
             <TooltipTrigger asChild>

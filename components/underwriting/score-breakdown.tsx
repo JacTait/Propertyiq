@@ -1,9 +1,15 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 
 export interface ScoreComponent {
   key: string;
   label: string;
   score: number;
+  weight?: number;
+  contribution?: number;
+  rawInput?: string;
+  threshold?: string;
+  detail?: string;
 }
 
 export function ScoreBreakdown({
@@ -12,6 +18,7 @@ export function ScoreBreakdown({
   grade,
   components,
   primaryRisk,
+  explain,
   className,
 }: {
   title?: string;
@@ -19,6 +26,7 @@ export function ScoreBreakdown({
   grade?: string;
   components: ScoreComponent[];
   primaryRisk?: string;
+  explain?: ReactNode;
   className?: string;
 }) {
   const tone = score >= 80 ? "text-success" : score >= 60 ? "text-warning" : "text-destructive";
@@ -26,7 +34,10 @@ export function ScoreBreakdown({
 
   return (
     <section className={cn("border border-border bg-card rounded-lg px-4 py-3", className)}>
-      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{title}</p>
+      <div className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        <span>{title}</span>
+        {explain}
+      </div>
       <div className="mt-2 flex items-end justify-between gap-3">
         <p className={cn("font-figure text-[40px] font-medium leading-none tabular-nums", tone)}>
           {Math.round(score)}
@@ -54,6 +65,20 @@ export function ScoreBreakdown({
                   style={{ width: `${Math.max(0, Math.min(100, component.score))}%` }}
                 />
               </div>
+              {component.detail ? <p className="mt-1 text-[11px] text-muted-foreground">{component.detail}</p> : null}
+              {component.rawInput || component.threshold || component.weight != null ? (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {component.rawInput ? <span>{component.rawInput}</span> : null}
+                  {component.threshold ? <span>{component.rawInput ? " · " : ""}{component.threshold}</span> : null}
+                  {component.weight != null ? (
+                    <span>
+                      {(component.rawInput || component.threshold) ? " · " : ""}
+                      {Math.round(component.weight * 100)}% weight
+                      {component.contribution != null ? ` · ${component.contribution.toFixed(1)} pts` : ""}
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
             </div>
           </li>
         ))}

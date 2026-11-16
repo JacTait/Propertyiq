@@ -156,7 +156,6 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
     includeSensitivity: false,
     includeDownsideSensitivity: true,
     desiredMonthlyCashflow: input.targets?.desiredMonthlyCashflow,
-    marginPrice: askingPrice,
     marginOffers,
   });
 

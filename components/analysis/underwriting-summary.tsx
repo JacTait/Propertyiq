@@ -3,6 +3,7 @@
 import type { UnderwritingSummary } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DealSurvivalInfo, dealSurvivalInfoFromScore } from "@/components/underwriting/deal-survival-info";
 
 export function UnderwritingSummaryCard({ summary }: { summary: UnderwritingSummary }) {
   return (
@@ -30,7 +31,10 @@ export function UnderwritingSummaryCard({ summary }: { summary: UnderwritingSumm
         </ul>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Deal Survival Score</p>
+            <div className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Deal Survival Score</span>
+              <DealSurvivalInfo {...dealSurvivalInfoFromScore(summary.dealSurvivalScore, summary.primaryRisk)} />
+            </div>
             <p className="text-2xl font-black tabular">{summary.dealSurvivalScore}/100</p>
             <p className="text-sm font-medium">{summary.dealSurvivalVerdict}</p>
           </div>

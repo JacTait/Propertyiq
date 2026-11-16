@@ -5,6 +5,10 @@ import { cn } from "@/lib/utils/cn";
 import { useFormatters } from "@/hooks/useSettings";
 import { DecisionStatus } from "@/components/underwriting/status-indicator";
 import { FinancialDataRow } from "@/components/underwriting/financial-data-row";
+import {
+  DealSurvivalInfo,
+  dealSurvivalInfoFromSnapshot,
+} from "@/components/underwriting/deal-survival-info";
 
 export function DecisionRail({
   results,
@@ -30,15 +34,26 @@ export function DecisionRail({
       )}
     >
       <DecisionStatus verdict={results.verdict.verdict} label={results.verdict.label} />
+      <div className="mt-4 flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        <span>Deal Survival</span>
+        <DealSurvivalInfo
+          {...(results.downside ? dealSurvivalInfoFromSnapshot(results.downside) : {})}
+        />
+      </div>
       {score != null ? (
-        <p className="mt-3 font-figure text-[32px] font-medium leading-none tabular-nums">
+        <p className="mt-2 font-figure text-[32px] font-medium leading-none tabular-nums">
           {Math.round(score)}
           <span className="ml-1 text-sm text-muted-foreground">/ 100</span>
         </p>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">Survival score appears after the deal is fully specified.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Survival score appears after the deal is fully specified.</p>
       )}
       <div className="mt-4 space-y-0.5 border-t border-border pt-3">
+        <FinancialDataRow
+          label="Underwritten Price"
+          value={results.underwrittenPrice ? fmt.currency(results.underwrittenPrice) : "—"}
+          detail={results.underwrittenPriceSource ? `Based on ${results.acquisitionPrice.label}` : "No price entered yet."}
+        />
         <FinancialDataRow label="Maximum Offer" value={results.maximumOffer == null ? "—" : fmt.currency(results.maximumOffer)} />
         <FinancialDataRow label="Post-Refinance DSCR" value={dscr} />
         <FinancialDataRow label="Cash Left In Deal" value={cashLeft == null ? "—" : fmt.currency(cashLeft)} />

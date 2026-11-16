@@ -32,7 +32,7 @@ export function MarginOfSafetyCard({ margin }: { margin: MarginOfSafety }) {
                 <Badge variant="muted">Awaiting Price Input</Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Enter a purchase price or asking price to calculate margin of safety.
+                Enter an asking price, proposed offer, or purchase price to calculate margin of safety.
               </p>
             </div>
           </div>
@@ -67,7 +67,7 @@ export function MarginOfSafetyCard({ margin }: { margin: MarginOfSafety }) {
             <p className="mt-1 text-2xl font-black tabular">{fmt.percent(margin.percent, 1)}</p>
             <p className="text-sm text-muted-foreground">{margin.detail}</p>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-2">
-              <Metric label="Current Price Used" value={fmt.currency(margin.currentPrice)} hint={margin.priceSourceLabel} />
+              <Metric label="Underwritten Price" value={fmt.currency(margin.currentPrice)} hint={`Based on ${margin.priceSourceLabel}`} />
               <Metric label="Recommended Offer" value={fmt.currency(margin.recommendedOffer)} />
               <Metric label="Maximum Offer" value={fmt.currency(margin.maximumOffer)} />
               <Metric label="Margin Of Safety" value={fmt.percent(margin.percent, 1)} />

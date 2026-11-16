@@ -3,6 +3,8 @@ import type {
   CapRateBasis,
   Country,
   CurrencyCode,
+  DealSurvivalGrade,
+  DownsideRiskCategory,
   InvestmentStrategy,
   PropertyCondition,
   PropertyType,
@@ -234,3 +236,81 @@ export const DOWNSIDE_WEIGHTS = {
   refinance: 0.15,
   roi: 0.1,
 } as const;
+
+export const DEAL_SURVIVAL_CATEGORY_ORDER = ["cashflow", "dscr", "margin", "refinance", "roi"] as const satisfies readonly DownsideRiskCategory[];
+
+export const DEAL_SURVIVAL_CATEGORY_COPY: Record<
+  DownsideRiskCategory,
+  { label: string; description: string; primaryRiskDetail: string }
+> = {
+  cashflow: {
+    label: "Cashflow Survival",
+    description: "Measures how much of the investor's target monthly cashflow remains under the stress scenario.",
+    primaryRiskDetail: "Cashflow is the weakest part of this deal under stress assumptions.",
+  },
+  dscr: {
+    label: "DSCR Survival",
+    description: "Measures whether the property can continue covering its debt payments when the deal is stressed.",
+    primaryRiskDetail: "DSCR is the weakest part of this deal under stress assumptions.",
+  },
+  margin: {
+    label: "Margin of Safety",
+    description: "Measures how far the Underwritten Price sits below the calculated Maximum Offer.",
+    primaryRiskDetail: "Margin of safety is the weakest part of this deal under stress assumptions.",
+  },
+  refinance: {
+    label: "Refinance Viability",
+    description: "Measures whether the supported refinance remains viable at the required DSCR.",
+    primaryRiskDetail: "Refinance viability is the weakest part of this deal under stress assumptions.",
+  },
+  roi: {
+    label: "ROI Durability",
+    description: "Measures how strongly ROI holds up under the stress scenario.",
+    primaryRiskDetail: "ROI durability is the weakest part of this deal under stress assumptions.",
+  },
+};
+
+/** Inclusive score bands used by `gradeDealSurvival`. Keep in descending min order. */
+export const DEAL_SURVIVAL_GRADE_BANDS: readonly {
+  min: number;
+  max: number;
+  grade: DealSurvivalGrade;
+  gradeLabel: string;
+  summary: string;
+}[] = [
+  {
+    min: 90,
+    max: 100,
+    grade: "very-defensive",
+    gradeLabel: "Very Defensive",
+    summary: "The deal remains strong across the majority of downside tests.",
+  },
+  {
+    min: 80,
+    max: 89,
+    grade: "defensive",
+    gradeLabel: "Defensive",
+    summary: "The deal remains healthy under stress, with limited weaknesses.",
+  },
+  {
+    min: 70,
+    max: 79,
+    grade: "acceptable",
+    gradeLabel: "Acceptable",
+    summary: "The deal survives most stress conditions but has areas that deserve attention.",
+  },
+  {
+    min: 60,
+    max: 69,
+    grade: "exposed",
+    gradeLabel: "Exposed",
+    summary: "The deal is increasingly sensitive to changes in assumptions.",
+  },
+  {
+    min: 0,
+    max: 59,
+    grade: "high-risk",
+    gradeLabel: "High Risk",
+    summary: "One or more important parts of the deal weaken significantly under stress.",
+  },
+];

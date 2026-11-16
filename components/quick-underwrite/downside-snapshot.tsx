@@ -8,6 +8,7 @@ import { useFormatters } from "@/hooks/useSettings";
 import { downsidePath, resiliencePath } from "@/lib/utils/routes";
 import type { QuickDownsideSnapshot } from "@/lib/types";
 import { formatDscr } from "@/lib/calculations/ratios";
+import { DealSurvivalInfo, dealSurvivalInfoFromSnapshot } from "@/components/underwriting/deal-survival-info";
 
 export function DownsideSnapshot({
   snapshot,
@@ -42,7 +43,12 @@ export function DownsideSnapshot({
             <StatRow label="Stress DSCR" value={formatDscr(snapshot.stressDscr)} />
             <StatRow label="Expected ROI" value={fmt.percent(snapshot.expectedRoi)} />
             <StatRow label="Stress ROI" value={fmt.percent(snapshot.stressRoi)} />
-            <StatRow label="Deal Survival Score" value={`${snapshot.dealSurvivalScore}/100`} emphasis />
+            <StatRow
+              label="Deal Survival Score"
+              value={`${snapshot.dealSurvivalScore}/100`}
+              emphasis
+              labelAccessory={<DealSurvivalInfo {...dealSurvivalInfoFromSnapshot(snapshot)} />}
+            />
             <StatRow label="Primary risk" value={snapshot.primaryRisk} />
           </>
         ) : (

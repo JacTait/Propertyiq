@@ -9,6 +9,7 @@ import { analysisOpenPath } from "@/lib/utils/routes";
 import { useFormatters } from "@/hooks/useSettings";
 import type { Formatters } from "@/lib/utils/format";
 import { StatusIndicator } from "@/components/underwriting/status-indicator";
+import { DealSurvivalInfo } from "@/components/underwriting/deal-survival-info";
 
 interface CompareRow {
   key: string;
@@ -136,7 +137,12 @@ export function CompareTable({ properties }: { properties: PortfolioProperty[] }
                 const winner = winnerFor(row);
                 return (
                   <tr key={row.key} className="border-t border-border">
-                    <td className="px-3 py-2.5 text-muted-foreground">{row.label}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        {row.label}
+                        {row.key === "survival" ? <DealSurvivalInfo /> : null}
+                      </span>
+                    </td>
                     {properties.map((p) => {
                       const isWinner = winner === p.id;
                       const text = displayValue(row, p, fmt);

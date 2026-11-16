@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusIndicator } from "@/components/underwriting/status-indicator";
 import { PortfolioCard } from "@/components/portfolio/portfolio-card";
+import { DealSurvivalInfo } from "@/components/underwriting/deal-survival-info";
 
 function verdictCopy(property: PortfolioProperty) {
   switch (property.snapshot.quickVerdict) {
@@ -105,7 +106,10 @@ export function PortfolioTable({
                   "",
                 ].map((label, i) => (
                   <th key={`${label}-${i}`} className="px-3 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    {label}
+                    <span className="inline-flex items-center gap-1">
+                      {label}
+                      {label === "Survival" ? <DealSurvivalInfo /> : null}
+                    </span>
                   </th>
                 ))}
               </tr>

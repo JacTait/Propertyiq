@@ -10,6 +10,7 @@ import {
   holdingCostsFromFlip,
   resolveAcquisitionLoan,
 } from "@/lib/calculations/brrrr-capital";
+import { applyUnderwrittenPrice } from "@/lib/calculations/underwritten-price";
 
 export function resolveArv(input: AnalysisInput): number {
   if (input.brrrr.afterRepairValue > 0) return input.brrrr.afterRepairValue;
@@ -107,26 +108,27 @@ export function validateRefinance(
 ): RefinanceValidation {
   const arvFactor = overrides?.arvFactor ?? 1;
   const rentFactor = overrides?.rentFactor ?? 1;
-  const arv = Math.max(0, resolveArv(input) * arvFactor);
-  const ltv = clamp(input.brrrr.refinanceLtv || 75, 0, 100);
-  const rate = input.brrrr.refinanceRate || input.financing.interestRate;
-  const termYears = input.brrrr.refinanceTermYears || input.financing.termYears;
+  const priced = applyUnderwrittenPrice(input);
+  const arv = Math.max(0, resolveArv(priced) * arvFactor);
+  const ltv = clamp(priced.brrrr.refinanceLtv || 75, 0, 100);
+  const rate = priced.brrrr.refinanceRate || priced.financing.interestRate;
+  const termYears = priced.brrrr.refinanceTermYears || priced.financing.termYears;
   const dscrRequirement =
-    input.brrrr.refinanceDscrMin > 0 ? input.brrrr.refinanceDscrMin : DEFAULT_REFINANCE_DSCR;
+    priced.brrrr.refinanceDscrMin > 0 ? priced.brrrr.refinanceDscrMin : DEFAULT_REFINANCE_DSCR;
 
   const maximumRefinanceAmount = arv * (ltv / 100);
   const loanAmount = maximumRefinanceAmount;
   const monthlyPayment = calculateMonthlyPayment(loanAmount, rate, termYears);
 
-  const rehab = input.strategy === "fix-flip" ? input.flip.renovationBudget : input.brrrr.rehabCost;
+  const rehab = priced.strategy === "fix-flip" ? priced.flip.renovationBudget : priced.brrrr.rehabCost;
   const capital = computeBrrrrCapital({
-    purchasePrice: input.financing.purchasePrice,
+    purchasePrice: priced.financing.purchasePrice,
     rehabCost: rehab,
-    closingCosts: acquisitionClosingCosts(input.financing),
-    holdingCosts: holdingCostsFromFlip(input.flip),
+    closingCosts: acquisitionClosingCosts(priced.financing),
+    holdingCosts: holdingCostsFromFlip(priced.flip),
     originalLoan: resolveAcquisitionLoan(
-      input.financing.purchasePrice,
-      input.financing.depositPercent,
+      priced.financing.purchasePrice,
+      priced.financing.depositPercent,
       results.mortgage?.loanAmount,
     ),
     refinanceProceeds: loanAmount,

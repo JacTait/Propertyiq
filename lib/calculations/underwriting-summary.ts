@@ -17,6 +17,7 @@ interface SummaryArgs {
   refinance: RefinanceValidation;
   resilience: DealResilienceResults;
   downside: DownsideAnalysisResults;
+  maximumOffer?: number;
 }
 
 function money(value: number): string {
@@ -29,14 +30,14 @@ function signedMoney(value: number): string {
 }
 
 export function generateUnderwritingSummary(args: SummaryArgs): UnderwritingSummary {
-  const { input, results, buyBox, refinance, resilience, downside } = args;
+  const { input, results, buyBox, refinance, resilience, downside, maximumOffer = 0 } = args;
   const rent = resolveRent(input);
   const stress = resilience.scenarios.find((s) => s.key === "stress");
   const expected = resilience.scenarios.find((s) => s.key === "expected");
   const paragraphs: string[] = [];
 
   const asking = typeof input.financing.askingPrice === "number" ? input.financing.askingPrice : 0;
-  const listingMissesTargets = buyBox.status === "inside" && asking > 0 && downside.marginReady && downside.marginOfSafetyPercent < 0;
+  const listingMissesTargets = buyBox.status === "inside" && asking > 0 && maximumOffer > 0 && asking > maximumOffer;
   if (listingMissesTargets) {
     paragraphs.push(
       "The property fits the active Buy Box characteristics, but the current listing price does not meet your return targets.",

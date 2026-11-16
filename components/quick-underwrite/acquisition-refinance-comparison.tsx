@@ -23,7 +23,15 @@ export function AcquisitionRefinanceComparison({
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Acquisition</p>
           <StatRow label="Asking Price" value={fmt.currency(input.financing.askingPrice)} />
           <StatRow label="Proposed Offer" value={fmt.currency(input.financing.proposedOffer)} />
-          <StatRow label="Purchase Price" value={fmt.currency(input.financing.purchasePrice)} />
+          <StatRow
+            label="Underwritten Price"
+            value={results.underwrittenPrice ? fmt.currency(results.underwrittenPrice) : "—"}
+            detail={results.underwrittenPriceSource ? `Based on ${results.acquisitionPrice.label}` : "No price entered yet."}
+          />
+          <StatRow
+            label="Purchase Price"
+            value={input.financing.purchasePrice > 0 ? fmt.currency(input.financing.purchasePrice) : "Not Purchased / Not Entered"}
+          />
           <StatRow label="Rehab" value={fmt.currency(results.allIn.estimatedRehab)} />
           <StatRow
             label="All-In Cost"

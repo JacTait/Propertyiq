@@ -44,6 +44,10 @@ import { DecisionRail } from "@/components/underwriting/decision-rail";
 import { OfferRange } from "@/components/underwriting/offer-range";
 import { BuyBoxBreakdown } from "@/components/underwriting/buy-box-breakdown";
 import { ScoreBreakdown } from "@/components/underwriting/score-breakdown";
+import { DealSurvivalInfo, dealSurvivalInfoFromSnapshot } from "@/components/underwriting/deal-survival-info";
+import { PriceComparisons } from "@/components/underwriting/price-comparisons";
+import { basedOnUnderwrittenSource } from "@/lib/calculations/underwritten-price";
+
 function readPropertyId(searchParams: URLSearchParams): string | null {
   const raw = searchParams.get("id")?.trim();
   return raw ? raw : null;
@@ -241,7 +245,13 @@ function QuickSession({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <MajorMetric
+              label="Underwritten Price"
+              value={quick.underwrittenPrice ? fmt.currency(quick.underwrittenPrice) : "—"}
+              detail={basedOnUnderwrittenSource(quick.underwrittenPriceSource)}
+              tone={quick.underwrittenPrice ? "primary" : "muted"}
+            />
             <MajorMetric
               label="Buy Box"
               value={quick.buyBox.status === "inside" ? "Inside" : quick.buyBox.status === "outside" ? "Outside" : "Not set"}
@@ -265,7 +275,7 @@ function QuickSession({
             <MajorMetric
               label="Maximum Offer"
               value={quick.maximumOffer == null ? "—" : fmt.currency(quick.maximumOffer)}
-              detail={quick.marginOfSafetyPercent == null ? "Enter asking or purchase price" : `${fmt.percent(quick.marginOfSafetyPercent)} margin of safety`}
+              detail={quick.marginOfSafetyPercent == null ? "No price entered yet." : `${fmt.percent(quick.marginOfSafetyPercent)} margin of safety`}
               tone="primary"
             />
             <MajorMetric
@@ -302,19 +312,32 @@ function QuickSession({
               <ScoreBreakdown
                 score={quick.downside.dealSurvivalScore}
                 grade={underwriting?.downside.gradeLabel}
-                components={
-                  underwriting?.downside.components.map((component) => ({
-                    key: component.key,
-                    label: component.label,
-                    score: component.score,
-                  })) ?? []
-                }
+                components={quick.downside.components.map((component) => ({
+                  key: component.key,
+                  label: component.label,
+                  score: component.score,
+                  weight: component.weight,
+                  contribution: component.contribution,
+                  rawInput: component.rawInput,
+                  threshold: component.threshold,
+                  detail: component.detail,
+                }))}
                 primaryRisk={quick.downside.primaryRisk}
+                explain={
+                  <DealSurvivalInfo
+                    {...dealSurvivalInfoFromSnapshot(quick.downside, {
+                      gradeLabel: underwriting?.downside.gradeLabel,
+                      shocks: underwriting?.downside.shocks,
+                    })}
+                  />
+                }
               />
             ) : (
               <DownsideSnapshot snapshot={quick.downside} propertyId={requestedId} />
             )}
           </div>
+
+          <PriceComparisons comparisons={quick.priceComparisons} maximumOffer={quick.maximumOffer} />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <DownsideSnapshot snapshot={quick.downside} propertyId={requestedId} />

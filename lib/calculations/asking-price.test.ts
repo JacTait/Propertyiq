@@ -55,8 +55,25 @@ describe("standalone Downside current price", () => {
     return input;
   }
 
-  it("uses asking price when available", () => {
+  it("keeps purchase price ahead of asking when both are entered", () => {
     const input = base();
+    input.financing.askingPrice = 275_000;
+    const resolved = resolveCurrentPrice(input);
+    expect(resolved?.source).toBe("purchase");
+    expect(resolved?.price).toBe(260_000);
+    const results = analyzeProperty(applyActiveRent(input));
+    const pack = underwriteDeal(input, results, null);
+    expect(pack.margin.ready).toBe(true);
+    expect(pack.margin.currentPrice).toBe(260_000);
+    expect(pack.margin.priceSource).toBe("purchase");
+    expect(pack.downside.marginReady).toBe(true);
+    expect(pack.downside.marginOfSafetyPercent).toBeCloseTo(pack.margin.percent, 5);
+  });
+
+  it("uses asking price when purchase and proposed are zero", () => {
+    const input = base();
+    input.financing.purchasePrice = 0;
+    input.financing.proposedOffer = 0;
     input.financing.askingPrice = 275_000;
     const resolved = resolveCurrentPrice(input);
     expect(resolved?.source).toBe("asking");
@@ -66,8 +83,6 @@ describe("standalone Downside current price", () => {
     expect(pack.margin.ready).toBe(true);
     expect(pack.margin.currentPrice).toBe(275_000);
     expect(pack.margin.priceSource).toBe("asking");
-    expect(pack.downside.marginReady).toBe(true);
-    expect(pack.downside.marginOfSafetyPercent).toBeCloseTo(pack.margin.percent, 5);
   });
 
   it("falls back to purchase price when asking is absent", () => {

@@ -20,6 +20,8 @@ import { RentSourceToggle } from "@/components/analysis/rent-source-toggle";
 import { DealResiliencePanel } from "@/components/analysis/deal-resilience";
 import { RefinanceValidator } from "@/components/analysis/refinance-validator";
 import { MarginOfSafetyCard } from "@/components/analysis/margin-of-safety";
+import { PriceComparisons } from "@/components/underwriting/price-comparisons";
+import { buildPriceComparisons } from "@/lib/calculations/underwritten-price";
 import { DealKillerList } from "@/components/analysis/deal-killers";
 import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
 import { DownsideAnalysisPanel, DownsideCharts } from "@/components/analysis/downside-analysis";
@@ -59,6 +61,12 @@ export function ResultsPanel({ input, results, summary, underwriting, onRentSour
           <MarginOfSafetyCard margin={underwriting.margin} />
         </div>
       )}
+      {underwriting ? (
+        <PriceComparisons
+          comparisons={buildPriceComparisons(input, underwriting.margin.maximumOffer)}
+          maximumOffer={underwriting.margin.maximumOffer}
+        />
+      ) : null}
       {underwriting && <DealKillerList warnings={underwriting.warnings} />}
 
       <Tabs defaultValue="overview">

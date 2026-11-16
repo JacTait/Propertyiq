@@ -10,8 +10,10 @@ import { DEFAULT_INVESTOR_TARGETS } from "@/lib/constants";
 import { calculateMaxOffer } from "@/lib/calculations/max-offer";
 import { resolveRent } from "@/lib/calculations/rent";
 import { resolveArv } from "@/lib/calculations/refinance";
+import { resolveUnderwrittenPrice, toCurrentDealPrice } from "@/lib/calculations/underwritten-price";
 
-const AWAITING_DETAIL = "Enter a purchase price or asking price to calculate margin of safety.";
+const AWAITING_DETAIL =
+  "Enter an asking price, proposed offer, or purchase price to calculate margin of safety.";
 const RECONSTRUCTED_CEILING = "Maximum offer is reconstructed with default investor targets, not a saved Max Offer search.";
 const SUPPLIED_CEILING = "Maximum offer comes from the supplied Max Offer run.";
 
@@ -50,19 +52,11 @@ export function pendingMargin(
 }
 
 /**
- * Visible comparable price only: asking if entered, else purchase if entered.
+ * Visible comparable price: Purchase → Proposed Offer → Asking, skipping zeros.
  * Never synthesizes a price from ARV, recommended offer, or sample defaults.
  */
 export function resolveCurrentPrice(input: AnalysisInput): CurrentDealPrice | null {
-  const asking = finitePrice(input.financing?.askingPrice);
-  if (asking > 0) {
-    return { price: asking, source: "asking", label: "Current Asking Price" };
-  }
-  const purchase = finitePrice(input.financing?.purchasePrice);
-  if (purchase > 0) {
-    return { price: purchase, source: "purchase", label: "Purchase Price" };
-  }
-  return null;
+  return toCurrentDealPrice(resolveUnderwrittenPrice(input));
 }
 
 export function analysisToMaxOfferInputs(input: AnalysisInput): MaxOfferInputs {
@@ -176,12 +170,13 @@ export function marginFromAnalysis(
   currentPriceOverride?: number | null,
   offers?: { recommendedOffer: number; maximumOffer: number } | null,
 ): MarginOfSafety {
+  const resolved = resolveCurrentPrice(input);
+  const override = finitePrice(currentPriceOverride);
   const current =
-    currentPriceOverride !== undefined
-      ? finitePrice(currentPriceOverride) > 0
-        ? { price: finitePrice(currentPriceOverride), source: "asking" as const, label: "Current Asking Price" }
-        : null
-      : resolveCurrentPrice(input);
+    resolved ??
+    (currentPriceOverride !== undefined && override > 0
+      ? { price: override, source: "asking" as const, label: "Current Asking Price" }
+      : null);
   if (offers) {
     return calculateMarginOfSafety(current, offers.recommendedOffer, offers.maximumOffer, "supplied");
   }
