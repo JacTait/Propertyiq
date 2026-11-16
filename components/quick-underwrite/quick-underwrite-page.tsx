@@ -9,20 +9,19 @@ import { Copy, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { AnalysisInput, CountryCode } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
-import { STORAGE_KEYS } from "@/lib/constants";
 import { dashboardPath, quickUnderwritePath } from "@/lib/utils/routes";
-import { createBlankAnalysis } from "@/data/default-analysis";
 import { getMarketProfile, toMarketData } from "@/data/market-data";
-import { identityFromAnalysis, seedUnsavedAnalysis } from "@/lib/property-identity";
+import { identityFromAnalysis } from "@/lib/property-identity";
 import { calculateQuickUnderwrite } from "@/lib/calculations/quick-underwrite";
-import { analyzeProperty } from "@/lib/calculations/analyze";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePersistPropertyIdentity } from "@/hooks/usePropertyIdentity";
 import { useFormatters, useSettings } from "@/hooks/useSettings";
 import { usePropertyAnalysis, sanitizeInput } from "@/hooks/usePropertyAnalysis";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
 import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { useBuyBoxes } from "@/hooks/useBuyBoxes";
+import { useSharedDeal } from "@/hooks/useSharedDeal";
+import { useDebouncedDraftSync } from "@/hooks/useDebouncedDraftSync";
+import { sharedDealFromPortfolio, sharedDealToQuickUnderwrite, type AnalysisDraft } from "@/lib/deal-draft";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SavePropertyDialog } from "@/components/portfolio/save-property-dialog";
@@ -45,19 +44,9 @@ import { DecisionRail } from "@/components/underwriting/decision-rail";
 import { OfferRange } from "@/components/underwriting/offer-range";
 import { BuyBoxBreakdown } from "@/components/underwriting/buy-box-breakdown";
 import { ScoreBreakdown } from "@/components/underwriting/score-breakdown";
-import type { AnalysisDraft } from "@/components/dashboard/analysis-dashboard";
-
-function isDraft(value: unknown): value is AnalysisDraft {
-  return typeof value === "object" && value !== null && "input" in value && "savedId" in value;
-}
-
 function readPropertyId(searchParams: URLSearchParams): string | null {
   const raw = searchParams.get("id")?.trim();
   return raw ? raw : null;
-}
-
-function isSampleDraft(input: AnalysisInput): boolean {
-  return input.property.name === "Sample Investment Property";
 }
 
 export function QuickUnderwriteSkeleton() {
@@ -83,35 +72,31 @@ export function QuickUnderwritePage() {
   const propertyId = readPropertyId(searchParams);
   const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const [draft, setDraft, draftHydrated] = useLocalStorage<AnalysisDraft | null>(STORAGE_KEYS.draft, null, isDraft);
-  const hydrated = settingsHydrated && draftHydrated && portfolioHydrated;
+  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio } = useSharedDeal();
+  const hydrated = settingsHydrated && dealHydrated && portfolioHydrated;
+
+  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
+  useEffect(() => {
+    if (!propertyId) return;
+    const saved = getById(propertyId) ?? findPortfolioProperty(propertyId);
+    if (saved) adoptPortfolio(saved, "quick-underwrite");
+  }, [adoptPortfolio, getById, propertyId]);
 
   if (!hydrated) return <QuickUnderwriteSkeleton />;
 
-  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
-
-  let initial: AnalysisDraft;
-  if (fromPortfolio) {
-    initial = { input: sanitizeInput(fromPortfolio.input), savedId: fromPortfolio.id };
-  } else if (!propertyId && draft && draft.savedId === null && !isSampleDraft(draft.input)) {
-    initial = {
-      input: seedUnsavedAnalysis(sanitizeInput(draft.input), settings.defaultCountry),
-      savedId: null,
-    };
-  } else {
-    initial = {
-      input: seedUnsavedAnalysis(createBlankAnalysis(settings.defaultCountry), settings.defaultCountry),
-      savedId: null,
-    };
-  }
+  const source = fromPortfolio ? sharedDealFromPortfolio(fromPortfolio, settings.defaultCountry) : draft;
+  const initial: AnalysisDraft = {
+    input: sharedDealToQuickUnderwrite(source),
+    savedId: source.savedId,
+  };
 
   return (
     <QuickSession
-      key={propertyId ?? "new"}
+      key={`${propertyId ?? source.savedId ?? "draft"}-${revision}`}
       initial={initial}
       requestedId={propertyId}
       missing={Boolean(propertyId && !fromPortfolio)}
-      onDraftChange={setDraft}
+      onDraftChange={(input) => patchAnalysis(input, "quick-underwrite")}
     />
   );
 }
@@ -125,11 +110,12 @@ function QuickSession({
   initial: AnalysisDraft;
   requestedId: string | null;
   missing: boolean;
-  onDraftChange: (value: AnalysisDraft | ((prev: AnalysisDraft | null) => AnalysisDraft | null)) => void;
+  onDraftChange: (input: AnalysisInput) => void;
 }) {
   const router = useRouter();
   const fmt = useFormatters();
-  const { saveProperty, getById, deleteProperty } = usePortfolio();
+  const { getById, deleteProperty } = usePortfolio();
+  const { saveDeal, detachSaved } = useSharedDeal();
   const { active } = useBuyBoxes();
   const [saveOpen, setSaveOpen] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(initial.savedId);
@@ -167,18 +153,7 @@ function QuickSession({
   const results = usePropertyAnalysis(quick.acquisitionPrice.value ? analysisInput : null);
   const underwriting = useUnderwriting(analysisInput, results, { includeSensitivity: false });
 
-  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!input) return;
-    if (persistTimer.current) clearTimeout(persistTimer.current);
-    const next: AnalysisDraft = { input: sanitizeInput(input), savedId };
-    persistTimer.current = setTimeout(() => {
-      onDraftChange((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
-    }, 400);
-    return () => {
-      if (persistTimer.current) clearTimeout(persistTimer.current);
-    };
-  }, [input, savedId, onDraftChange]);
+  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeInput(next)));
 
   const handleLocationChange = (country: CountryCode, region: string) => {
     const profile = getMarketProfile(country, region);
@@ -187,34 +162,22 @@ function QuickSession({
   };
 
   const handleSave = (name: string, asNew: boolean) => {
-    const clean = sanitizeInput({
+    onDraftChange(sanitizeInput({
       ...input,
       property: { ...input.property, name: name.trim() || input.property.name || "Untitled property" },
-    });
-    const toSave = results ?? analyzeProperty(clean);
-    const saved = saveProperty(clean, toSave, clean.property.name, asNew ? undefined : (savedId ?? undefined), underwriting, {
-      kind: "quick-underwrite",
-      quick,
-    });
+    }));
+    const saved = saveDeal(name, asNew, "quick-underwrite");
+    if (!saved) return;
     form.setValue("property.name", saved.name);
     setSavedId(saved.id);
-    onDraftChange({ input: clean, savedId: saved.id });
     if (asNew || requestedId !== saved.id) router.replace(quickUnderwritePath(saved.id));
     toast.success(asNew || !savedId ? "Saved to portfolio" : "Portfolio updated");
   };
 
   const handleDuplicate = () => {
-    const clean = sanitizeInput({
-      ...input,
-      property: { ...input.property, name: `${input.property.name || "Untitled property"} copy` },
-    });
-    const toSave = results ?? analyzeProperty(clean);
-    const saved = saveProperty(clean, toSave, clean.property.name, undefined, underwriting, {
-      kind: "quick-underwrite",
-      quick,
-    });
+    const saved = saveDeal(`${input.property.name || "Untitled property"} copy`, true, "quick-underwrite");
+    if (!saved) return;
     setSavedId(saved.id);
-    onDraftChange({ input: clean, savedId: saved.id });
     router.replace(quickUnderwritePath(saved.id));
     toast.success("Deal duplicated");
   };
@@ -222,8 +185,8 @@ function QuickSession({
   const handleDelete = () => {
     if (!savedId) return;
     deleteProperty(savedId);
+    detachSaved();
     setSavedId(null);
-    onDraftChange({ input: sanitizeInput(input), savedId: null });
     router.replace(quickUnderwritePath());
     toast("Deal deleted");
   };

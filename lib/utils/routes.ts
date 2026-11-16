@@ -34,7 +34,12 @@ export function isQuickUnderwriteProperty(property: Pick<PortfolioProperty, "kin
   return property.kind === "quick-underwrite";
 }
 
-export function analysisOpenPath(property: Pick<PortfolioProperty, "id" | "kind">): string {
+export function analysisOpenPath(property: Pick<PortfolioProperty, "id" | "kind" | "originWorkflow">): string {
+  if (property.originWorkflow === "quick-underwrite") return quickUnderwritePath(property.id);
+  if (property.originWorkflow === "max-offer") return maxOfferPath(property.id);
+  if (property.originWorkflow === "deal-resilience") return resiliencePath(property.id);
+  if (property.originWorkflow === "downside-analysis") return downsidePath(property.id);
+  if (property.originWorkflow === "standard-analysis") return dashboardPath(property.id);
   if (isMaxOfferProperty(property)) return maxOfferPath(property.id);
   if (isQuickUnderwriteProperty(property)) return quickUnderwritePath(property.id);
   return dashboardPath(property.id);

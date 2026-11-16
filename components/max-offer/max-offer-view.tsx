@@ -8,20 +8,20 @@ import { Save } from "lucide-react";
 import { toast } from "sonner";
 import type { CountryCode, MaxOfferInputs } from "@/lib/types";
 import { maxOfferSchema, type MaxOfferFormValues } from "@/lib/utils/schema";
-import { STORAGE_KEYS } from "@/lib/constants";
 import { maxOfferPath } from "@/lib/utils/routes";
-import { createDefaultMaxOffer, maxOfferToAnalysisInput } from "@/data/default-max-offer";
 import { getMarketProfile } from "@/data/market-data";
 import { sanitizeMaxOffer } from "@/lib/calculations/max-offer";
 import { pendingMargin } from "@/lib/calculations/margin-of-safety";
-import { identityFromMaxOffer, seedUnsavedMaxOffer } from "@/lib/property-identity";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { identityFromMaxOffer } from "@/lib/property-identity";
 import { usePersistPropertyIdentity } from "@/hooks/usePropertyIdentity";
 import { useSettings } from "@/hooks/useSettings";
 import { useMaxOfferAnalysis } from "@/hooks/useMaxOfferAnalysis";
 import { usePropertyAnalysis } from "@/hooks/usePropertyAnalysis";
 import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
+import { useSharedDeal } from "@/hooks/useSharedDeal";
+import { useDebouncedDraftSync } from "@/hooks/useDebouncedDraftSync";
+import { maxOfferToSharedDeal, sharedDealFromPortfolio, sharedDealToMaxOffer, type MaxOfferDraft } from "@/lib/deal-draft";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,14 +41,7 @@ import { OfferEvaluationCard } from "@/components/max-offer/offer-evaluation";
 import { DownsideAnalysisPanel, DownsideCharts } from "@/components/analysis/downside-analysis";
 import { UnderwritingSummaryCard } from "@/components/analysis/underwriting-summary";
 
-export interface MaxOfferDraft {
-  input: MaxOfferInputs;
-  savedId: string | null;
-}
-
-function isDraft(value: unknown): value is MaxOfferDraft {
-  return typeof value === "object" && value !== null && "input" in value && "savedId" in value;
-}
+export type { MaxOfferDraft };
 
 function readPropertyId(searchParams: URLSearchParams): string | null {
   const raw = searchParams.get("id")?.trim();
@@ -81,37 +74,31 @@ export function MaxOfferView() {
   const propertyId = readPropertyId(searchParams);
   const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const [draft, setDraft, draftHydrated] = useLocalStorage<MaxOfferDraft | null>(
-    STORAGE_KEYS.maxOfferDraft,
-    null,
-    isDraft,
-  );
-  const hydrated = settingsHydrated && draftHydrated && portfolioHydrated;
+  const { draft, hydrated: dealHydrated, revision, patchMaxOffer, adoptPortfolio } = useSharedDeal();
+  const hydrated = settingsHydrated && dealHydrated && portfolioHydrated;
+
+  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
+  useEffect(() => {
+    if (!propertyId) return;
+    const saved = getById(propertyId) ?? findPortfolioProperty(propertyId);
+    if (saved) adoptPortfolio(saved, "max-offer");
+  }, [adoptPortfolio, getById, propertyId]);
 
   if (!hydrated) return <MaxOfferSkeleton />;
 
-  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
-  const savedInput = fromPortfolio?.maxOfferInput;
-
-  let initial: MaxOfferDraft;
-  if (savedInput) {
-    initial = { input: savedInput, savedId: fromPortfolio.id };
-  } else if (!propertyId && draft && draft.savedId === null) {
-    initial = { input: seedUnsavedMaxOffer(sanitizeMaxOffer(draft.input), settings.defaultCountry), savedId: null };
-  } else {
-    initial = {
-      input: seedUnsavedMaxOffer(createDefaultMaxOffer(settings.defaultCountry), settings.defaultCountry),
-      savedId: null,
-    };
-  }
+  const source = fromPortfolio ? sharedDealFromPortfolio(fromPortfolio, settings.defaultCountry) : draft;
+  const initial: MaxOfferDraft = {
+    input: sharedDealToMaxOffer(source),
+    savedId: source.savedId,
+  };
 
   return (
     <MaxOfferSession
-      key={propertyId ?? "new"}
+      key={`${propertyId ?? source.savedId ?? "draft"}-${revision}`}
       initial={initial}
       requestedId={propertyId}
-      missing={Boolean(propertyId && !savedInput)}
-      onDraftChange={setDraft}
+      missing={Boolean(propertyId && !fromPortfolio)}
+      onDraftChange={patchMaxOffer}
     />
   );
 }
@@ -120,13 +107,14 @@ interface SessionProps {
   initial: MaxOfferDraft;
   requestedId: string | null;
   missing: boolean;
-  onDraftChange: (value: MaxOfferDraft | ((prev: MaxOfferDraft | null) => MaxOfferDraft | null)) => void;
+  onDraftChange: (input: MaxOfferInputs) => void;
 }
 
 function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: SessionProps) {
   const router = useRouter();
   const { settings } = useSettings();
-  const { saveMaxOffer, getById } = usePortfolio();
+  const { getById } = usePortfolio();
+  const { saveDeal, draft } = useSharedDeal();
   const [saveOpen, setSaveOpen] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(initial.savedId);
   const warnedMissing = useRef(false);
@@ -155,8 +143,8 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
   usePersistPropertyIdentity(identity, !requestedId);
   const results = useMaxOfferAnalysis(input);
   const analysisInput = useMemo(
-    () => (results ? maxOfferToAnalysisInput(sanitizeMaxOffer(input), results, settings.defaultCountry) : null),
-    [input, results, settings.defaultCountry],
+    () => maxOfferToSharedDeal(draft, sanitizeMaxOffer(input)).input,
+    [draft, input],
   );
   const analysisResults = usePropertyAnalysis(analysisInput);
   const askingPrice =
@@ -172,33 +160,15 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
     marginOffers,
   });
 
-  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!input) return;
-    if (persistTimer.current) clearTimeout(persistTimer.current);
-    const next: MaxOfferDraft = { input: sanitizeMaxOffer(input), savedId };
-    persistTimer.current = setTimeout(() => {
-      onDraftChange((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
-    }, 400);
-    return () => {
-      if (persistTimer.current) clearTimeout(persistTimer.current);
-    };
-  }, [input, savedId, onDraftChange]);
+  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeMaxOffer(next)));
 
   const handleSave = (name: string, asNew: boolean) => {
     if (!input || !results) return;
-    const clean = sanitizeMaxOffer({ ...input, property: { ...input.property, name } });
-    const saved = saveMaxOffer(
-      clean,
-      results,
-      settings.defaultCountry,
-      name,
-      asNew ? undefined : (savedId ?? undefined),
-      underwriting,
-    );
+    onDraftChange(sanitizeMaxOffer({ ...input, property: { ...input.property, name } }));
+    const saved = saveDeal(name, asNew, "max-offer");
+    if (!saved) return;
     form.setValue("property.name", name);
     setSavedId(saved.id);
-    onDraftChange({ input: clean, savedId: saved.id });
     if (asNew || requestedId !== saved.id) {
       router.replace(maxOfferPath(saved.id));
     }

@@ -9,17 +9,17 @@ import { ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import type { AnalysisInput, CountryCode, RentSource } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
-import { STORAGE_KEYS } from "@/lib/constants";
 import { dashboardPath, downsidePath, resiliencePath } from "@/lib/utils/routes";
-import { createDefaultAnalysis } from "@/data/default-analysis";
 import { getMarketProfile, toMarketData } from "@/data/market-data";
-import { identityFromAnalysis, seedUnsavedAnalysis } from "@/lib/property-identity";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { identityFromAnalysis } from "@/lib/property-identity";
 import { usePersistPropertyIdentity } from "@/hooks/usePropertyIdentity";
 import { useSettings } from "@/hooks/useSettings";
 import { sanitizeInput, usePropertyAnalysis } from "@/hooks/usePropertyAnalysis";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
 import { useUnderwriting } from "@/hooks/useUnderwriting";
+import { useSharedDeal } from "@/hooks/useSharedDeal";
+import { useDebouncedDraftSync } from "@/hooks/useDebouncedDraftSync";
+import { sharedDealFromPortfolio, sharedDealToResilience, type AnalysisDraft } from "@/lib/deal-draft";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
@@ -37,12 +37,6 @@ import { DecisionContext } from "@/components/workspace/decision-context";
 import { useDealDecision } from "@/hooks/useDealDecision";
 import { DownsideAnalysisPanel, DownsideCharts } from "@/components/analysis/downside-analysis";
 import { ChartCard, CashflowStressChart, RehabSensitivityChart, RentSensitivityChart, ResilienceBreakdownChart } from "@/components/charts";
-import type { AnalysisDraft } from "@/components/dashboard/analysis-dashboard";
-
-function isDraft(value: unknown): value is AnalysisDraft {
-  return typeof value === "object" && value !== null && "input" in value && "savedId" in value;
-}
-
 function readPropertyId(searchParams: URLSearchParams): string | null {
   const raw = searchParams.get("id")?.trim();
   return raw ? raw : null;
@@ -69,36 +63,31 @@ export function ResilienceView() {
   const propertyId = readPropertyId(searchParams);
   const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const [draft, setDraft, draftHydrated] = useLocalStorage<AnalysisDraft | null>(STORAGE_KEYS.draft, null, isDraft);
-  const hydrated = settingsHydrated && draftHydrated && portfolioHydrated;
+  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio } = useSharedDeal();
+  const hydrated = settingsHydrated && dealHydrated && portfolioHydrated;
+
+  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
+  useEffect(() => {
+    if (!propertyId) return;
+    const saved = getById(propertyId) ?? findPortfolioProperty(propertyId);
+    if (saved) adoptPortfolio(saved, "deal-resilience");
+  }, [adoptPortfolio, getById, propertyId]);
 
   if (!hydrated) return <ResilienceSkeleton />;
 
-  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
-
-  let initial: AnalysisDraft;
-  if (fromPortfolio) {
-    initial = { input: sanitizeInput(fromPortfolio.input), savedId: fromPortfolio.id };
-  } else if (!propertyId && draft) {
-    const clean = sanitizeInput(draft.input);
-    initial = {
-      input: draft.savedId === null ? seedUnsavedAnalysis(clean, settings.defaultCountry) : clean,
-      savedId: draft.savedId,
-    };
-  } else {
-    initial = {
-      input: seedUnsavedAnalysis(createDefaultAnalysis(settings.defaultCountry), settings.defaultCountry),
-      savedId: null,
-    };
-  }
+  const source = fromPortfolio ? sharedDealFromPortfolio(fromPortfolio, settings.defaultCountry) : draft;
+  const initial: AnalysisDraft = {
+    input: sharedDealToResilience(source),
+    savedId: source.savedId,
+  };
 
   return (
     <ResilienceSession
-      key={propertyId ?? draft?.savedId ?? "draft"}
+      key={`${propertyId ?? source.savedId ?? "draft"}-${revision}`}
       initial={initial}
       requestedId={propertyId}
       missing={Boolean(propertyId && !fromPortfolio)}
-      onDraftChange={setDraft}
+      onDraftChange={(input) => patchAnalysis(input, "deal-resilience")}
     />
   );
 }
@@ -112,7 +101,7 @@ function ResilienceSession({
   initial: AnalysisDraft;
   requestedId: string | null;
   missing: boolean;
-  onDraftChange: (value: AnalysisDraft | ((prev: AnalysisDraft | null) => AnalysisDraft | null)) => void;
+  onDraftChange: (input: AnalysisInput) => void;
 }) {
   const router = useRouter();
   const symbol = useCurrencySymbol();
@@ -154,18 +143,7 @@ function ResilienceSession({
     form.setValue("expenses.insuranceAnnual", data.insuranceAnnual, { shouldDirty: true });
   };
 
-  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!input) return;
-    if (persistTimer.current) clearTimeout(persistTimer.current);
-    const next: AnalysisDraft = { input: sanitizeInput(input), savedId: initial.savedId };
-    persistTimer.current = setTimeout(() => {
-      onDraftChange((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
-    }, 400);
-    return () => {
-      if (persistTimer.current) clearTimeout(persistTimer.current);
-    };
-  }, [input, initial.savedId, onDraftChange]);
+  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeInput(next)));
 
   return (
     <>

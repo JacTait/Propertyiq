@@ -23,7 +23,11 @@ export const STORAGE_KEYS = {
   maxOfferDraft: "propertyiq:max-offer-draft:v1",
   buyBoxes: "propertyiq:buy-boxes:v1",
   propertyIdentity: "propertyiq:property-identity:v1",
+  /** Cross-workflow shared deal. Existing draft keys are not bumped. */
+  sharedDeal: "propertyiq:shared-deal:v1",
 } as const;
+
+export const SHARED_DEAL_SCHEMA_VERSION = 1;
 
 export const COUNTRIES: Country[] = [
   { code: "US", name: "United States", currency: "USD", regionLabel: "State" },

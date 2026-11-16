@@ -9,17 +9,17 @@ import { Save, Shield, Umbrella } from "lucide-react";
 import { toast } from "sonner";
 import type { AnalysisInput, RentSource } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
-import { STORAGE_KEYS } from "@/lib/constants";
 import { dashboardPath, downsidePath, resiliencePath } from "@/lib/utils/routes";
-import { createDefaultAnalysis } from "@/data/default-analysis";
-import { identityFromAnalysis, seedUnsavedAnalysis } from "@/lib/property-identity";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { identityFromAnalysis } from "@/lib/property-identity";
 import { usePersistPropertyIdentity } from "@/hooks/usePropertyIdentity";
 import { useSettings } from "@/hooks/useSettings";
 import { usePropertyAnalysis, sanitizeInput } from "@/hooks/usePropertyAnalysis";
 import { useInvestmentSummary } from "@/hooks/useInvestmentSummary";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
 import { useUnderwriting } from "@/hooks/useUnderwriting";
+import { useSharedDeal } from "@/hooks/useSharedDeal";
+import { useDebouncedDraftSync } from "@/hooks/useDebouncedDraftSync";
+import { sharedDealFromPortfolio, sharedDealToStandardAnalysis, type AnalysisDraft } from "@/lib/deal-draft";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
@@ -27,14 +27,7 @@ import { DealWorkspace } from "@/components/workspace/deal-workspace";
 import { ExportPdfButton } from "@/components/reports/export-pdf-button";
 import { SavePropertyDialog } from "@/components/portfolio/save-property-dialog";
 
-export interface AnalysisDraft {
-  input: AnalysisInput;
-  savedId: string | null;
-}
-
-function isDraft(value: unknown): value is AnalysisDraft {
-  return typeof value === "object" && value !== null && "input" in value && "savedId" in value;
-}
+export type { AnalysisDraft };
 
 function readPropertyId(searchParams: URLSearchParams): string | null {
   const raw = searchParams.get("id")?.trim();
@@ -68,35 +61,31 @@ export function AnalysisDashboard() {
   const propertyId = readPropertyId(searchParams);
   const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const [draft, setDraft, draftHydrated] = useLocalStorage<AnalysisDraft | null>(STORAGE_KEYS.draft, null, isDraft);
-  const hydrated = settingsHydrated && draftHydrated && portfolioHydrated;
+  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio } = useSharedDeal();
+  const hydrated = settingsHydrated && dealHydrated && portfolioHydrated;
+
+  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
+  useEffect(() => {
+    if (!propertyId) return;
+    const saved = getById(propertyId) ?? findPortfolioProperty(propertyId);
+    if (saved) adoptPortfolio(saved, "standard-analysis");
+  }, [adoptPortfolio, getById, propertyId]);
 
   if (!hydrated) return <AnalysisDashboardSkeleton />;
 
-  const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
-
-  let initial: AnalysisDraft;
-  if (fromPortfolio) {
-    initial = { input: sanitizeInput(fromPortfolio.input), savedId: fromPortfolio.id };
-  } else if (!propertyId && draft && draft.savedId === null) {
-    initial = {
-      input: seedUnsavedAnalysis(sanitizeInput(draft.input), settings.defaultCountry),
-      savedId: null,
-    };
-  } else {
-    initial = {
-      input: seedUnsavedAnalysis(createDefaultAnalysis(settings.defaultCountry), settings.defaultCountry),
-      savedId: null,
-    };
-  }
+  const source = fromPortfolio ? sharedDealFromPortfolio(fromPortfolio, settings.defaultCountry) : draft;
+  const initial: AnalysisDraft = {
+    input: sharedDealToStandardAnalysis(source),
+    savedId: source.savedId,
+  };
 
   return (
     <DashboardSession
-      key={propertyId ?? "new"}
+      key={`${propertyId ?? source.savedId ?? "draft"}-${revision}`}
       initial={initial}
       requestedId={propertyId}
       missing={Boolean(propertyId && !fromPortfolio)}
-      onDraftChange={setDraft}
+      onDraftChange={(input) => patchAnalysis(input, "standard-analysis")}
     />
   );
 }
@@ -105,13 +94,13 @@ interface DashboardSessionProps {
   initial: AnalysisDraft;
   requestedId: string | null;
   missing: boolean;
-  onDraftChange: (value: AnalysisDraft | ((prev: AnalysisDraft | null) => AnalysisDraft | null)) => void;
+  onDraftChange: (input: AnalysisInput) => void;
 }
 
 function DashboardSession({ initial, requestedId, missing, onDraftChange }: DashboardSessionProps) {
   const router = useRouter();
-  const { settings } = useSettings();
-  const { saveProperty, getById } = usePortfolio();
+  const { getById } = usePortfolio();
+  const { saveDeal, startNewDeal } = useSharedDeal();
   const [saveOpen, setSaveOpen] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(initial.savedId);
   const warnedMissing = useRef(false);
@@ -142,35 +131,23 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
   const summary = useInvestmentSummary(input, results);
   const underwriting = useUnderwriting(input, results, { includeSensitivity: false });
 
-  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!input) return;
-    if (persistTimer.current) clearTimeout(persistTimer.current);
-    const next: AnalysisDraft = { input: sanitizeInput(input), savedId };
-    persistTimer.current = setTimeout(() => {
-      onDraftChange((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
-    }, 400);
-    return () => {
-      if (persistTimer.current) clearTimeout(persistTimer.current);
-    };
-  }, [input, savedId, onDraftChange]);
+  useDebouncedDraftSync(input, (next) => {
+    if (next) onDraftChange(sanitizeInput(next));
+  });
 
   const handleReset = useCallback(() => {
-    const fresh = createDefaultAnalysis(settings.defaultCountry);
-    form.reset(fresh);
+    startNewDeal();
     setSavedId(null);
-    onDraftChange({ input: fresh, savedId: null });
     router.replace(dashboardPath());
-    toast("Analysis reset", { description: "Inputs restored to defaults for your preferred country." });
-  }, [form, settings.defaultCountry, onDraftChange, router]);
+    toast("Analysis reset", { description: "Started a new blank deal. Saved Portfolio properties were not deleted." });
+  }, [router, startNewDeal]);
 
   const handleSave = (name: string, asNew: boolean) => {
     if (!input || !results) return;
-    const clean = sanitizeInput({ ...input, property: { ...input.property, name } });
-    const saved = saveProperty(clean, results, name, asNew ? undefined : (savedId ?? undefined), underwriting);
+    const saved = saveDeal(name, asNew, "standard-analysis");
+    if (!saved) return;
     form.setValue("property.name", name);
     setSavedId(saved.id);
-    onDraftChange({ input: clean, savedId: saved.id });
     if (asNew || requestedId !== saved.id) {
       router.replace(dashboardPath(saved.id));
     }

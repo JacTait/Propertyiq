@@ -513,6 +513,13 @@ export interface PortfolioSnapshot {
 
 export type PortfolioKind = "analysis" | "max-offer" | "quick-underwrite";
 
+export type OriginWorkflow =
+  | "quick-underwrite"
+  | "standard-analysis"
+  | "max-offer"
+  | "deal-resilience"
+  | "downside-analysis";
+
 export interface PortfolioProperty {
   id: string;
   name: string;
@@ -528,6 +535,12 @@ export interface PortfolioProperty {
   kind?: PortfolioKind;
   /** Present when `kind` is `"max-offer"` so the analyser can round-trip. */
   maxOfferInput?: MaxOfferInputs;
+  /** Shared-deal schema version persisted with the property. Absent on legacy records. */
+  schemaVersion?: number;
+  /** Workflow the user last edited before saving. Absent on legacy records. */
+  originWorkflow?: OriginWorkflow;
+  /** Buy Box selected while this deal was underwritten. Absent on legacy records. */
+  activeBuyBoxId?: string | null;
 }
 
 /* ------------------------------------------------------------------ */

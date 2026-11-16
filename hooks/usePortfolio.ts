@@ -9,6 +9,7 @@ import type {
   InvestmentStrategy,
   MaxOfferInputs,
   MaxOfferResults,
+  OriginWorkflow,
   PortfolioKind,
   PortfolioProperty,
   PortfolioSnapshot,
@@ -16,6 +17,7 @@ import type {
   Recommendation,
   UnderwritingPack,
 } from "@/lib/types";
+import { SHARED_DEAL_SCHEMA_VERSION } from "@/lib/constants";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { createId, readStorage } from "@/lib/utils/storage";
 import { getRegionName } from "@/data/market-data";
@@ -133,7 +135,14 @@ export function usePortfolio() {
       name?: string,
       existingId?: string,
       underwriting?: UnderwritingPack | null,
-      extras?: { kind?: PortfolioKind; quick?: QuickUnderwriteResults | null },
+      extras?: {
+        kind?: PortfolioKind;
+        quick?: QuickUnderwriteResults | null;
+        originWorkflow?: OriginWorkflow | null;
+        schemaVersion?: number;
+        activeBuyBoxId?: string | null;
+        maxOfferInput?: MaxOfferInputs;
+      },
     ): PortfolioProperty => {
       const now = new Date().toISOString();
       const regionName = getRegionName(input.location.country, input.location.region);
@@ -152,6 +161,10 @@ export function usePortfolio() {
         input,
         snapshot,
         kind: extras?.kind ?? existing?.kind ?? "analysis",
+        maxOfferInput: extras?.maxOfferInput ?? existing?.maxOfferInput,
+        schemaVersion: extras?.schemaVersion ?? existing?.schemaVersion ?? SHARED_DEAL_SCHEMA_VERSION,
+        originWorkflow: extras?.originWorkflow ?? existing?.originWorkflow,
+        activeBuyBoxId: extras?.activeBuyBoxId ?? existing?.activeBuyBoxId ?? null,
       };
 
       setProperties((prev) =>
@@ -173,9 +186,15 @@ export function usePortfolio() {
       name?: string,
       existingId?: string,
       underwriting?: UnderwritingPack | null,
+      extras?: {
+        analysisInput?: AnalysisInput;
+        originWorkflow?: OriginWorkflow | null;
+        schemaVersion?: number;
+        activeBuyBoxId?: string | null;
+      },
     ): PortfolioProperty => {
       const now = new Date().toISOString();
-      const analysisInput = maxOfferToAnalysisInput(maxOfferInput, results, country);
+      const analysisInput = extras?.analysisInput ?? maxOfferToAnalysisInput(maxOfferInput, results, country);
       const regionName = getRegionName(analysisInput.location.country, analysisInput.location.region);
       const metrics = results.atRecommended.purchasePrice > 0 ? results.atRecommended : results.atMaximum;
       const score = calculateDealScore({
@@ -230,6 +249,9 @@ export function usePortfolio() {
           ...maxOfferInput,
           property: { ...maxOfferInput.property, name: name?.trim() || maxOfferInput.property.name },
         },
+        schemaVersion: extras?.schemaVersion ?? existing?.schemaVersion ?? SHARED_DEAL_SCHEMA_VERSION,
+        originWorkflow: extras?.originWorkflow ?? existing?.originWorkflow ?? "max-offer",
+        activeBuyBoxId: extras?.activeBuyBoxId ?? existing?.activeBuyBoxId ?? null,
       };
 
       setProperties((prev) =>

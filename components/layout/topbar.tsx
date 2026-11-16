@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@/components/layout/logo";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
+import { CurrentDealIndicator } from "@/components/layout/current-deal-indicator";
 import { useSettings } from "@/hooks/useSettings";
 
 export function Topbar() {
@@ -23,7 +24,8 @@ export function Topbar() {
         <span className="text-border-strong">/</span>
         <span className="font-medium text-foreground">{current?.label ?? "Home"}</span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center justify-end gap-3">
+        <CurrentDealIndicator />
         <span className="hidden font-figure text-xs tabular-nums text-muted-foreground sm:inline">{settings.currency}</span>
       </div>
     </header>
