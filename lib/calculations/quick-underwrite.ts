@@ -5,6 +5,7 @@ import type {
   BuyBoxProfile,
   CapRateBasis,
   CashRecoveryResults,
+  MaxOfferTargetInputs,
   PriceSource,
   QuickDownsideSnapshot,
   QuickOperatingStatement,
@@ -24,10 +25,9 @@ import { formatDscrOrNA, sizeSupportedRefinance } from "@/lib/calculations/refin
 import { computeCashRecovery } from "@/lib/calculations/cash-recovery";
 import { normalizeAnalysisInput } from "@/lib/calculations/normalize-input";
 import { resolveAcquisitionLoan } from "@/lib/calculations/brrrr-capital";
-import { calculateDealResilience } from "@/lib/calculations/deal-resilience";
-import { calculateDownsideAnalysis } from "@/lib/calculations/downside-analysis";
-import { calculateMaxOffer } from "@/lib/calculations/max-offer";
-import { analysisToMaxOfferInputs, marginFromAnalysis } from "@/lib/calculations/margin-of-safety";
+import { analyzeProperty } from "@/lib/calculations/analyze";
+import { analyzeOffer } from "@/lib/calculations/offer-analysis";
+import { calculateSharedScenarios } from "@/lib/calculations/deal-scenarios";
 import { applyActiveRent } from "@/lib/calculations/rent";
 import { rehabContingencyAmount, totalRehabBudget } from "@/lib/calculations/deal-decision";
 import {
@@ -563,12 +563,14 @@ function buildVerdict(args: {
 export function calculateQuickUnderwrite(
   raw: AnalysisInput,
   buyBox: BuyBoxProfile | null | undefined,
+  targets?: MaxOfferTargetInputs | null,
 ): QuickUnderwriteResults {
   const input = normalizeAnalysisInput(raw);
   const rent = resolveQuickRent(input);
   const acquisition = resolveAcquisitionPrice(input);
   const allIn = buildAllInCost(input, acquisition);
   const operating = buildOperatingStatement(input, rent.active);
+  const analyzed = rent.active > 0 ? analyzeProperty(input) : null;
   const loanAmount = acquisition.value
     ? resolveAcquisitionLoan(acquisition.value, input.financing.depositPercent)
     : 0;
@@ -577,18 +579,19 @@ export function calculateQuickUnderwrite(
     input.financing.interestRate,
     input.financing.termYears,
   );
+  const monthlyNoi = analyzed ? analyzed.noi / 12 : operating.monthlyNoi;
   const monthlyCashflow =
     acquisition.value === null
       ? null
-      : Number.isFinite(operating.monthlyNoi - acquisitionMonthlyPayment)
-        ? operating.monthlyNoi - acquisitionMonthlyPayment
+      : Number.isFinite(monthlyNoi - acquisitionMonthlyPayment)
+        ? monthlyNoi - acquisitionMonthlyPayment
         : null;
   const annualCashflow = monthlyCashflow === null ? null : monthlyCashflow * 12;
   const capRateBasis = defaultCapRateBasis(input);
   const capBasisValue = capRateValue(capRateBasis, input, acquisition, allIn);
   const capRate =
-    capBasisValue && capBasisValue > 0 ? calculateCapRate(operating.annualNoi, capBasisValue) : null;
-  const refinance = buildQuickRefinance(input, operating, acquisition);
+    capBasisValue && capBasisValue > 0 ? calculateCapRate((analyzed?.noi ?? operating.annualNoi), capBasisValue) : null;
+  const refinance = buildQuickRefinance(input, { ...operating, monthlyNoi, annualNoi: monthlyNoi * 12 }, acquisition);
   const investorCashInvested =
     allIn.total === null ? null : Math.max(0, allIn.total - loanAmount);
   const cashOnCash =
@@ -626,44 +629,43 @@ export function calculateQuickUnderwrite(
   if (money(input.brrrr.afterRepairValue) <= 0) missing.push("ARV is missing");
 
   let maximumOffer: number | null = null;
+  let recommendedOffer: number | null = null;
   let marginPercent: number | null = null;
   let downside: QuickDownsideSnapshot | null = null;
+  let offerAnalysis = null as ReturnType<typeof analyzeOffer> | null;
+  let usingDefaultTargets = false;
   if (rent.active > 0 && money(input.brrrr.afterRepairValue) > 0) {
     const mapped = engineInput(input, acquisition, rent);
-    const offerInput = analysisToMaxOfferInputs(mapped);
-    offerInput.property.expectedMonthlyRent = rent.active;
-    offerInput.property.arv = money(input.brrrr.afterRepairValue);
-    offerInput.property.askingPrice = money(input.financing.askingPrice);
-    const maxOffer = calculateMaxOffer(offerInput);
-    maximumOffer = maxOffer.feasible ? maxOffer.maximumOffer : 0;
-    const margin = marginFromAnalysis(input, null, {
-      recommendedOffer: maxOffer.recommendedOffer,
-      maximumOffer: maxOffer.maximumOffer,
-    });
-    marginPercent = margin.ready ? margin.percent : null;
+    offerAnalysis = analyzeOffer(mapped, targets);
+    usingDefaultTargets = offerAnalysis.usingDefaultTargets;
+    recommendedOffer = offerAnalysis.recommendedOffer;
+    maximumOffer = offerAnalysis.maxOffer.feasible ? offerAnalysis.maximumOffer : 0;
+    marginPercent = offerAnalysis.marginOfSafety.ready ? offerAnalysis.marginOfSafety.percent : null;
 
-    const resilience = calculateDealResilience(mapped, { includeSensitivity: false });
-    const expected = resilience.scenarios.find((item) => item.key === "expected");
-    const stress = resilience.scenarios.find((item) => item.key === "stress");
-    const down = calculateDownsideAnalysis(input, {
+    const scenarios = calculateSharedScenarios(mapped, {
       includeSensitivity: false,
-      maximumOffer: maxOffer.maximumOffer,
-      askingPrice: acquisition.value,
+      includeDownsideSensitivity: false,
+      targets,
+      maximumOffer: offerAnalysis.maximumOffer,
+      askingPrice: acquisition.value ?? undefined,
       postRefinanceDscr: refinance.postRefiDscr ?? undefined,
       refinanceLoanAmount: refinance.supportedRefinanceLoan,
       refinanceLimitingFactor: refinance.limitingFactor,
       requiredDscr: refinance.requiredDscr,
     });
     downside = {
-      expectedCashflow: expected?.monthlyCashflow ?? 0,
-      stressCashflow: stress?.monthlyCashflow ?? 0,
-      expectedDscr: expected?.dscr ?? 0,
-      stressDscr: stress?.dscr ?? 0,
-      expectedRoi: expected?.roi ?? 0,
-      stressRoi: stress?.roi ?? 0,
-      dealSurvivalScore: down.score,
-      primaryRisk: down.primaryRiskLabel,
-      components: down.components,
+      expectedCashflow: scenarios.expected.monthlyCashflow,
+      stressCashflow: scenarios.stress.monthlyCashflow,
+      expectedDscr: scenarios.expected.dscr,
+      stressDscr: scenarios.stress.dscr,
+      expectedRoi: scenarios.expected.roi,
+      stressRoi: scenarios.stress.roi,
+      badYearCashflow: scenarios.worst.monthlyCashflow,
+      badYearDscr: scenarios.worst.dscr,
+      badYearRoi: scenarios.worst.roi,
+      dealSurvivalScore: scenarios.downside.score,
+      primaryRisk: scenarios.downside.primaryRiskLabel,
+      components: scenarios.downside.components,
     };
   }
 
@@ -716,7 +718,10 @@ export function calculateQuickUnderwrite(
     cashRecovery,
     buyBox: buyBoxMatch,
     marginOfSafetyPercent: marginPercent,
+    recommendedOffer,
     maximumOffer,
+    usingDefaultTargets,
+    offer: offerAnalysis,
     downside,
     verdict,
     warnings,

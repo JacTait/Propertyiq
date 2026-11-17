@@ -769,6 +769,20 @@ export interface MaxOfferBrrrrResults {
   annualRefinanceDebtService: number;
   efficiencyScore: number;
   infiniteReturn: boolean;
+  ltvBasedLoan: number;
+  dscrSupportedLoan: number | null;
+  supportedRefinanceLoan: number;
+  limitingFactor: RefinanceLimitFactor;
+  limitingLabel: string;
+  supportedPayment: number;
+  supportedDscr: number | null;
+  netSupportedRefinanceProceeds: number;
+  excessCashOut: number;
+  fullLtvLoan: number;
+  fullLtvPayment: number;
+  fullLtvDscr: number;
+  fullLtvMonthlyCashflow: number;
+  fullLtvCompliant: boolean;
 }
 
 export interface MaxOfferSummary {
@@ -834,11 +848,14 @@ export interface BuyBoxReason {
   message: string;
 }
 
+export type BuyBoxPriceField = "asking" | "proposed" | "purchase";
+
 export interface BuyBoxSubject {
   propertyType?: PropertyType;
   bedrooms?: number;
   purchasePrice: number;
   askingPrice?: number;
+  proposedOffer?: number;
   monthlyRent: number;
   arv: number;
   zipCode?: string;
@@ -1027,6 +1044,20 @@ export interface RefinanceValidation {
   status: RefinanceStatus;
   headline: string;
   detail: string;
+  ltvBasedLoan: number;
+  dscrSupportedLoan: number | null;
+  supportedRefinanceLoan: number;
+  limitingFactor: RefinanceLimitFactor;
+  limitingLabel: string;
+  supportedPayment: number;
+  supportedDscr: number | null;
+  fullLtvLoan: number;
+  fullLtvPayment: number;
+  fullLtvDscr: number;
+  fullLtvMonthlyCashflow: number;
+  fullLtvCompliant: boolean;
+  fullLtvHeadline: string;
+  fullLtvDetail: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1065,7 +1096,40 @@ export interface PriceVsMaximumOffer {
   statusLabel: string;
 }
 
-export type OfferCeilingSource = "supplied" | "reconstructed-default-targets";
+export type OfferCeilingSource = "supplied" | "shared-targets" | "reconstructed-default-targets";
+
+export interface CalculationProvenance {
+  engine: string;
+  scenarioId?: string;
+  refinanceScenario?: "supported" | "full-ltv";
+  underwrittenPriceSource: UnderwrittenPriceSource | null;
+  targetSet: MaxOfferTargetInputs;
+  usingDefaultTargets: boolean;
+  generatedAt: string;
+}
+
+export interface OfferAnalysisResult {
+  excellentOffer: number;
+  recommendedOffer: number;
+  maximumOffer: number;
+  underwrittenPrice: number | null;
+  underwrittenPriceSource: UnderwrittenPriceSource | null;
+  underwrittenPriceLabel: string;
+  askingPrice: number;
+  proposedOffer: number;
+  purchasePrice: number;
+  marginOfSafety: MarginOfSafety;
+  askingPriceDifference: number | null;
+  proposedOfferDifference: number | null;
+  purchasePriceDifference: number | null;
+  limitingConstraint: OfferConstraintKey | null;
+  constraints: OfferConstraint[];
+  dealStatus: OfferTier | "infeasible";
+  warningSeverity: "none" | "info" | "warning" | "critical";
+  usingDefaultTargets: boolean;
+  provenance: CalculationProvenance;
+  maxOffer: MaxOfferResults;
+}
 
 export interface MarginOfSafety {
   ready: boolean;
@@ -1119,6 +1183,7 @@ export interface UnderwritingPack {
   resilience: DealResilienceResults;
   downside: DownsideAnalysisResults;
   margin: MarginOfSafety;
+  offer: OfferAnalysisResult;
   warnings: DealKillerWarning[];
   summary: UnderwritingSummary;
 }
@@ -1241,6 +1306,9 @@ export interface QuickDownsideSnapshot {
   stressDscr: number;
   expectedRoi: number;
   stressRoi: number;
+  badYearCashflow: number;
+  badYearDscr: number;
+  badYearRoi: number;
   dealSurvivalScore: number;
   primaryRisk: string;
   components: DownsideComponentScore[];
@@ -1265,7 +1333,10 @@ export interface QuickUnderwriteResults {
   cashRecovery: CashRecoveryResults | null;
   buyBox: BuyBoxMatch;
   marginOfSafetyPercent: number | null;
+  recommendedOffer: number | null;
   maximumOffer: number | null;
+  usingDefaultTargets: boolean;
+  offer: OfferAnalysisResult | null;
   downside: QuickDownsideSnapshot | null;
   verdict: QuickUnderwriteVerdictResult;
   warnings: UnderwritingWarning[];

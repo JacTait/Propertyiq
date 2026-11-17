@@ -81,12 +81,16 @@ export function DecisionNumbers({ input, results }: { input: AnalysisInput; resu
             value={results.marginOfSafetyPercent === null ? "—" : fmt.percent(results.marginOfSafetyPercent)}
           />
           <StatRow
-            label="Downside Cashflow"
+            label="Resilience Stress Cashflow"
             value={results.downside ? `${fmt.signedCurrency(results.downside.stressCashflow)}/mo` : "—"}
           />
           <StatRow
-            label="Downside DSCR"
-            value={results.downside ? results.downside.stressDscr === Infinity ? "Not applicable" : `${results.downside.stressDscr.toFixed(2)}x` : "—"}
+            label="Downside Bad-Year Cashflow"
+            value={results.downside ? `${fmt.signedCurrency(results.downside.badYearCashflow)}/mo` : "—"}
+          />
+          <StatRow
+            label="Downside Bad-Year DSCR"
+            value={results.downside ? results.downside.badYearDscr === Infinity ? "Not applicable" : `${results.downside.badYearDscr.toFixed(2)}x` : "—"}
           />
         </CardContent>
       </Card>

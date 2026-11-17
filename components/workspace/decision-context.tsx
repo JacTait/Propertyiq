@@ -15,6 +15,11 @@ interface DecisionContextProps {
   decision: DealDecisionResult | null;
   purpose: "resilience" | "downside";
   dashboardHref?: string;
+  expectedCashflow?: number;
+  comparisonCashflow?: number;
+  expectedLabel?: string;
+  comparisonLabel?: string;
+  hasUnderwrittenPrice?: boolean;
 }
 
 const PURPOSE_COPY: Record<DecisionContextProps["purpose"], { title: string; distinction: string }> = {
@@ -30,11 +35,23 @@ const PURPOSE_COPY: Record<DecisionContextProps["purpose"], { title: string; dis
   },
 };
 
-export function DecisionContext({ decision, purpose, dashboardHref }: DecisionContextProps) {
+export function DecisionContext({
+  decision,
+  purpose,
+  dashboardHref,
+  expectedCashflow,
+  comparisonCashflow,
+  expectedLabel = "Expected Cashflow",
+  comparisonLabel = "Stress Cashflow",
+  hasUnderwrittenPrice,
+}: DecisionContextProps) {
   const fmt = useFormatters();
   const copy = PURPOSE_COPY[purpose];
+  const expected = expectedCashflow;
+  const comparison = comparisonCashflow;
+  const hasSharedScenarios = typeof expected === "number" && typeof comparison === "number";
 
-  if (!decision) {
+  if (!decision && !hasSharedScenarios) {
     return (
       <Card>
         <CardHeader className="pb-2">
@@ -42,15 +59,17 @@ export function DecisionContext({ decision, purpose, dashboardHref }: DecisionCo
           <CardDescription>{copy.distinction}</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Add a purchase price and conservative rent in Deal Workspace.</p>
+          <p className="text-sm text-muted-foreground">
+            {hasUnderwrittenPrice === false
+              ? "Enter an asking price, proposed offer or purchase price to calculate limits."
+              : "Enter an asking price, proposed offer or purchase price to calculate limits."}
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  const conservative = decision.conservative.monthlyCashflow;
-  const stress = decision.scenarios.stress.monthlyCashflow;
-  const margin = decision.marginForError;
+  const margin = decision?.marginForError;
 
   return (
     <div className="space-y-4">
@@ -60,47 +79,43 @@ export function DecisionContext({ decision, purpose, dashboardHref }: DecisionCo
           <CardDescription>{copy.distinction}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Conservative cash flow
-              </p>
-              <p
-                className={cn(
-                  "mt-1 text-lg font-semibold tabular",
-                  cashflowTone(conservative) === "positive" && "text-success",
-                  cashflowTone(conservative) === "negative" && "text-destructive",
-                )}
-              >
-                {signedMonthly(fmt, conservative)}
-                <span className="sr-only">
-                  {cashflowTone(conservative) === "negative" ? "Negative" : cashflowTone(conservative) === "positive" ? "Positive" : "Breakeven"}
-                </span>
-              </p>
+          {hasSharedScenarios ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{expectedLabel}</p>
+                <p
+                  className={cn(
+                    "mt-1 text-lg font-semibold tabular",
+                    cashflowTone(expected) === "positive" && "text-success",
+                    cashflowTone(expected) === "negative" && "text-destructive",
+                  )}
+                >
+                  {signedMonthly(fmt, expected)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{comparisonLabel}</p>
+                <p
+                  className={cn(
+                    "mt-1 text-lg font-semibold tabular",
+                    cashflowTone(comparison) === "positive" && "text-success",
+                    cashflowTone(comparison) === "negative" && "text-destructive",
+                  )}
+                >
+                  {signedMonthly(fmt, comparison)}
+                </p>
+              </div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Stress-case cash flow
-              </p>
-              <p
-                className={cn(
-                  "mt-1 text-lg font-semibold tabular",
-                  cashflowTone(stress) === "positive" && "text-success",
-                  cashflowTone(stress) === "negative" && "text-destructive",
-                )}
-              >
-                {signedMonthly(fmt, stress)}
-                <span className="sr-only">
-                  {cashflowTone(stress) === "negative" ? "Negative" : cashflowTone(stress) === "positive" ? "Positive" : "Breakeven"}
-                </span>
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Margin for error</p>
-            <Badge variant={MARGIN_BADGE_VARIANT[margin.label]}>{margin.label}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">{margin.explanation}</p>
+          ) : null}
+          {margin ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Margin for error</p>
+                <Badge variant={MARGIN_BADGE_VARIANT[margin.label]}>{margin.label}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">{margin.explanation}</p>
+            </>
+          ) : null}
           <Link
             href={dashboardHref ?? dashboardPath()}
             className="inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
@@ -109,8 +124,8 @@ export function DecisionContext({ decision, purpose, dashboardHref }: DecisionCo
           </Link>
         </CardContent>
       </Card>
-      <AssumptionCheck decision={decision} compact />
-      <WhatBreaks decision={decision} compact />
+      {decision ? <AssumptionCheck decision={decision} compact /> : null}
+      <WhatBreaks decision={decision} compact hasUnderwrittenPrice={hasUnderwrittenPrice} />
     </div>
   );
 }

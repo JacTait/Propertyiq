@@ -43,6 +43,7 @@ interface SharedDealContextValue {
   populated: boolean;
   patchAnalysis: (input: AnalysisInput, origin: OriginWorkflow) => void;
   patchMaxOffer: (input: MaxOfferInputs) => void;
+  flushPending: () => void;
   adoptPortfolio: (property: PortfolioProperty, origin?: OriginWorkflow) => void;
   startNewDeal: () => void;
   clearDraft: () => void;
@@ -105,6 +106,30 @@ export function SharedDealProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("storage", native);
     };
   }, []);
+
+  const flushPending = useCallback(() => {
+    if (persistTimer.current) {
+      clearTimeout(persistTimer.current);
+      persistTimer.current = null;
+    }
+    const pending = pendingRef.current;
+    if (!pending) return;
+    persistSharedDeal(pending);
+    writeStorage(STORAGE_KEYS.propertyIdentity, identityFromAnalysis(pending.input));
+    if (pending.savedId && isDraftDirty(pending)) setPersistStatus("unsaved");
+    else setPersistStatus(pending.savedId ? "saved-portfolio" : "saved-locally");
+  }, []);
+
+  useEffect(() => {
+    const onHide = () => flushPending();
+    window.addEventListener("pagehide", onHide);
+    window.addEventListener("beforeunload", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      window.removeEventListener("beforeunload", onHide);
+      flushPending();
+    };
+  }, [flushPending]);
 
   const commit = useCallback(
     (next: SharedDealDraft, options?: { persistImmediately?: boolean; bumpRevision?: boolean; portfolio?: boolean }) => {
@@ -212,8 +237,8 @@ export function SharedDealProvider({ children }: { children: ReactNode }) {
         property: { ...current.input.property, name: name.trim() || current.input.property.name || "Untitled property" },
       });
       const results = analyzeProperty(clean);
-      const underwriting = underwriteDeal(clean, results, active);
-      const quick = calculateQuickUnderwrite(clean, active);
+      const underwriting = underwriteDeal(clean, results, active, { targets: current.targets });
+      const quick = calculateQuickUnderwrite(clean, active, current.targets);
       const maxInput = sharedDealToMaxOffer({ ...current, input: clean });
       const maxResults = calculateMaxOffer(maxInput);
       const existingId = asNew ? undefined : (current.savedId ?? undefined);
@@ -251,6 +276,7 @@ export function SharedDealProvider({ children }: { children: ReactNode }) {
       populated: isDealPopulated(draft),
       patchAnalysis,
       patchMaxOffer,
+      flushPending,
       adoptPortfolio,
       startNewDeal,
       clearDraft,
@@ -266,6 +292,7 @@ export function SharedDealProvider({ children }: { children: ReactNode }) {
       hydrated,
       loadDemoDeal,
       patchAnalysis,
+      flushPending,
       patchMaxOffer,
       persistStatus,
       revision,

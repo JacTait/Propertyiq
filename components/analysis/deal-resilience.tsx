@@ -43,7 +43,7 @@ export function DealResiliencePanel({
           tone={stress && stress.monthlyCashflow >= 0 && stress.dscr >= 1 ? "success" : "danger"}
         />
         <MajorMetric
-          label="Worst-Case Cashflow"
+          label="Resilience Worst-Case Cashflow"
           value={worst ? fmt.signedCurrency(worst.monthlyCashflow) : "—"}
           tone={worst && worst.monthlyCashflow >= 0 ? "success" : "danger"}
         />
@@ -54,7 +54,7 @@ export function DealResiliencePanel({
         />
       </div>
       <ScenarioComparison
-        title="Expected · Stress · Worst"
+        title="Expected · Resilience Stress · Resilience Worst"
         columns={columns}
         rows={[
           {

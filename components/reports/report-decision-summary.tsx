@@ -91,7 +91,7 @@ export function ReportDecisionSummary({ decision }: ReportDecisionSummaryProps) 
         <h3 className="text-sm font-semibold">What breaks this deal</h3>
         <p className="mt-1 text-xs text-muted-foreground">Limits from the current underwrite. Not an investment recommendation.</p>
         {breaks.length === 0 ? (
-          <p className="mt-1 text-sm text-muted-foreground">Add a purchase price and conservative rent to calculate limits.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Enter an asking price, proposed offer or purchase price to calculate limits.</p>
         ) : (
           <ul className="mt-2 space-y-1.5">
             {breaks.map((item) => (

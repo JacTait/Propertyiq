@@ -1,4 +1,4 @@
-import type { CountryCode } from "@/lib/types";
+import type { CountryCode, PortfolioProperty } from "@/lib/types";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { readStorage, writeStorage, removeStorage } from "@/lib/utils/storage";
 import { createBlankSharedDeal, dealContentHash } from "@/lib/deal-draft/blank";
@@ -10,6 +10,7 @@ import {
   isSharedDealDraft,
   mergeLegacyDrafts,
   migrateSharedDealSchema,
+  sharedDealFromPortfolio,
 } from "@/lib/deal-draft/migrate";
 import type { AnalysisDraft, MaxOfferDraft, SharedDealDraft } from "@/lib/deal-draft/types";
 
@@ -72,4 +73,21 @@ export function resolveInitialSharedDeal(options: {
   if (options.stored) return migrateSharedDealSchema(options.stored);
   const hydrated = hydrateSharedDeal(options.country, options.activeBuyBoxId);
   return hydrated ?? createBlankSharedDeal(options.country, options.activeBuyBoxId);
+}
+
+/**
+ * Form hydration after SharedDealDraft exists.
+ * Live shared draft wins over a stale portfolio snapshot of the same saved deal.
+ * Opening a different saved deal uses that portfolio record.
+ */
+export function resolveWorkflowDraft(args: {
+  draft: SharedDealDraft;
+  propertyId: string | null;
+  fromPortfolio: PortfolioProperty | undefined;
+  country: CountryCode;
+}): SharedDealDraft {
+  if (!args.propertyId) return args.draft;
+  if (args.draft.savedId === args.propertyId) return args.draft;
+  if (args.fromPortfolio) return sharedDealFromPortfolio(args.fromPortfolio, args.country);
+  return args.draft;
 }

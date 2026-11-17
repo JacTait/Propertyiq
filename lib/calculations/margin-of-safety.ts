@@ -4,17 +4,17 @@ import type {
   MarginOfSafety,
   MaxOfferInputs,
   MaxOfferResults,
+  MaxOfferTargetInputs,
   SafetyRating,
 } from "@/lib/types";
-import { DEFAULT_INVESTOR_TARGETS } from "@/lib/constants";
 import { calculateMaxOffer } from "@/lib/calculations/max-offer";
-import { resolveRent } from "@/lib/calculations/rent";
-import { resolveArv } from "@/lib/calculations/refinance";
+import { canonicalInvestorTargets, toMaxOfferInputs } from "@/lib/calculations/offer-inputs";
 import { resolveUnderwrittenPrice, toCurrentDealPrice } from "@/lib/calculations/underwritten-price";
 
 const AWAITING_DETAIL =
   "Enter an asking price, proposed offer, or purchase price to calculate margin of safety.";
-const RECONSTRUCTED_CEILING = "Maximum offer is reconstructed with default investor targets, not a saved Max Offer search.";
+const RECONSTRUCTED_CEILING = "Indicative Maximum Offer — based on default investor targets.";
+const SHARED_CEILING = "Maximum offer uses the shared investor targets.";
 const SUPPLIED_CEILING = "Maximum offer comes from the supplied Max Offer run.";
 
 function finitePrice(value: unknown): number {
@@ -59,53 +59,11 @@ export function resolveCurrentPrice(input: AnalysisInput): CurrentDealPrice | nu
   return toCurrentDealPrice(resolveUnderwrittenPrice(input));
 }
 
-export function analysisToMaxOfferInputs(input: AnalysisInput): MaxOfferInputs {
-  const rent = resolveRent(input).active;
-  const arv = resolveArv(input);
-  const rehab = input.strategy === "fix-flip" ? input.flip.renovationBudget : input.brrrr.rehabCost;
-  const ltv = Math.max(0, 100 - input.financing.depositPercent);
-  return {
-    property: {
-      name: input.property.name,
-      arv,
-      expectedMonthlyRent: rent,
-      rehabBudget: rehab,
-      closingCosts: input.financing.closingCosts + input.financing.legalFees + input.financing.inspectionCosts,
-      holdingCosts: Math.max(0, input.flip.holdingCostsMonthly * 3),
-      askingPrice: finitePrice(input.financing.askingPrice),
-      propertyType: input.property.propertyType,
-      bedrooms: input.property.bedrooms,
-      bathrooms: input.property.bathrooms,
-      zipCode: input.property.zipCode ?? "",
-    },
-    location: {
-      country: input.location.country,
-      region: input.location.region,
-    },
-    strategy: input.strategy,
-    financing: {
-      interestRate: input.financing.interestRate,
-      termYears: input.financing.termYears,
-      loanToValue: ltv,
-      downPaymentPercent: input.financing.depositPercent,
-      loanFees: input.financing.loanFees,
-    },
-    expenses: {
-      propertyTaxAnnual: input.expenses.propertyTaxAnnual,
-      insuranceAnnual: input.expenses.insuranceAnnual,
-      managementPercent: input.expenses.managementPercent,
-      vacancyPercent: input.expenses.vacancyPercent,
-      maintenancePercent: input.expenses.maintenancePercent,
-      capexPercent: 0,
-      hoaMonthly: input.expenses.hoaMonthly,
-      otherMonthly: input.expenses.otherMonthly,
-    },
-    targets: { ...DEFAULT_INVESTOR_TARGETS },
-    brrrr: {
-      refinanceLtv: input.brrrr.refinanceLtv || 75,
-      refinanceRate: input.brrrr.refinanceRate || input.financing.interestRate,
-    },
-  };
+export function analysisToMaxOfferInputs(
+  input: AnalysisInput,
+  targets?: MaxOfferTargetInputs | null,
+): MaxOfferInputs {
+  return toMaxOfferInputs(input, targets);
 }
 
 export function calculateMarginOfSafety(
@@ -136,7 +94,12 @@ export function calculateMarginOfSafety(
     detail = "The current price is between the recommended offer and the maximum allowable offer.";
   }
 
-  const ceilingNote = offerCeilingSource === "supplied" ? SUPPLIED_CEILING : RECONSTRUCTED_CEILING;
+  const ceilingNote =
+    offerCeilingSource === "supplied"
+      ? SUPPLIED_CEILING
+      : offerCeilingSource === "shared-targets"
+        ? SHARED_CEILING
+        : RECONSTRUCTED_CEILING;
 
   return {
     ready: true,
@@ -169,6 +132,7 @@ export function marginFromAnalysis(
   input: AnalysisInput,
   currentPriceOverride?: number | null,
   offers?: { recommendedOffer: number; maximumOffer: number } | null,
+  targets?: MaxOfferTargetInputs | null,
 ): MarginOfSafety {
   const resolved = resolveCurrentPrice(input);
   const override = finitePrice(currentPriceOverride);
@@ -180,7 +144,12 @@ export function marginFromAnalysis(
   if (offers) {
     return calculateMarginOfSafety(current, offers.recommendedOffer, offers.maximumOffer, "supplied");
   }
-  const offerInput = analysisToMaxOfferInputs(input);
-  const results = calculateMaxOffer(offerInput);
-  return calculateMarginOfSafety(current, results.recommendedOffer, results.maximumOffer, "reconstructed-default-targets");
+  const canonical = canonicalInvestorTargets(targets);
+  const results = calculateMaxOffer(toMaxOfferInputs(input, canonical.targets));
+  return calculateMarginOfSafety(
+    current,
+    results.recommendedOffer,
+    results.maximumOffer,
+    canonical.usingDefaultTargets ? "reconstructed-default-targets" : "shared-targets",
+  );
 }

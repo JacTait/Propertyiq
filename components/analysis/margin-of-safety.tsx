@@ -69,7 +69,10 @@ export function MarginOfSafetyCard({ margin }: { margin: MarginOfSafety }) {
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-2">
               <Metric label="Underwritten Price" value={fmt.currency(margin.currentPrice)} hint={`Based on ${margin.priceSourceLabel}`} />
               <Metric label="Recommended Offer" value={fmt.currency(margin.recommendedOffer)} />
-              <Metric label="Maximum Offer" value={fmt.currency(margin.maximumOffer)} />
+              <Metric
+                label={margin.offerCeilingSource === "reconstructed-default-targets" ? "Indicative Maximum Offer" : "Maximum Offer"}
+                value={fmt.currency(margin.maximumOffer)}
+              />
               <Metric label="Margin Of Safety" value={fmt.percent(margin.percent, 1)} />
             </div>
           </div>

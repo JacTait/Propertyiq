@@ -18,7 +18,7 @@ import {
   migrateLegacyRent,
   sharedDealFromPortfolio,
 } from "@/lib/deal-draft/migrate";
-import { clearPersistedSharedDeal, persistSharedDeal, readPersistedSharedDeal } from "@/lib/deal-draft/persist";
+import { clearPersistedSharedDeal, hydrateSharedDeal, persistSharedDeal, readPersistedSharedDeal } from "@/lib/deal-draft/persist";
 import type { AnalysisInput, PortfolioProperty } from "@/lib/types";
 
 function installMemoryStorage(): { writes: Map<string, number> } {
@@ -224,6 +224,22 @@ describe("shared deal persistence", () => {
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEYS.buyBoxes) ?? "[]")).toEqual(buyBoxes);
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEYS.portfolio) ?? "[]")).toEqual(portfolio);
     expect(isDealPopulated(createBlankSharedDeal("US"))).toBe(false);
+  });
+
+  it("does not let a legacy Max Offer draft overwrite an existing shared ARV", () => {
+    const draft = quickUnderwriteToSharedDeal(createBlankSharedDeal("US"), userQuickUnderwrite());
+    draft.input.brrrr.afterRepairValue = 275_000;
+    persistSharedDeal(draft);
+    window.localStorage.setItem(
+      STORAGE_KEYS.maxOfferDraft,
+      JSON.stringify({
+        input: { ...createDefaultMaxOffer("US"), property: { ...createDefaultMaxOffer("US").property, arv: 99_000 } },
+        savedId: null,
+      }),
+    );
+    const loaded = hydrateSharedDeal("US");
+    expect(loaded?.input.brrrr.afterRepairValue).toBe(275_000);
+    expect(sharedDealToMaxOffer(loaded!).property.arv).toBe(275_000);
   });
 
   it("TEST 10: unchanged drafts do not write localStorage in a loop", () => {

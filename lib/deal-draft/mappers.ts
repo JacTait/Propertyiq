@@ -6,8 +6,10 @@ import type {
   RentSource,
 } from "@/lib/types";
 import { createBlankAnalysis } from "@/data/default-analysis";
+import { holdingCostsFromFlip } from "@/lib/calculations/brrrr-capital";
 import { sanitizeMaxOffer } from "@/lib/calculations/max-offer";
-import { normalizeAnalysisInput, resolveRent } from "@/lib/calculations/rent";
+import { toMaxOfferInputs } from "@/lib/calculations/offer-inputs";
+import { normalizeAnalysisInput } from "@/lib/calculations/rent";
 import { nowIso } from "@/lib/deal-draft/blank";
 import type { SharedDealDraft } from "@/lib/deal-draft/types";
 
@@ -21,9 +23,7 @@ function finiteNumber(value: unknown, fallback = 0): number {
 }
 
 export function holdingCostUsed(input: AnalysisInput): number {
-  const override = Math.max(0, finiteNumber(input.flip.holdingCostOverride));
-  if (override > 0) return override;
-  return Math.max(0, finiteNumber(input.flip.holdDurationMonths)) * Math.max(0, finiteNumber(input.flip.holdingCostsMonthly));
+  return holdingCostsFromFlip(input.flip);
 }
 
 export function rehabContingencyAmount(input: AnalysisInput): number {
@@ -71,12 +71,6 @@ function applyActiveRentField(income: IncomeInputs, expectedMonthlyRent: number)
   return { ...income, verifiedRent: rent };
 }
 
-function sharedArv(input: AnalysisInput): number {
-  const advertised = Math.max(0, finiteNumber(input.decision.advertisedArv));
-  if (advertised > 0) return advertised;
-  return Math.max(0, finiteNumber(input.brrrr.afterRepairValue));
-}
-
 export function sharedDealToQuickUnderwrite(draft: SharedDealDraft): AnalysisInput {
   return draft.input;
 }
@@ -115,10 +109,17 @@ export function analysisWorkflowToSharedDeal(
   origin: OriginWorkflow,
 ): SharedDealDraft {
   const clean = normalizeAnalysisInput(input);
+  const arv = Math.max(0, finiteNumber(clean.brrrr.afterRepairValue));
   return stampDraft(
     {
       ...draft,
-      input: clean,
+      input: {
+        ...clean,
+        decision: {
+          ...clean.decision,
+          advertisedArv: arv,
+        },
+      },
       maxOffer: {
         ...draft.maxOffer,
         loanToValue: ltvFromDeposit(clean.financing.depositPercent),
@@ -133,53 +134,9 @@ export function analysisWorkflowToSharedDeal(
  * Listing / verified / conservative stay independent in the shared draft.
  */
 export function sharedDealToMaxOffer(draft: SharedDealDraft): MaxOfferInputs {
-  const input = draft.input;
-  const rent = resolveRent(input);
-  const arv = sharedArv(input);
-  const deposit = clampPercent(finiteNumber(input.financing.depositPercent, 25));
+  const deposit = clampPercent(finiteNumber(draft.input.financing.depositPercent, 25));
   const ltv = draft.maxOffer.loanToValue > 0 ? clampPercent(draft.maxOffer.loanToValue) : ltvFromDeposit(deposit);
-  return {
-    property: {
-      name: input.property.name,
-      arv,
-      expectedMonthlyRent: rent.active,
-      rehabBudget: Math.max(0, finiteNumber(input.brrrr.rehabCost)),
-      closingCosts: Math.max(0, finiteNumber(input.financing.closingCosts)),
-      holdingCosts: holdingCostUsed(input),
-      askingPrice: Math.max(0, finiteNumber(input.financing.askingPrice)),
-      propertyType: input.property.propertyType,
-      bedrooms: input.property.bedrooms,
-      bathrooms: input.property.bathrooms,
-      zipCode: input.property.zipCode,
-    },
-    location: {
-      country: input.location.country,
-      region: input.location.region,
-    },
-    strategy: input.strategy,
-    financing: {
-      interestRate: input.financing.interestRate,
-      termYears: input.financing.termYears,
-      loanToValue: ltv,
-      downPaymentPercent: deposit,
-      loanFees: Math.max(0, finiteNumber(input.financing.loanFees)),
-    },
-    expenses: {
-      propertyTaxAnnual: input.expenses.propertyTaxAnnual,
-      insuranceAnnual: input.expenses.insuranceAnnual,
-      managementPercent: input.expenses.managementPercent,
-      vacancyPercent: input.expenses.vacancyPercent,
-      maintenancePercent: input.expenses.maintenancePercent,
-      capexPercent: input.expenses.capexPercent,
-      hoaMonthly: input.expenses.hoaMonthly,
-      otherMonthly: input.expenses.otherMonthly,
-    },
-    targets: { ...draft.targets },
-    brrrr: {
-      refinanceLtv: input.brrrr.refinanceLtv,
-      refinanceRate: input.brrrr.refinanceRate,
-    },
-  };
+  return toMaxOfferInputs(draft.input, draft.targets, { loanToValue: ltv, usingDefaultTargets: false });
 }
 
 /**

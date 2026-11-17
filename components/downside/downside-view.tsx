@@ -7,7 +7,7 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
-import type { AnalysisInput, CountryCode, RentSource } from "@/lib/types";
+import type { AnalysisInput, CountryCode, MaxOfferTargetInputs, RentSource } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { dashboardPath, downsidePath, resiliencePath } from "@/lib/utils/routes";
 import { getMarketProfile, toMarketData } from "@/data/market-data";
@@ -19,7 +19,7 @@ import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
 import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { useSharedDeal } from "@/hooks/useSharedDeal";
 import { useDebouncedDraftSync } from "@/hooks/useDebouncedDraftSync";
-import { sharedDealFromPortfolio, sharedDealToDownside, type AnalysisDraft } from "@/lib/deal-draft";
+import { resolveWorkflowDraft, sharedDealToDownside, type AnalysisDraft } from "@/lib/deal-draft";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
@@ -60,7 +60,7 @@ export function DownsideView() {
   const propertyId = readPropertyId(searchParams);
   const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio } = useSharedDeal();
+  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio, flushPending } = useSharedDeal();
   const hydrated = settingsHydrated && dealHydrated && portfolioHydrated;
 
   const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
@@ -72,7 +72,12 @@ export function DownsideView() {
 
   if (!hydrated) return <DownsideSkeleton />;
 
-  const source = fromPortfolio ? sharedDealFromPortfolio(fromPortfolio, settings.defaultCountry) : draft;
+  const source = resolveWorkflowDraft({
+    draft,
+    propertyId,
+    fromPortfolio,
+    country: settings.defaultCountry,
+  });
   const initial: AnalysisDraft = {
     input: sharedDealToDownside(source),
     savedId: source.savedId,
@@ -85,6 +90,8 @@ export function DownsideView() {
       requestedId={propertyId}
       missing={Boolean(propertyId && !fromPortfolio)}
       onDraftChange={(input) => patchAnalysis(input, "downside-analysis")}
+      persistImmediately={flushPending}
+      targets={source.targets}
     />
   );
 }
@@ -94,11 +101,15 @@ function DownsideSession({
   requestedId,
   missing,
   onDraftChange,
+  persistImmediately,
+  targets,
 }: {
   initial: AnalysisDraft;
   requestedId: string | null;
   missing: boolean;
   onDraftChange: (input: AnalysisInput) => void;
+  persistImmediately: () => void;
+  targets: MaxOfferTargetInputs;
 }) {
   const router = useRouter();
   const symbol = useCurrencySymbol();
@@ -125,7 +136,7 @@ function DownsideSession({
   );
   usePersistPropertyIdentity(identity, !requestedId && initial.savedId === null);
   const results = usePropertyAnalysis(input);
-  const underwriting = useUnderwriting(input, results, { includeSensitivity: true });
+  const underwriting = useUnderwriting(input, results, { includeSensitivity: true, targets });
   const decision = useDealDecision(input);
 
   const handleLocationChange = (country: CountryCode, region: string) => {
@@ -140,7 +151,7 @@ function DownsideSession({
     form.setValue("expenses.insuranceAnnual", data.insuranceAnnual, { shouldDirty: true });
   };
 
-  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeInput(next)));
+  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeInput(next)), 400, persistImmediately);
 
   return (
     <>
@@ -210,6 +221,11 @@ function DownsideSession({
               decision={decision}
               purpose="downside"
               dashboardHref={requestedId ? dashboardPath(requestedId) : dashboardPath()}
+              expectedCashflow={underwriting?.resilience.scenarios.find((item) => item.key === "expected")?.monthlyCashflow}
+              comparisonCashflow={underwriting?.downside.worstCase.monthlyCashflow}
+              expectedLabel="Expected Cashflow"
+              comparisonLabel="Downside Bad-Year Cashflow"
+              hasUnderwrittenPrice={Boolean(input.financing.purchasePrice > 0 || input.financing.proposedOffer > 0 || input.financing.askingPrice > 0)}
             />
             {underwriting && results ? (
               <>

@@ -7,7 +7,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save, Shield, Umbrella } from "lucide-react";
 import { toast } from "sonner";
-import type { AnalysisInput, RentSource } from "@/lib/types";
+import type { AnalysisInput, MaxOfferTargetInputs, RentSource } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { dashboardPath, downsidePath, resiliencePath } from "@/lib/utils/routes";
 import { identityFromAnalysis } from "@/lib/property-identity";
@@ -19,7 +19,7 @@ import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
 import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { useSharedDeal } from "@/hooks/useSharedDeal";
 import { useDebouncedDraftSync } from "@/hooks/useDebouncedDraftSync";
-import { sharedDealFromPortfolio, sharedDealToStandardAnalysis, type AnalysisDraft } from "@/lib/deal-draft";
+import { resolveWorkflowDraft, sharedDealToStandardAnalysis, type AnalysisDraft } from "@/lib/deal-draft";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
@@ -61,7 +61,7 @@ export function AnalysisDashboard() {
   const propertyId = readPropertyId(searchParams);
   const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio } = useSharedDeal();
+  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio, flushPending } = useSharedDeal();
   const hydrated = settingsHydrated && dealHydrated && portfolioHydrated;
 
   const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
@@ -73,7 +73,12 @@ export function AnalysisDashboard() {
 
   if (!hydrated) return <AnalysisDashboardSkeleton />;
 
-  const source = fromPortfolio ? sharedDealFromPortfolio(fromPortfolio, settings.defaultCountry) : draft;
+  const source = resolveWorkflowDraft({
+    draft,
+    propertyId,
+    fromPortfolio,
+    country: settings.defaultCountry,
+  });
   const initial: AnalysisDraft = {
     input: sharedDealToStandardAnalysis(source),
     savedId: source.savedId,
@@ -86,6 +91,8 @@ export function AnalysisDashboard() {
       requestedId={propertyId}
       missing={Boolean(propertyId && !fromPortfolio)}
       onDraftChange={(input) => patchAnalysis(input, "standard-analysis")}
+      persistImmediately={flushPending}
+      targets={source.targets}
     />
   );
 }
@@ -95,9 +102,11 @@ interface DashboardSessionProps {
   requestedId: string | null;
   missing: boolean;
   onDraftChange: (input: AnalysisInput) => void;
+  persistImmediately: () => void;
+  targets: MaxOfferTargetInputs;
 }
 
-function DashboardSession({ initial, requestedId, missing, onDraftChange }: DashboardSessionProps) {
+function DashboardSession({ initial, requestedId, missing, onDraftChange, persistImmediately, targets }: DashboardSessionProps) {
   const router = useRouter();
   const { getById } = usePortfolio();
   const { saveDeal, startNewDeal } = useSharedDeal();
@@ -129,11 +138,11 @@ function DashboardSession({ initial, requestedId, missing, onDraftChange }: Dash
   usePersistPropertyIdentity(identity, !requestedId);
   const results = usePropertyAnalysis(input);
   const summary = useInvestmentSummary(input, results);
-  const underwriting = useUnderwriting(input, results, { includeSensitivity: false });
+  const underwriting = useUnderwriting(input, results, { includeSensitivity: false, targets });
 
   useDebouncedDraftSync(input, (next) => {
     if (next) onDraftChange(sanitizeInput(next));
-  });
+  }, 400, persistImmediately);
 
   const handleReset = useCallback(() => {
     startNewDeal();

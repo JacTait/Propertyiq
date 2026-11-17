@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils/cn";
 interface WhatBreaksProps {
   decision: DealDecisionResult | null;
   compact?: boolean;
+  hasUnderwrittenPrice?: boolean;
 }
 
 const SEVERITY_LABEL: Record<BreakSeverity, string> = {
@@ -18,7 +19,7 @@ const SEVERITY_LABEL: Record<BreakSeverity, string> = {
   info: "Threshold",
 };
 
-export function WhatBreaks({ decision, compact = false }: WhatBreaksProps) {
+export function WhatBreaks({ decision, compact = false, hasUnderwrittenPrice }: WhatBreaksProps) {
   const fmt = useFormatters();
   if (!decision) return null;
   const presented = presentWhatBreaks(decision, fmt);
@@ -32,7 +33,11 @@ export function WhatBreaks({ decision, compact = false }: WhatBreaksProps) {
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Add a purchase price and conservative rent to calculate limits.</p>
+          <p className="text-sm text-muted-foreground">
+            {hasUnderwrittenPrice === false
+              ? "Enter an asking price, proposed offer or purchase price to calculate limits."
+              : "Enter an asking price, proposed offer or purchase price to calculate limits."}
+          </p>
         ) : (
           <ul className="space-y-2">
             {items.map((item) => (

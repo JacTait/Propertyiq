@@ -130,7 +130,8 @@ export const QuickUnderwriteReport = forwardRef<
         {quick.downside ? (
           <>
             <p className="text-sm">Expected CF {fmt.signedCurrency(quick.downside.expectedCashflow)}/mo</p>
-            <p className="text-sm">Stress CF {fmt.signedCurrency(quick.downside.stressCashflow)}/mo</p>
+            <p className="text-sm">Resilience Stress CF {fmt.signedCurrency(quick.downside.stressCashflow)}/mo</p>
+            <p className="text-sm">Downside Bad-Year CF {fmt.signedCurrency(quick.downside.badYearCashflow)}/mo</p>
             <p className="text-sm">Survival {quick.downside.dealSurvivalScore}/100 · {quick.downside.primaryRisk}</p>
           </>
         ) : (

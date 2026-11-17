@@ -7,7 +7,15 @@ import { MajorMetric } from "@/components/underwriting/major-metric";
 import { FinancialDataRow } from "@/components/underwriting/financial-data-row";
 import { FinancialSection } from "@/components/underwriting/financial-section";
 
-export function MaxOfferKpis({ results, askingPrice = 0 }: { results: MaxOfferResults; askingPrice?: number }) {
+export function MaxOfferKpis({
+  results,
+  askingPrice = 0,
+  usingDefaultTargets = false,
+}: {
+  results: MaxOfferResults;
+  askingPrice?: number;
+  usingDefaultTargets?: boolean;
+}) {
   const fmt = useFormatters();
   const m = results.atRecommended.purchasePrice > 0 ? results.atRecommended : results.atMaximum;
   const limiting = results.constraints.find((c) => c.isLimiting);
@@ -23,7 +31,7 @@ export function MaxOfferKpis({ results, askingPrice = 0 }: { results: MaxOfferRe
           size="major"
         />
         <MajorMetric
-          label="Maximum Offer"
+          label={usingDefaultTargets ? "Indicative Maximum Offer" : "Maximum Offer"}
           value={fmt.currency(results.maximumOffer)}
           detail={limiting ? `Limited by ${limiting.label}` : results.feasible ? "All targets cleared" : "No feasible offer"}
           tone={results.feasible ? "success" : "danger"}
@@ -36,9 +44,9 @@ export function MaxOfferKpis({ results, askingPrice = 0 }: { results: MaxOfferRe
           tone={askingPrice > 0 && askingPrice > results.maximumOffer ? "danger" : "default"}
         />
         <MajorMetric
-          label="Margin of Safety"
+          label="Safety Buffer"
           value={fmt.percent(results.safetyMarginPercent)}
-          detail={fmt.currency(results.safetyMargin)}
+          detail={`${fmt.currency(results.safetyMargin)} below maximum`}
           tone={results.safetyMargin > 0 ? "success" : "warning"}
         />
       </div>

@@ -111,13 +111,19 @@ describe("Max Offer post-refinance cash flow", () => {
     const rec = results.atRecommended;
     const brrrr = results.brrrr;
 
-    expect(brrrr.refinanceAmount).toBeCloseTo(380_000 * 0.75, 0);
+    expect(brrrr.ltvBasedLoan).toBeCloseTo(380_000 * 0.75, 0);
+    expect(brrrr.refinanceAmount).toBeCloseTo(brrrr.supportedRefinanceLoan, 0);
+    expect(brrrr.supportedRefinanceLoan).toBeLessThanOrEqual(brrrr.ltvBasedLoan);
     expect(brrrr.monthlyCashflow).not.toBeCloseTo(rec.monthlyCashflow, 0);
-    expect(brrrr.monthlyCashflow).toBeCloseTo(-319, 0);
-    expect(brrrr.postRefiDscr).toBeCloseTo(0.83, 2);
+    expect(brrrr.fullLtvMonthlyCashflow).toBeCloseTo(-319, 0);
+    expect(brrrr.fullLtvDscr).toBeCloseTo(0.83, 2);
+    expect(brrrr.fullLtvCompliant).toBe(false);
     expect(Number.isFinite(brrrr.monthlyCashflow)).toBe(true);
     expect(Number.isFinite(brrrr.postRefiDscr)).toBe(true);
     expect(brrrr.postRefiDscr).not.toBe(Infinity);
+    if (brrrr.limitingFactor === "dscr") {
+      expect(brrrr.supportedDscr ?? 0).toBeGreaterThanOrEqual(1.25 - 1e-6);
+    }
   });
 
   it("uses the same NOI and refinance debt service for post-refi cash flow and DSCR", () => {
@@ -160,8 +166,9 @@ describe("evaluateDealMetrics phase split", () => {
     const refinance = validateRefinance(input, analyzeProperty(applyActiveRent(input)));
     expect(metrics.postRefiMonthlyCashflow).toBeCloseTo(refinance.postRefiMonthlyCashflow, 8);
     expect(metrics.postRefiDscr).toBeCloseTo(refinance.postRefiDscr, 8);
-    expect(metrics.postRefiMonthlyCashflow).toBeCloseTo(-319, 0);
-    expect(metrics.postRefiDscr).toBeCloseTo(0.83, 2);
+    expect(refinance.fullLtvMonthlyCashflow).toBeCloseTo(-319, 0);
+    expect(refinance.fullLtvDscr).toBeCloseTo(0.83, 2);
+    expect(refinance.fullLtvCompliant).toBe(false);
     expect(Number.isFinite(metrics.postRefiMonthlyCashflow)).toBe(true);
     expect(Number.isFinite(metrics.postRefiDscr)).toBe(true);
     if (metrics.postRefiDscr < 1) {

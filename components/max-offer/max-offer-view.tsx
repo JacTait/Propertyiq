@@ -21,7 +21,7 @@ import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { findPortfolioProperty, usePortfolio } from "@/hooks/usePortfolio";
 import { useSharedDeal } from "@/hooks/useSharedDeal";
 import { useDebouncedDraftSync } from "@/hooks/useDebouncedDraftSync";
-import { maxOfferToSharedDeal, sharedDealFromPortfolio, sharedDealToMaxOffer, type MaxOfferDraft } from "@/lib/deal-draft";
+import { maxOfferToSharedDeal, resolveWorkflowDraft, sharedDealToMaxOffer, type MaxOfferDraft } from "@/lib/deal-draft";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -74,7 +74,7 @@ export function MaxOfferView() {
   const propertyId = readPropertyId(searchParams);
   const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const { draft, hydrated: dealHydrated, revision, patchMaxOffer, adoptPortfolio } = useSharedDeal();
+  const { draft, hydrated: dealHydrated, revision, patchMaxOffer, adoptPortfolio, flushPending } = useSharedDeal();
   const hydrated = settingsHydrated && dealHydrated && portfolioHydrated;
 
   const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
@@ -86,7 +86,12 @@ export function MaxOfferView() {
 
   if (!hydrated) return <MaxOfferSkeleton />;
 
-  const source = fromPortfolio ? sharedDealFromPortfolio(fromPortfolio, settings.defaultCountry) : draft;
+  const source = resolveWorkflowDraft({
+    draft,
+    propertyId,
+    fromPortfolio,
+    country: settings.defaultCountry,
+  });
   const initial: MaxOfferDraft = {
     input: sharedDealToMaxOffer(source),
     savedId: source.savedId,
@@ -99,6 +104,7 @@ export function MaxOfferView() {
       requestedId={propertyId}
       missing={Boolean(propertyId && !fromPortfolio)}
       onDraftChange={patchMaxOffer}
+      persistImmediately={flushPending}
     />
   );
 }
@@ -108,9 +114,10 @@ interface SessionProps {
   requestedId: string | null;
   missing: boolean;
   onDraftChange: (input: MaxOfferInputs) => void;
+  persistImmediately: () => void;
 }
 
-function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: SessionProps) {
+function MaxOfferSession({ initial, requestedId, missing, onDraftChange, persistImmediately }: SessionProps) {
   const router = useRouter();
   const { settings } = useSettings();
   const { getById } = usePortfolio();
@@ -157,9 +164,10 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
     includeDownsideSensitivity: true,
     desiredMonthlyCashflow: input.targets?.desiredMonthlyCashflow,
     marginOffers,
+    targets: input.targets,
   });
 
-  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeMaxOffer(next)));
+  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeMaxOffer(next)), 400, persistImmediately);
 
   const handleSave = (name: string, asNew: boolean) => {
     if (!input || !results) return;
@@ -219,7 +227,7 @@ function MaxOfferSession({ initial, requestedId, missing, onDraftChange }: Sessi
         <div className="min-w-0 space-y-4 xl:col-span-7 2xl:col-span-8">
           {results ? (
             <>
-              <MaxOfferKpis results={results} askingPrice={askingPrice ?? 0} />
+              <MaxOfferKpis results={results} askingPrice={askingPrice ?? 0} usingDefaultTargets={false} />
               <div className="grid gap-4 lg:grid-cols-2">
                 {underwriting && (
                   <BuyBoxStatusCard

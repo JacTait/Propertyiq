@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { AnalysisInput, AnalysisResults, UnderwritingPack } from "@/lib/types";
+import type { AnalysisInput, AnalysisResults, MaxOfferTargetInputs, UnderwritingPack } from "@/lib/types";
 import { underwriteDeal } from "@/lib/calculations/underwrite";
 import { useBuyBoxes } from "@/hooks/useBuyBoxes";
 
@@ -14,6 +14,7 @@ export function useUnderwriting(
     desiredMonthlyCashflow?: number;
     marginPrice?: number | null;
     marginOffers?: { recommendedOffer: number; maximumOffer: number } | null;
+    targets?: MaxOfferTargetInputs | null;
   } = {},
 ): UnderwritingPack | null {
   const { active } = useBuyBoxes();
@@ -26,6 +27,7 @@ export function useUnderwriting(
   const hasMarginOverride = Object.prototype.hasOwnProperty.call(options, "marginPrice");
   const recommendedOffer = options.marginOffers?.recommendedOffer;
   const maximumOffer = options.marginOffers?.maximumOffer;
+  const targetsSerialized = options.targets ? JSON.stringify(options.targets) : null;
 
   return useMemo(() => {
     if (!serialized || !results) return null;
@@ -35,12 +37,14 @@ export function useUnderwriting(
       recommendedOffer !== undefined && maximumOffer !== undefined
         ? { recommendedOffer, maximumOffer }
         : undefined;
+    const targets = targetsSerialized ? (JSON.parse(targetsSerialized) as MaxOfferTargetInputs) : undefined;
     return underwriteDeal(parsed, results, box, {
       includeSensitivity,
       includeDownsideSensitivity,
       ...(desiredMonthlyCashflow !== undefined ? { desiredMonthlyCashflow } : {}),
       ...(hasMarginOverride ? { marginPrice } : {}),
       ...(marginOffers ? { marginOffers } : {}),
+      ...(targets ? { targets } : {}),
     });
   }, [
     serialized,
@@ -53,5 +57,6 @@ export function useUnderwriting(
     marginPrice,
     recommendedOffer,
     maximumOffer,
+    targetsSerialized,
   ]);
 }

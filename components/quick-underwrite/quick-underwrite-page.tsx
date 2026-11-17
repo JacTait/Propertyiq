@@ -7,7 +7,7 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Copy, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { AnalysisInput, CountryCode } from "@/lib/types";
+import type { AnalysisInput, CountryCode, MaxOfferTargetInputs } from "@/lib/types";
 import { analysisSchema, type AnalysisFormValues } from "@/lib/utils/schema";
 import { dashboardPath, quickUnderwritePath } from "@/lib/utils/routes";
 import { getMarketProfile, toMarketData } from "@/data/market-data";
@@ -21,7 +21,7 @@ import { useUnderwriting } from "@/hooks/useUnderwriting";
 import { useBuyBoxes } from "@/hooks/useBuyBoxes";
 import { useSharedDeal } from "@/hooks/useSharedDeal";
 import { useDebouncedDraftSync } from "@/hooks/useDebouncedDraftSync";
-import { sharedDealFromPortfolio, sharedDealToQuickUnderwrite, type AnalysisDraft } from "@/lib/deal-draft";
+import { resolveWorkflowDraft, sharedDealToQuickUnderwrite, type AnalysisDraft } from "@/lib/deal-draft";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SavePropertyDialog } from "@/components/portfolio/save-property-dialog";
@@ -76,7 +76,7 @@ export function QuickUnderwritePage() {
   const propertyId = readPropertyId(searchParams);
   const { getById, hydrated: portfolioHydrated } = usePortfolio();
   const { settings, hydrated: settingsHydrated } = useSettings();
-  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio } = useSharedDeal();
+  const { draft, hydrated: dealHydrated, revision, patchAnalysis, adoptPortfolio, flushPending } = useSharedDeal();
   const hydrated = settingsHydrated && dealHydrated && portfolioHydrated;
 
   const fromPortfolio = propertyId ? (getById(propertyId) ?? findPortfolioProperty(propertyId)) : undefined;
@@ -88,7 +88,12 @@ export function QuickUnderwritePage() {
 
   if (!hydrated) return <QuickUnderwriteSkeleton />;
 
-  const source = fromPortfolio ? sharedDealFromPortfolio(fromPortfolio, settings.defaultCountry) : draft;
+  const source = resolveWorkflowDraft({
+    draft,
+    propertyId,
+    fromPortfolio,
+    country: settings.defaultCountry,
+  });
   const initial: AnalysisDraft = {
     input: sharedDealToQuickUnderwrite(source),
     savedId: source.savedId,
@@ -101,6 +106,8 @@ export function QuickUnderwritePage() {
       requestedId={propertyId}
       missing={Boolean(propertyId && !fromPortfolio)}
       onDraftChange={(input) => patchAnalysis(input, "quick-underwrite")}
+      persistImmediately={flushPending}
+      targets={source.targets}
     />
   );
 }
@@ -110,11 +117,15 @@ function QuickSession({
   requestedId,
   missing,
   onDraftChange,
+  persistImmediately,
+  targets,
 }: {
   initial: AnalysisDraft;
   requestedId: string | null;
   missing: boolean;
   onDraftChange: (input: AnalysisInput) => void;
+  persistImmediately: () => void;
+  targets: MaxOfferTargetInputs;
 }) {
   const router = useRouter();
   const fmt = useFormatters();
@@ -146,7 +157,7 @@ function QuickSession({
   );
   usePersistPropertyIdentity(identity, !requestedId);
 
-  const quick = useMemo(() => calculateQuickUnderwrite(sanitizeInput(input), active), [input, active]);
+  const quick = useMemo(() => calculateQuickUnderwrite(sanitizeInput(input), active, targets), [input, active, targets]);
   const analysisInput = useMemo(() => {
     const clean = sanitizeInput(input);
     if (quick.acquisitionPrice.value) {
@@ -155,9 +166,9 @@ function QuickSession({
     return clean;
   }, [input, quick.acquisitionPrice.value]);
   const results = usePropertyAnalysis(quick.acquisitionPrice.value ? analysisInput : null);
-  const underwriting = useUnderwriting(analysisInput, results, { includeSensitivity: false });
+  const underwriting = useUnderwriting(analysisInput, results, { includeSensitivity: false, targets });
 
-  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeInput(next)));
+  useDebouncedDraftSync(input, (next) => onDraftChange(sanitizeInput(next)), 400, persistImmediately);
 
   const handleLocationChange = (country: CountryCode, region: string) => {
     const profile = getMarketProfile(country, region);
@@ -273,9 +284,15 @@ function QuickSession({
               }
             />
             <MajorMetric
-              label="Maximum Offer"
+              label={quick.usingDefaultTargets ? "Indicative Maximum Offer" : "Maximum Offer"}
               value={quick.maximumOffer == null ? "—" : fmt.currency(quick.maximumOffer)}
-              detail={quick.marginOfSafetyPercent == null ? "No price entered yet." : `${fmt.percent(quick.marginOfSafetyPercent)} margin of safety`}
+              detail={
+                quick.usingDefaultTargets
+                  ? "Based on default investor targets"
+                  : quick.marginOfSafetyPercent == null
+                    ? "No price entered yet."
+                    : `${fmt.percent(quick.marginOfSafetyPercent)} margin of safety`
+              }
               tone="primary"
             />
             <MajorMetric

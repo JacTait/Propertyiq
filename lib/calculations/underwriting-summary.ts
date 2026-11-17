@@ -97,8 +97,8 @@ export function generateUnderwritingSummary(args: SummaryArgs): UnderwritingSumm
     `Refinance: ${refinance.viable ? "appears viable" : "at risk"}`,
     `Deal Survival Score: ${downside.score}/100 · ${downside.gradeLabel}`,
     `Primary Risk: ${downside.primaryRiskLabel}`,
-    `Worst-case cashflow: ${signedMoney(downside.worstCase.monthlyCashflow)}/month`,
-    `Worst-case DSCR: ${formatDscr(downside.worstCase.dscr)}`,
+    `Downside bad-year cashflow: ${signedMoney(downside.worstCase.monthlyCashflow)}/month`,
+    `Downside bad-year DSCR: ${formatDscr(downside.worstCase.dscr)}`,
     `Bad-year total return: ${worstRoiLabel} (downside cash flow plus principal and configured appreciation)`,
     `Deal Survival Verdict: ${downside.survival.verdictLabel}`,
   ];

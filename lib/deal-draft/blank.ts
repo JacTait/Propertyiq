@@ -1,16 +1,11 @@
 import type { CountryCode, MaxOfferTargetInputs } from "@/lib/types";
+import { DEFAULT_INVESTOR_TARGETS } from "@/lib/constants";
 import { createBlankAnalysis } from "@/data/default-analysis";
 import { createId } from "@/lib/utils/storage";
 import { SHARED_DEAL_SCHEMA_VERSION, type SharedDealDraft, type SharedDealMaxOfferExtras } from "@/lib/deal-draft/types";
 
 export function defaultInvestorTargets(): MaxOfferTargetInputs {
-  return {
-    desiredMonthlyCashflow: 200,
-    desiredRoi: 12,
-    desiredCashOnCash: 8,
-    minimumDscr: 1.25,
-    safetyBufferPercent: 8,
-  };
+  return { ...DEFAULT_INVESTOR_TARGETS };
 }
 
 export function defaultMaxOfferExtras(): SharedDealMaxOfferExtras {

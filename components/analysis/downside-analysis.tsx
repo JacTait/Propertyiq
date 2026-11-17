@@ -69,7 +69,7 @@ export function DownsideKpiGrid({ downside }: { downside: DownsideAnalysisResult
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
       <KpiCard
         index={0}
-        label="Worst Case Cashflow"
+        label="Bad-Year Cashflow"
         value={fmt.signedCurrency(wc.monthlyCashflow)}
         sub="pre-refinance, after downside shocks"
         icon={Wallet}
@@ -85,7 +85,7 @@ export function DownsideKpiGrid({ downside }: { downside: DownsideAnalysisResult
       />
       <KpiCard
         index={2}
-        label="Worst Case DSCR"
+        label="Bad-Year DSCR"
         value={fmt.ratio(wc.dscr)}
         sub="pre-refinance coverage after downside shocks"
         icon={Scale}

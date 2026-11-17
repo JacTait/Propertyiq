@@ -12,6 +12,7 @@ import type {
 import { RESILIENCE_SHOCKS, RESILIENCE_WEIGHTS } from "@/lib/constants";
 import { analyzeProperty } from "@/lib/calculations/analyze";
 import { applyActiveRent, normalizeAnalysisInput } from "@/lib/calculations/rent";
+import { applyUnderwrittenPrice } from "@/lib/calculations/underwritten-price";
 import { clamp } from "@/lib/calculations/ratios";
 import { validateRefinance } from "@/lib/calculations/refinance";
 import {
@@ -26,7 +27,7 @@ const SCENARIO_LABELS: Record<ResilienceScenarioKey, string> = {
   best: "Best Case",
   expected: "Expected Case",
   stress: "Stress Case",
-  worst: "Worst Case",
+  worst: "Resilience Worst Case",
 };
 
 function cloneInput(input: AnalysisInput): AnalysisInput {
@@ -193,12 +194,13 @@ export function mapRehabCapitalSensitivity(input: AnalysisInput, steps: number[]
     const totalRehab = totalRehabBudget(rehab, next.decision.rehabContingencyPercent);
     const holding = totalHoldingCost(next.flip.holdingCostsMonthly, next.flip.holdDurationMonths);
     const fees = acquisitionFees(next.financing);
-    const deposit = (next.financing.purchasePrice * next.financing.depositPercent) / 100;
+    const priced = applyUnderwrittenPrice(next);
+    const deposit = (priced.financing.purchasePrice * priced.financing.depositPercent) / 100;
     const totalCashInvested = Math.max(0, deposit + fees + totalRehab + holding);
     const maxBudget = maximumTotalRehabBudget({
       conservativeArv: next.decision.conservativeArv,
       targetArvPercent: next.decision.targetArvPercent,
-      purchasePrice: next.financing.purchasePrice,
+      purchasePrice: priced.financing.purchasePrice,
     });
     return {
       changePercent,

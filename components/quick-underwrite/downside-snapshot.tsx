@@ -38,11 +38,13 @@ export function DownsideSnapshot({
         {snapshot ? (
           <>
             <StatRow label="Expected cashflow" value={`${fmt.signedCurrency(snapshot.expectedCashflow)}/mo`} />
-            <StatRow label="Stress cashflow" value={`${fmt.signedCurrency(snapshot.stressCashflow)}/mo`} />
+            <StatRow label="Resilience Stress Cashflow" value={`${fmt.signedCurrency(snapshot.stressCashflow)}/mo`} />
+            <StatRow label="Downside Bad-Year Cashflow" value={`${fmt.signedCurrency(snapshot.badYearCashflow)}/mo`} />
             <StatRow label="Expected DSCR" value={formatDscr(snapshot.expectedDscr)} />
-            <StatRow label="Stress DSCR" value={formatDscr(snapshot.stressDscr)} />
+            <StatRow label="Resilience Stress DSCR" value={formatDscr(snapshot.stressDscr)} />
+            <StatRow label="Downside Bad-Year DSCR" value={formatDscr(snapshot.badYearDscr)} />
             <StatRow label="Expected ROI" value={fmt.percent(snapshot.expectedRoi)} />
-            <StatRow label="Stress ROI" value={fmt.percent(snapshot.stressRoi)} />
+            <StatRow label="Resilience Stress ROI" value={fmt.percent(snapshot.stressRoi)} />
             <StatRow
               label="Deal Survival Score"
               value={`${snapshot.dealSurvivalScore}/100`}

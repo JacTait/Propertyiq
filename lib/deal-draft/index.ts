@@ -47,4 +47,5 @@ export {
   persistSharedDeal,
   readPersistedSharedDeal,
   resolveInitialSharedDeal,
+  resolveWorkflowDraft,
 } from "@/lib/deal-draft/persist";

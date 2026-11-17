@@ -63,7 +63,13 @@ export function acquisitionClosingCosts(financing: {
   return money(financing.closingCosts) + money(financing.legalFees) + money(financing.inspectionCosts) + money(financing.loanFees);
 }
 
-export function holdingCostsFromFlip(flip: { holdingCostsMonthly: number; holdDurationMonths: number }): number {
+export function holdingCostsFromFlip(flip: {
+  holdingCostsMonthly: number;
+  holdDurationMonths: number;
+  holdingCostOverride?: number;
+}): number {
+  const override = money(flip.holdingCostOverride ?? 0);
+  if (override > 0) return override;
   return money(flip.holdingCostsMonthly) * money(flip.holdDurationMonths);
 }
 

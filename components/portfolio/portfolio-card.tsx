@@ -169,7 +169,7 @@ export function PortfolioCard({
               value={decision.guidelineMaxOffer === null ? "—" : fmt.currency(decision.guidelineMaxOffer, { compact: true })}
             />
             <Metric
-              label="Stress CF"
+              label="Workspace Stress CF"
               value={decision.stressMonthlyCashflow === null ? "—" : fmt.signedCurrency(decision.stressMonthlyCashflow)}
               sub={decision.stressMonthlyCashflow === null ? undefined : "/mo"}
               tone={
@@ -189,7 +189,7 @@ export function PortfolioCard({
               action={<DealSurvivalInfo {...dealSurvivalInfoFromScore(s.dealSurvivalScore, s.primaryRisk)} />}
             />
             <Metric
-              label="WC Cashflow"
+              label="Bad-Year CF"
               value={fmt.signedCurrency(s.worstCaseCashflow ?? 0)}
               sub="/mo"
               tone={metricTone(s.worstCaseCashflow ?? 0, { good: 1, ok: 0 })}

@@ -23,6 +23,7 @@ import {
 } from "@/lib/calculations/ratios";
 import { monthlyUtilitiesTotal } from "@/lib/calculations/utilities";
 import { DEFAULT_SCENARIO_ASSUMPTIONS } from "@/lib/constants/deal-workspace";
+import { resolveUnderwrittenPrice } from "@/lib/calculations/underwritten-price";
 
 export const DEAL_DOES_NOT_BREAK_EVEN_BEFORE_INSURANCE =
   "The deal does not break even before insurance is included.";
@@ -524,7 +525,7 @@ function applyScenario(input: AnalysisInput, assumptions: ScenarioAssumptions): 
 }
 
 function computeCosts(input: AnalysisInput): DealCostBreakdown {
-  const purchasePrice = money(input.financing.purchasePrice);
+  const purchasePrice = money(resolveUnderwrittenPrice(input).value);
   const mortgage = calculateMortgage({
     purchasePrice,
     depositPercent: money(input.financing.depositPercent),

@@ -1,6 +1,7 @@
 import type {
   AnalysisInput,
   BuyBoxMatch,
+  BuyBoxPriceField,
   BuyBoxProfile,
   BuyBoxReason,
   BuyBoxSubject,
@@ -8,6 +9,7 @@ import type {
 } from "@/lib/types";
 import { propertyTypeLabel, strategyLabel } from "@/lib/utils/labels";
 import { resolveRent } from "@/lib/calculations/rent";
+import { canonicalArv } from "@/lib/calculations/offer-inputs";
 
 export function normalizeZip(value: string | undefined): string {
   return (value ?? "").trim().toUpperCase().replace(/\s+/g, "");
@@ -33,18 +35,14 @@ function zipInList(zip: string, list: string[]): boolean {
 
 export function subjectFromAnalysis(input: AnalysisInput): BuyBoxSubject {
   const rent = resolveRent(input);
-  const arv =
-    input.brrrr.afterRepairValue > 0
-      ? input.brrrr.afterRepairValue
-      : input.flip.expectedSalePrice > 0
-        ? input.flip.expectedSalePrice
-        : input.financing.purchasePrice;
   return {
     propertyType: input.property.propertyType,
     bedrooms: input.property.bedrooms,
     purchasePrice: input.financing.purchasePrice,
+    askingPrice: input.financing.askingPrice,
+    proposedOffer: input.financing.proposedOffer,
     monthlyRent: rent.active,
-    arv,
+    arv: canonicalArv(input),
     zipCode: input.property.zipCode,
     strategy: input.strategy,
   };
@@ -55,11 +53,28 @@ export function subjectFromMaxOffer(input: MaxOfferInputs, purchasePrice: number
     propertyType: input.property.propertyType,
     bedrooms: input.property.bedrooms,
     purchasePrice,
+    askingPrice: input.property.askingPrice,
     monthlyRent: input.property.expectedMonthlyRent,
     arv: input.property.arv,
     zipCode: input.property.zipCode,
     strategy: input.strategy || "brrrr",
   };
+}
+
+function priceFieldLabel(field: BuyBoxPriceField): string {
+  if (field === "asking") return "Asking price";
+  if (field === "proposed") return "Proposed offer";
+  return "Purchase price";
+}
+
+function resolveBuyBoxPrice(subject: BuyBoxSubject): { field: BuyBoxPriceField; value: number } | null {
+  const asking = typeof subject.askingPrice === "number" && Number.isFinite(subject.askingPrice) ? subject.askingPrice : 0;
+  const proposed = typeof subject.proposedOffer === "number" && Number.isFinite(subject.proposedOffer) ? subject.proposedOffer : 0;
+  const purchase = Number.isFinite(subject.purchasePrice) ? subject.purchasePrice : 0;
+  if (asking > 0) return { field: "asking", value: asking };
+  if (proposed > 0) return { field: "proposed", value: proposed };
+  if (purchase > 0) return { field: "purchase", value: purchase };
+  return null;
 }
 
 export function matchBuyBox(profile: BuyBoxProfile | null | undefined, subject: BuyBoxSubject): BuyBoxMatch {
@@ -115,24 +130,24 @@ export function matchBuyBox(profile: BuyBoxProfile | null | undefined, subject: 
   }
 
   if (profile.maxPurchasePrice > 0) {
-    const asking = typeof subject.askingPrice === "number" && Number.isFinite(subject.askingPrice) ? subject.askingPrice : 0;
-    if (asking > 0 && asking > profile.maxPurchasePrice) {
+    const evaluated = resolveBuyBoxPrice(subject);
+    if (!evaluated) {
       reasons.push({
         key: "price",
-        tone: "fail",
-        message: "Asking price exceeds the maximum purchase price.",
+        tone: "warn",
+        message: "No asking price, proposed offer or purchase price is available to evaluate against the Buy Box ceiling.",
       });
-    } else if (subject.purchasePrice > profile.maxPurchasePrice) {
+    } else if (evaluated.value > profile.maxPurchasePrice) {
       reasons.push({
         key: "price",
         tone: "fail",
-        message: "Purchase price exceeds limit.",
+        message: `${priceFieldLabel(evaluated.field)} exceeds the Buy Box ceiling.`,
       });
     } else {
       reasons.push({
         key: "price",
         tone: "pass",
-        message: asking > 0 ? "Asking price is within the Buy Box ceiling." : "Purchase price is within the Buy Box ceiling.",
+        message: `${priceFieldLabel(evaluated.field)} is within the Buy Box ceiling.`,
       });
     }
   }

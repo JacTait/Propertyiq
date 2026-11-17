@@ -23,6 +23,9 @@ import {
   safeDivide,
 } from "@/lib/calculations/ratios";
 import { computeBrrrrCapital } from "@/lib/calculations/brrrr-capital";
+import { computeCashRecovery } from "@/lib/calculations/cash-recovery";
+import { sizeSupportedRefinance } from "@/lib/calculations/refinance";
+import { DEFAULT_REFINANCE_DSCR } from "@/lib/constants";
 
 const SEARCH_STEPS = 40;
 const PRICE_STEP = 50;
@@ -334,15 +337,28 @@ function buildCurve(input: MaxOfferInputs, maximumOffer: number): PriceMetricPoi
 }
 
 function buildBrrrr(input: MaxOfferInputs, purchasePrice: number, metrics: OfferDealMetrics): MaxOfferBrrrrResults {
-  const refinanceAmount = input.property.arv * (input.brrrr.refinanceLtv / 100);
-  const refinanceMonthlyPayment = calculateMonthlyPayment(
-    refinanceAmount,
-    input.brrrr.refinanceRate,
-    input.financing.termYears,
-  );
+  const requiredDscr = input.targets.minimumDscr > 0 ? input.targets.minimumDscr : DEFAULT_REFINANCE_DSCR;
+  const sized = sizeSupportedRefinance({
+    arv: input.property.arv,
+    refinanceLtv: input.brrrr.refinanceLtv,
+    interestRate: input.brrrr.refinanceRate,
+    termYears: input.financing.termYears,
+    requiredDscr,
+    monthlyNoi: metrics.noi / 12,
+  });
+  const fullLtvLoan = sized.ltvBasedMaximumLoan;
+  const fullLtvPayment = calculateMonthlyPayment(fullLtvLoan, input.brrrr.refinanceRate, input.financing.termYears);
+  const fullLtvDscr = calculateDscr(metrics.noi, fullLtvPayment * 12);
+  const fullLtvMonthlyCashflow = (metrics.noi - fullLtvPayment * 12) / 12;
+  const fullLtvCompliant =
+    fullLtvLoan > 0 && (fullLtvPayment <= 0 || (Number.isFinite(fullLtvDscr) && fullLtvDscr + EPS >= requiredDscr));
+
+  const refinanceAmount = sized.supportedRefinanceLoan;
+  const refinanceMonthlyPayment = sized.monthlyPayment;
   const annualRefinanceDebtService = refinanceMonthlyPayment * 12;
   const postRefiMonthlyCashflow = (metrics.noi - annualRefinanceDebtService) / 12;
-  const postRefiDscr = calculateDscr(metrics.noi, annualRefinanceDebtService);
+  const postRefiDscr = sized.postRefiDscr ?? calculateDscr(metrics.noi, annualRefinanceDebtService);
+
   const capital = computeBrrrrCapital({
     purchasePrice,
     rehabCost: input.property.rehabBudget,
@@ -351,9 +367,15 @@ function buildBrrrr(input: MaxOfferInputs, purchasePrice: number, metrics: Offer
     originalLoan: metrics.loanAmount,
     refinanceProceeds: refinanceAmount,
   });
-  const cashPulledOut = capital.cashPulledOut;
-  const cashLeftInDeal = Math.max(0, capital.cashLeftInDeal);
-  const cashRecoveryPercent = safeDivide(Math.max(0, cashPulledOut), capital.totalCapitalInvested) * 100;
+  const recovery = computeCashRecovery({
+    totalCapitalInvested: capital.totalCapitalInvested,
+    grossRefinanceProceeds: refinanceAmount,
+    refinanceClosingCosts: 0,
+    loanPayoffAmount: capital.originalLoanPayoff,
+  });
+  const cashPulledOut = recovery.cashRecovered;
+  const cashLeftInDeal = recovery.cashLeftInDeal;
+  const cashRecoveryPercent = recovery.cashRecoveryPercent ?? 0;
   const recoveryScore = clamp(cashRecoveryPercent / 100, 0, 1) * 70;
   const cashflowScore = clamp(postRefiMonthlyCashflow / 400, 0, 1) * 30;
   const infiniteReturn = cashLeftInDeal <= 0 && postRefiMonthlyCashflow > 0;
@@ -370,6 +392,20 @@ function buildBrrrr(input: MaxOfferInputs, purchasePrice: number, metrics: Offer
     annualRefinanceDebtService,
     efficiencyScore: Math.round(recoveryScore + cashflowScore),
     infiniteReturn,
+    ltvBasedLoan: sized.ltvBasedMaximumLoan,
+    dscrSupportedLoan: sized.dscrSupportedMaximumLoan,
+    supportedRefinanceLoan: sized.supportedRefinanceLoan,
+    limitingFactor: sized.limitingFactor,
+    limitingLabel: sized.limitingLabel,
+    supportedPayment: sized.monthlyPayment,
+    supportedDscr: sized.postRefiDscr,
+    netSupportedRefinanceProceeds: recovery.netRefinanceProceeds,
+    excessCashOut: recovery.excessCashOut,
+    fullLtvLoan,
+    fullLtvPayment,
+    fullLtvDscr,
+    fullLtvMonthlyCashflow,
+    fullLtvCompliant,
   };
 }
 
