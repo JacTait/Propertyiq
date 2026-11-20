@@ -12,6 +12,7 @@ import { FinancialDataRow } from "@/components/underwriting/financial-data-row";
 import { APP_NAME } from "@/lib/constants";
 
 const FOOTER_LINKS = [
+  { href: "/access", label: "Activate access" },
   { href: "/quick-underwrite", label: "Quick Underwrite" },
   { href: "/dashboard", label: "Standard Analysis" },
   { href: "/max-offer", label: "Max Offer" },
@@ -27,6 +28,9 @@ export function LandingPage() {
         <Logo href="/" />
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <Button variant="outline" asChild>
+            <Link href="/access">Activate access</Link>
+          </Button>
           <Button asChild>
             <Link href="/quick-underwrite">
               Underwrite a Property <ArrowRight />

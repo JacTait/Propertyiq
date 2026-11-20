@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/page-header";
+import { AccessStatusCard } from "@/components/settings/access-status";
 import { BuyBoxProfiles } from "@/components/settings/buy-box-profiles";
 
 const THEMES: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
@@ -67,6 +68,7 @@ export function SettingsView() {
       />
 
       <div className="grid gap-5 lg:grid-cols-2">
+        <AccessStatusCard />
         <SettingsCard icon={Coins} title="Currency" description="Used for every monetary value across the app.">
           <Label htmlFor="currency">Display currency</Label>
           <Select value={settings.currency} onValueChange={(v) => updateSettings({ currency: v as CurrencyCode })}>
