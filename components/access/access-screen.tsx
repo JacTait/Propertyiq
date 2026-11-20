@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, KeyRound, LoaderCircle } from "lucide-react";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { accessQueryWithoutLicenceKey, licenceKeyFromAccessQuery } from "@/lib/auth/access-query";
 import { ACCESS_ERROR_MESSAGES, type AccessClientError } from "@/lib/auth/messages";
 import { DEFAULT_POST_ACCESS_PATH, isSafeInternalPath } from "@/lib/auth/routes";
 
@@ -25,10 +26,17 @@ export function AccessScreen() {
   const fromParam = searchParams.get("from");
   const reasonParam = searchParams.get("reason");
   const redirectTo = fromParam && isSafeInternalPath(fromParam) ? fromParam : DEFAULT_POST_ACCESS_PATH;
+  const prefilledKey = licenceKeyFromAccessQuery(searchParams);
 
   const [email, setEmail] = useState("");
-  const [licenceKey, setLicenceKey] = useState("");
+  const [licenceKey, setLicenceKey] = useState(prefilledKey);
   const [state, setState] = useState<FormState>(reasonParam === "disabled" ? "disabled" : "idle");
+
+  useEffect(() => {
+    const cleaned = accessQueryWithoutLicenceKey(searchParams);
+    if (!cleaned) return;
+    router.replace(cleaned, { scroll: false });
+  }, [router, searchParams]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -82,7 +90,7 @@ export function AccessScreen() {
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Licensed access</p>
             <h1 className="font-heading text-[28px] font-medium tracking-tight">Access PropertyIQ</h1>
             <CardDescription>
-              Enter the email address used for your purchase and the licence key supplied by Payhip.
+              Enter the email address used for your purchase and your PropertyIQ licence key.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -128,6 +136,10 @@ export function AccessScreen() {
                   {message}
                 </p>
               )}
+
+              <p className="text-xs text-muted-foreground">
+                Purchased through Payhip or Gumroad? Your licence key is included with your purchase.
+              </p>
 
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button type="submit" disabled={busy} className="sm:flex-1">

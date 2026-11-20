@@ -4,6 +4,13 @@ import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { ACCESS_ERROR_MESSAGES } from "@/lib/auth/messages";
 import {
+  defaultGumroadClient,
+  getGumroadProductId,
+  gumroadConfigured,
+  type GumroadClient,
+  verifyGumroadLicence,
+} from "@/lib/auth/gumroad";
+import {
   ACCESS_COOKIE_NAME,
   DEFAULT_POST_ACCESS_PATH,
   isProtectedApiPath,
@@ -13,6 +20,7 @@ import {
   type AccessCookieOptions,
   type AccessSession,
   type CookiePayload,
+  type LicenceProvider,
   type SessionValidation as ParsedSession,
   cookieOptions,
   emailsMatch,
@@ -26,6 +34,7 @@ import {
   publicSession,
   REVALIDATE_INTERVAL_MS,
   SESSION_TTL_MS,
+  sessionProvider,
   signAccessSession,
 } from "@/lib/auth/session";
 
@@ -46,7 +55,9 @@ export {
   signAccessSession,
 };
 
-export type { AccessCookieOptions, AccessSession, CookiePayload };
+export type { AccessCookieOptions, AccessSession, CookiePayload, LicenceProvider };
+
+export { getGumroadProductId, gumroadConfigured, verifyGumroadLicence };
 
 export const DEFAULT_MAX_ACTIVATIONS = 2;
 
@@ -96,6 +107,10 @@ export type VerifyLicenceResult =
   | { ok: true; record: PayhipLicenceRecord }
   | { ok: false; reason: LicenceDenialReason };
 
+export type AuthorisedLicenceResult =
+  | { ok: true; provider: LicenceProvider; uses: number }
+  | { ok: false; reason: LicenceDenialReason };
+
 export type SessionValidation =
   | { ok: true; session: AccessSession }
   | { ok: false; reason: "missing" | "invalid" | "expired" | "disabled" | "network" };
@@ -109,6 +124,8 @@ interface ActivateAccessInput {
   licenceKey: string;
   from?: string | null;
   client?: PayhipClient;
+  payhipClient?: PayhipClient;
+  gumroadClient?: GumroadClient;
   cookieStore?: AccessCookieStore;
   now?: number;
   incrementUsage?: boolean;
@@ -117,6 +134,8 @@ interface ActivateAccessInput {
 interface ValidateAccessInput {
   cookieStore?: AccessCookieStore;
   client?: PayhipClient;
+  payhipClient?: PayhipClient;
+  gumroadClient?: GumroadClient;
   now?: number;
   revalidate?: boolean | "if_stale";
 }
@@ -142,8 +161,12 @@ export function getMaxActivations(): number {
   return parsed;
 }
 
+export function payhipConfigured(): boolean {
+  return getPayhipProductSecret().length > 0;
+}
+
 export function accessSecretsConfigured(): boolean {
-  return getPayhipProductSecret().length > 0 && getSessionSecret().length >= 16;
+  return getSessionSecret().length >= 16 && (payhipConfigured() || gumroadConfigured());
 }
 
 export async function getAccessCookieStore(): Promise<AccessCookieStore> {
@@ -277,7 +300,7 @@ export async function verifyPayhipLicence(
   licenceKey: string,
   client: PayhipClient = defaultPayhipClient,
 ): Promise<VerifyLicenceResult> {
-  if (!accessSecretsConfigured()) {
+  if (!payhipConfigured() || getSessionSecret().length < 16) {
     logSafe("verify_misconfigured");
     return { ok: false, reason: "misconfigured" };
   }
@@ -309,8 +332,68 @@ export async function verifyPayhipLicence(
     return { ok: false, reason: "email_mismatch" };
   }
 
-  logSafe("verify_ok", { licence: maskLicenceIdentifier(normalisedKey) });
+  logSafe("verify_ok", { provider: "payhip", licence: maskLicenceIdentifier(normalisedKey) });
   return { ok: true, record };
+}
+
+function pickLicenceDenial(outcomes: AuthorisedLicenceResult[]): AuthorisedLicenceResult {
+  const reasons = outcomes.filter((outcome): outcome is { ok: false; reason: LicenceDenialReason } => !outcome.ok).map(
+    (outcome) => outcome.reason,
+  );
+  if (reasons.length === 0) return { ok: false, reason: "invalid" };
+
+  const onlyWeak = reasons.every((reason) => reason === "invalid" || reason === "network" || reason === "misconfigured");
+  if (onlyWeak && reasons.includes("network")) return { ok: false, reason: "network" };
+
+  const ranked: LicenceDenialReason[] = [
+    "email_mismatch",
+    "disabled",
+    "activation_limit",
+    "network",
+    "misconfigured",
+    "invalid",
+    "rate_limited",
+  ];
+  for (const reason of ranked) {
+    if (reasons.includes(reason)) return { ok: false, reason };
+  }
+  return { ok: false, reason: "invalid" };
+}
+
+export async function verifyAuthorisedLicence(
+  email: string,
+  licenceKey: string,
+  options: {
+    payhipClient?: PayhipClient;
+    gumroadClient?: GumroadClient;
+    incrementGumroadUses?: boolean;
+  } = {},
+): Promise<AuthorisedLicenceResult> {
+  if (getSessionSecret().length < 16 || (!payhipConfigured() && !gumroadConfigured())) {
+    logSafe("verify_misconfigured");
+    return { ok: false, reason: "misconfigured" };
+  }
+
+  const outcomes: AuthorisedLicenceResult[] = [];
+  const payhipClient = options.payhipClient ?? defaultPayhipClient;
+  const gumroadClient = options.gumroadClient ?? defaultGumroadClient;
+
+  if (payhipConfigured()) {
+    const payhip = await verifyPayhipLicence(email, licenceKey, payhipClient);
+    if (payhip.ok) return { ok: true, provider: "payhip", uses: payhip.record.uses };
+    outcomes.push(payhip);
+  }
+
+  if (gumroadConfigured()) {
+    const gumroad = await verifyGumroadLicence(email, licenceKey, {
+      client: gumroadClient,
+      incrementUses: options.incrementGumroadUses === true,
+    });
+    if (gumroad.ok) return { ok: true, provider: "gumroad", uses: gumroad.record.uses };
+    outcomes.push(gumroad);
+  }
+
+  return pickLicenceDenial(outcomes);
 }
 
 async function resolveCookieStore(store?: AccessCookieStore): Promise<AccessCookieStore> {
@@ -321,6 +404,7 @@ export async function createAccessSession(input: {
   email: string;
   licenceKey: string;
   usageCounted: boolean;
+  provider?: LicenceProvider;
   now?: number;
   cookieStore?: AccessCookieStore;
 }): Promise<AccessSession> {
@@ -337,6 +421,7 @@ export async function createAccessSession(input: {
     expiresAt: now + SESSION_TTL_MS,
     lastRevalidatedAt: now,
     usageCounted: input.usageCounted,
+    provider: input.provider ?? "payhip",
     licenceKey,
   };
   const token = signAccessSession(payload);
@@ -372,8 +457,16 @@ export async function validateAccessSession(options: ValidateAccessInput = {}): 
     return { ok: true, session: parsed.session };
   }
 
-  const client = options.client ?? defaultPayhipClient;
-  const verified = await verifyPayhipLicence(parsed.payload.email, parsed.payload.licenceKey, client);
+  const payhipClient = options.payhipClient ?? options.client ?? defaultPayhipClient;
+  const gumroadClient = options.gumroadClient ?? defaultGumroadClient;
+  const provider = sessionProvider(parsed.payload);
+  const verified =
+    provider === "gumroad"
+      ? await verifyGumroadLicence(parsed.payload.email, parsed.payload.licenceKey, {
+          client: gumroadClient,
+          incrementUses: false,
+        })
+      : await verifyPayhipLicence(parsed.payload.email, parsed.payload.licenceKey, payhipClient);
   if (!verified.ok && verified.reason === "network") {
     return { ok: true, session: parsed.session };
   }
@@ -384,32 +477,58 @@ export async function validateAccessSession(options: ValidateAccessInput = {}): 
   }
 
   parsed.payload.lastRevalidatedAt = now;
+  parsed.payload.provider = provider;
   const session = await persistSession(parsed.payload, store);
   return { ok: true, session };
 }
 
 export async function activateAccess(input: ActivateAccessInput): Promise<ActivateAccessResult> {
   const now = input.now ?? Date.now();
-  const client = input.client ?? defaultPayhipClient;
+  const payhipClient = input.payhipClient ?? input.client ?? defaultPayhipClient;
+  const gumroadClient = input.gumroadClient ?? defaultGumroadClient;
   const store = await resolveCookieStore(input.cookieStore);
-  const verified = await verifyPayhipLicence(input.email, input.licenceKey, client);
-  if (!verified.ok) return verified;
+  const inspected = await verifyAuthorisedLicence(input.email, input.licenceKey, {
+    payhipClient,
+    gumroadClient,
+    incrementGumroadUses: false,
+  });
+  if (!inspected.ok) return inspected;
 
   const licenceKey = normalizeLicenceKey(input.licenceKey);
-  const current = await validateAccessSession({ cookieStore: store, now, revalidate: false, client });
+  const current = await validateAccessSession({
+    cookieStore: store,
+    now,
+    revalidate: false,
+    payhipClient,
+    gumroadClient,
+  });
   const sameBrowser =
     current.ok &&
     current.session.licenceHash === hashLicenceIdentifier(licenceKey) &&
-    current.session.email === normalizeEmail(input.email);
+    current.session.email === normalizeEmail(input.email) &&
+    current.session.provider === inspected.provider;
 
   let usageCounted = sameBrowser ? current.session.usageCounted : true;
   if (!sameBrowser && input.incrementUsage !== false) {
-    if (verified.record.uses >= getMaxActivations()) {
-      logSafe("verify_denied", { outcome: "activation_limit", licence: maskLicenceIdentifier(licenceKey) });
+    if (inspected.uses >= getMaxActivations()) {
+      logSafe("verify_denied", {
+        provider: inspected.provider,
+        outcome: "activation_limit",
+        licence: maskLicenceIdentifier(licenceKey),
+      });
       return { ok: false, reason: "activation_limit" };
     }
-    const incremented = await client.incrementUsage(licenceKey);
-    if (incremented.status === "network") return { ok: false, reason: "network" };
+    if (inspected.provider === "payhip") {
+      const incremented = await payhipClient.incrementUsage(licenceKey);
+      if (incremented.status === "network") return { ok: false, reason: "network" };
+    } else {
+      const incremented = await verifyGumroadLicence(input.email, licenceKey, {
+        client: gumroadClient,
+        incrementUses: true,
+      });
+      if (!incremented.ok && incremented.reason === "network") return { ok: false, reason: "network" };
+      if (!incremented.ok) return incremented;
+    }
     usageCounted = true;
   } else if (sameBrowser) {
     usageCounted = current.session.usageCounted;
@@ -419,6 +538,7 @@ export async function activateAccess(input: ActivateAccessInput): Promise<Activa
     email: input.email,
     licenceKey,
     usageCounted,
+    provider: inspected.provider,
     now,
     cookieStore: store,
   });
@@ -429,13 +549,15 @@ export async function activateAccess(input: ActivateAccessInput): Promise<Activa
 export async function logoutAccess(options: {
   cookieStore?: AccessCookieStore;
   client?: PayhipClient;
+  payhipClient?: PayhipClient;
   now?: number;
 }): Promise<void> {
   const store = await resolveCookieStore(options.cookieStore);
   const token = store.get(ACCESS_COOKIE_NAME)?.value;
   const parsed = parseAccessSession(token, options.now ?? Date.now());
-  if (parsed.ok && parsed.payload.usageCounted) {
-    const client = options.client ?? defaultPayhipClient;
+  const provider = parsed.ok ? sessionProvider(parsed.payload) : "payhip";
+  if (parsed.ok && parsed.payload.usageCounted && provider === "payhip") {
+    const client = options.payhipClient ?? options.client ?? defaultPayhipClient;
     const decreased = await client.decrementUsage(parsed.payload.licenceKey);
     if (decreased.status === "network") {
       logSafe("logout_usage_decrease_failed", { licence: maskLicenceIdentifier(parsed.payload.licenceKey) });

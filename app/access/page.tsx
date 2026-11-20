@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Access PropertyIQ" };
 export default function AccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; reason?: string }>;
+  searchParams: Promise<{ from?: string; reason?: string; key?: string; license?: string }>;
 }) {
   return (
     <Suspense fallback={<AccessScreenSkeleton />}>
@@ -23,7 +23,7 @@ export default function AccessPage({
 async function AccessPageBody({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; reason?: string }>;
+  searchParams: Promise<{ from?: string; reason?: string; key?: string; license?: string }>;
 }) {
   await connection();
   const params = await searchParams;

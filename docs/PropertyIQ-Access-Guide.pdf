@@ -10,7 +10,7 @@
 endobj
 4 0 obj
 <<
-/Length 1064
+/Length 1111
 >>
 stream
 0.200025 w
@@ -27,7 +27,7 @@ BT
 13.7999999999999989 TL
 0 g
 56. 733.8899999999999864 Td
-(Use this checklist after you purchase PropertyIQ on Payhip.) Tj
+(Use this checklist after you purchase PropertyIQ.) Tj
 ET
 BT
 /F1 12 Tf
@@ -41,14 +41,14 @@ BT
 13.7999999999999989 TL
 0 g
 56. 679.8899999999999864 Td
-(2. Enter the email used at Payhip checkout.) Tj
+(2. Enter the email used at checkout.) Tj
 ET
 BT
 /F1 12 Tf
 13.7999999999999989 TL
 0 g
 56. 657.8899999999999864 Td
-(3. Enter the unique Payhip licence key from the receipt/download page.) Tj
+(3. Enter the unique licence key from your receipt or download page.) Tj
 ET
 BT
 /F1 12 Tf
@@ -69,8 +69,9 @@ BT
 12.6499999999999986 TL
 0 g
 56. 575.8899999999999864 Td
-(Each licence is unique to your purchase. PropertyIQ does not use a shared bypass code. If you) Tj
-T* (need to move to a new browser, sign out under Settings, then activate again.) Tj
+(Licence keys are issued with Payhip and Gumroad purchases. Each licence is unique to your) Tj
+T* (purchase. PropertyIQ does not use a shared bypass code. If you need to move to a new browser,) Tj
+T* (sign out under Settings, then activate again.) Tj
 ET
 endstream
 endobj
@@ -244,7 +245,7 @@ endobj
 19 0 obj
 <<
 /Producer (jsPDF 4.2.1)
-/CreationDate (D:20261120021752-00'00')
+/CreationDate (D:20261120100642-00'00')
 >>
 endobj
 20 0 obj
@@ -258,33 +259,33 @@ endobj
 xref
 0 21
 0000000000 65535 f 
-0000001268 00000 n 
-0000003085 00000 n 
+0000001315 00000 n 
+0000003132 00000 n 
 0000000015 00000 n 
 0000000152 00000 n 
-0000001325 00000 n 
-0000001450 00000 n 
-0000001580 00000 n 
-0000001713 00000 n 
-0000001850 00000 n 
-0000001973 00000 n 
-0000002102 00000 n 
-0000002234 00000 n 
-0000002370 00000 n 
-0000002498 00000 n 
-0000002625 00000 n 
-0000002754 00000 n 
-0000002887 00000 n 
-0000002989 00000 n 
-0000003333 00000 n 
-0000003419 00000 n 
+0000001372 00000 n 
+0000001497 00000 n 
+0000001627 00000 n 
+0000001760 00000 n 
+0000001897 00000 n 
+0000002020 00000 n 
+0000002149 00000 n 
+0000002281 00000 n 
+0000002417 00000 n 
+0000002545 00000 n 
+0000002672 00000 n 
+0000002801 00000 n 
+0000002934 00000 n 
+0000003036 00000 n 
+0000003380 00000 n 
+0000003466 00000 n 
 trailer
 <<
 /Size 21
 /Root 20 0 R
 /Info 19 0 R
-/ID [ <B8AF7299FEB5BEBDAF9D3EE8C4B32C00> <B8AF7299FEB5BEBDAF9D3EE8C4B32C00> ]
+/ID [ <32AC1DAE00662BD72DEC2962059F8E8D> <32AC1DAE00662BD72DEC2962059F8E8D> ]
 >>
 startxref
-3523
+3570
 %%EOF

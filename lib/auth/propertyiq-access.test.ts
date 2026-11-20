@@ -142,6 +142,7 @@ beforeEach(() => {
   process.env.PROPERTYIQ_SESSION_SECRET = SECRET;
   process.env.PAYHIP_PROPERTYIQ_PRODUCT_LINK = "PIQ1";
   process.env.PAYHIP_MAX_ACTIVATIONS = "2";
+  delete process.env.GUMROAD_PROPERTYIQ_PRODUCT_ID;
 });
 
 afterEach(() => {
@@ -325,11 +326,20 @@ describe("Secret exposure", () => {
     for (const file of files) {
       if (file.endsWith("propertyiq-access.test.ts")) continue;
       const source = readFileSync(file, "utf8");
-      if (source.includes("NEXT_PUBLIC_PAYHIP") || source.includes("NEXT_PUBLIC_PROPERTYIQ_SESSION")) {
+      if (
+        source.includes("NEXT_PUBLIC_PAYHIP") ||
+        source.includes("NEXT_PUBLIC_GUMROAD") ||
+        source.includes("NEXT_PUBLIC_PROPERTYIQ_SESSION")
+      ) {
         publicEnvHits.push(file);
       }
       const isClient = /^\s*["']use client["']/.test(source);
-      if (isClient && (source.includes("PAYHIP_PRODUCT_SECRET_KEY") || source.includes("PROPERTYIQ_SESSION_SECRET"))) {
+      if (
+        isClient &&
+        (source.includes("PAYHIP_PRODUCT_SECRET_KEY") ||
+          source.includes("PROPERTYIQ_SESSION_SECRET") ||
+          source.includes("GUMROAD_PROPERTYIQ_PRODUCT_ID"))
+      ) {
         clientHits.push(file);
       }
     }

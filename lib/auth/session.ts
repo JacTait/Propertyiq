@@ -14,6 +14,8 @@ const SESSION_VERSION = "v1";
 
 export type AccessStatus = "active";
 
+export type LicenceProvider = "payhip" | "gumroad";
+
 export interface AccessSession {
   accessId: string;
   email: string;
@@ -24,10 +26,13 @@ export interface AccessSession {
   expiresAt: number;
   lastRevalidatedAt: number;
   usageCounted: boolean;
+  provider: LicenceProvider;
 }
 
-export interface CookiePayload extends AccessSession {
+export interface CookiePayload extends Omit<AccessSession, "provider"> {
   licenceKey: string;
+  /** Absent on sessions issued before Gumroad support; treated as Payhip. */
+  provider?: LicenceProvider;
 }
 
 export interface AccessCookieOptions {
@@ -95,8 +100,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isLicenceProvider(value: unknown): value is LicenceProvider {
+  return value === "payhip" || value === "gumroad";
+}
+
 function isCookiePayload(value: unknown): value is CookiePayload {
   if (!isRecord(value)) return false;
+  if (value.provider !== undefined && !isLicenceProvider(value.provider)) return false;
   return (
     typeof value.accessId === "string" &&
     typeof value.email === "string" &&
@@ -111,6 +121,10 @@ function isCookiePayload(value: unknown): value is CookiePayload {
   );
 }
 
+export function sessionProvider(payload: Pick<CookiePayload, "provider">): LicenceProvider {
+  return payload.provider ?? "payhip";
+}
+
 export function publicSession(payload: CookiePayload): AccessSession {
   return {
     accessId: payload.accessId,
@@ -122,6 +136,7 @@ export function publicSession(payload: CookiePayload): AccessSession {
     expiresAt: payload.expiresAt,
     lastRevalidatedAt: payload.lastRevalidatedAt,
     usageCounted: payload.usageCounted,
+    provider: sessionProvider(payload),
   };
 }
 

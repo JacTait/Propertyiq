@@ -17,13 +17,13 @@ y += 36;
 
 doc.setFont("helvetica", "normal");
 doc.setFontSize(12);
-doc.text("Use this checklist after you purchase PropertyIQ on Payhip.", left, y, { maxWidth: 480 });
+doc.text("Use this checklist after you purchase PropertyIQ.", left, y, { maxWidth: 480 });
 y += 32;
 
 const steps = [
   "1. Open the PropertyIQ access link.",
-  "2. Enter the email used at Payhip checkout.",
-  "3. Enter the unique Payhip licence key from the receipt/download page.",
+  "2. Enter the email used at checkout.",
+  "3. Enter the unique licence key from your receipt or download page.",
   "4. Activate access.",
   "5. Bookmark PropertyIQ.",
 ];
@@ -36,7 +36,7 @@ for (const step of steps) {
 y += 16;
 doc.setFontSize(11);
 doc.text(
-  "Each licence is unique to your purchase. PropertyIQ does not use a shared bypass code. If you need to move to a new browser, sign out under Settings, then activate again.",
+  "Licence keys are issued with Payhip and Gumroad purchases. Each licence is unique to your purchase. PropertyIQ does not use a shared bypass code. If you need to move to a new browser, sign out under Settings, then activate again.",
   left,
   y,
   { maxWidth: 480 },
