@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import { headers } from "next/headers";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { AccessSessionRefresher } from "@/components/access/access-session-refresher";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requirePropertyIqAccess } from "@/lib/auth/propertyiq-access";
@@ -27,6 +28,7 @@ async function GuardedAppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full">
+      {access.needsRefresh ? <AccessSessionRefresher /> : null}
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />

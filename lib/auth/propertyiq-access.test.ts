@@ -15,6 +15,7 @@ import {
   activateAccess,
   createAccessSession,
   logoutAccess,
+  renewAccessSession,
   validateAccessSession,
   verifyPayhipLicence,
 } from "@/lib/auth/propertyiq-access";
@@ -375,6 +376,10 @@ describe("Activation limits and revalidation", () => {
     });
     const result = await validateAccessSession({ cookieStore: cookies, client: disabled, revalidate: true });
     expect(result).toEqual({ ok: false, reason: "disabled" });
+    expect(cookies.get(ACCESS_COOKIE_NAME)).toBeTruthy();
+
+    const renewed = await renewAccessSession({ cookieStore: cookies, client: disabled });
+    expect(renewed).toEqual({ ok: false, reason: "disabled" });
     expect(cookies.get(ACCESS_COOKIE_NAME)).toBeUndefined();
   });
 

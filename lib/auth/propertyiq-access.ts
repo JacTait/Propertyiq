@@ -112,7 +112,7 @@ export type AuthorisedLicenceResult =
   | { ok: false; reason: LicenceDenialReason };
 
 export type SessionValidation =
-  | { ok: true; session: AccessSession }
+  | { ok: true; session: AccessSession; needsRefresh: boolean }
   | { ok: false; reason: "missing" | "invalid" | "expired" | "disabled" | "network" };
 
 export type ActivateAccessResult =
@@ -183,6 +183,12 @@ export async function getAccessCookieStore(): Promise<AccessCookieStore> {
       store.set(name, "", { ...cookieOptions(0), expires: new Date(0), maxAge: 0 });
     },
   };
+}
+
+async function readAccessCookie(store?: AccessCookieStore): Promise<string | undefined> {
+  if (store) return store.get(ACCESS_COOKIE_NAME)?.value;
+  const cookieStore = await cookies();
+  return cookieStore.get(ACCESS_COOKIE_NAME)?.value;
 }
 
 function logSafe(event: string, fields?: Record<string, string | number | boolean>): void {
@@ -442,10 +448,13 @@ async function persistSession(payload: CookiePayload, cookieStore?: AccessCookie
   return publicSession(payload);
 }
 
+export async function getAccessSession(options: ValidateAccessInput = {}): Promise<SessionValidation> {
+  return validateAccessSession(options);
+}
+
 export async function validateAccessSession(options: ValidateAccessInput = {}): Promise<SessionValidation> {
-  const store = await resolveCookieStore(options.cookieStore);
   const now = options.now ?? Date.now();
-  const token = store.get(ACCESS_COOKIE_NAME)?.value;
+  const token = await readAccessCookie(options.cookieStore);
   const parsed: ParsedSession = parseAccessSession(token, now);
   if (!parsed.ok) {
     return { ok: false, reason: parsed.reason };
@@ -454,7 +463,7 @@ export async function validateAccessSession(options: ValidateAccessInput = {}): 
   const stale = now - parsed.payload.lastRevalidatedAt >= REVALIDATE_INTERVAL_MS;
   const shouldRevalidate = options.revalidate === true || (options.revalidate === "if_stale" && stale);
   if (!shouldRevalidate) {
-    return { ok: true, session: parsed.session };
+    return { ok: true, session: parsed.session, needsRefresh: false };
   }
 
   const payhipClient = options.payhipClient ?? options.client ?? defaultPayhipClient;
@@ -468,7 +477,39 @@ export async function validateAccessSession(options: ValidateAccessInput = {}): 
         })
       : await verifyPayhipLicence(parsed.payload.email, parsed.payload.licenceKey, payhipClient);
   if (!verified.ok && verified.reason === "network") {
-    return { ok: true, session: parsed.session };
+    return { ok: true, session: parsed.session, needsRefresh: true };
+  }
+  if (!verified.ok) {
+    if (verified.reason === "disabled") return { ok: false, reason: "disabled" };
+    return { ok: false, reason: "invalid" };
+  }
+
+  return { ok: true, session: parsed.session, needsRefresh: true };
+}
+
+export async function renewAccessSession(options: ValidateAccessInput = {}): Promise<SessionValidation> {
+  const store = await resolveCookieStore(options.cookieStore);
+  const now = options.now ?? Date.now();
+  const token = store.get(ACCESS_COOKIE_NAME)?.value;
+  const parsed: ParsedSession = parseAccessSession(token, now);
+  if (!parsed.ok) {
+    await clearAccessSession(store);
+    return { ok: false, reason: parsed.reason };
+  }
+
+  const payhipClient = options.payhipClient ?? options.client ?? defaultPayhipClient;
+  const gumroadClient = options.gumroadClient ?? defaultGumroadClient;
+  const provider = sessionProvider(parsed.payload);
+  const verified =
+    provider === "gumroad"
+      ? await verifyGumroadLicence(parsed.payload.email, parsed.payload.licenceKey, {
+          client: gumroadClient,
+          incrementUses: false,
+        })
+      : await verifyPayhipLicence(parsed.payload.email, parsed.payload.licenceKey, payhipClient);
+
+  if (!verified.ok && verified.reason === "network") {
+    return { ok: true, session: parsed.session, needsRefresh: true };
   }
   if (!verified.ok) {
     await clearAccessSession(store);
@@ -479,7 +520,7 @@ export async function validateAccessSession(options: ValidateAccessInput = {}): 
   parsed.payload.lastRevalidatedAt = now;
   parsed.payload.provider = provider;
   const session = await persistSession(parsed.payload, store);
-  return { ok: true, session };
+  return { ok: true, session, needsRefresh: false };
 }
 
 export async function activateAccess(input: ActivateAccessInput): Promise<ActivateAccessResult> {
