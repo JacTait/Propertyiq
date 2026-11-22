@@ -14,7 +14,7 @@ const SESSION_VERSION = "v1";
 
 export type AccessStatus = "active";
 
-export type LicenceProvider = "payhip" | "gumroad";
+export type LicenceProvider = "payhip" | "gumroad" | "tester";
 
 export interface AccessSession {
   accessId: string;
@@ -27,6 +27,7 @@ export interface AccessSession {
   lastRevalidatedAt: number;
   usageCounted: boolean;
   provider: LicenceProvider;
+  testerRecordId?: string;
 }
 
 export interface CookiePayload extends Omit<AccessSession, "provider"> {
@@ -101,12 +102,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isLicenceProvider(value: unknown): value is LicenceProvider {
-  return value === "payhip" || value === "gumroad";
+  return value === "payhip" || value === "gumroad" || value === "tester";
 }
 
 function isCookiePayload(value: unknown): value is CookiePayload {
   if (!isRecord(value)) return false;
   if (value.provider !== undefined && !isLicenceProvider(value.provider)) return false;
+  if (value.testerRecordId !== undefined && typeof value.testerRecordId !== "string") return false;
+  if (value.provider === "tester" && (!value.testerRecordId || typeof value.licenceKey !== "string")) {
+    return false;
+  }
   return (
     typeof value.accessId === "string" &&
     typeof value.email === "string" &&
@@ -137,6 +142,7 @@ export function publicSession(payload: CookiePayload): AccessSession {
     lastRevalidatedAt: payload.lastRevalidatedAt,
     usageCounted: payload.usageCounted,
     provider: sessionProvider(payload),
+    ...(payload.testerRecordId ? { testerRecordId: payload.testerRecordId } : {}),
   };
 }
 
@@ -194,6 +200,5 @@ export function parseAccessSession(
 export function tamperSessionToken(token: string): string {
   const parts = token.split(".");
   if (parts.length !== 3 || !parts[2]) return `${token}x`;
-  const mutated = parts[2].endsWith("A") ? `${parts[2].slice(0, -1)}B` : `${parts[2].slice(0, -1)}A`;
-  return `${parts[0]}.${parts[1]}.${mutated}`;
+  return `${parts[0]}.${parts[1]}.${parts[2]}x`;
 }

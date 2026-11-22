@@ -17,6 +17,16 @@ import {
   safeRedirectPath,
 } from "@/lib/auth/routes";
 import {
+  type TesterCodeStore,
+  type TesterDenialReason,
+  hashTesterCode,
+  inspectExistingTesterSession,
+  inspectNewTesterActivation,
+  logTesterEvent,
+  normalizeTesterCode,
+  testerCodeTail,
+} from "@/lib/auth/tester-codes";
+import {
   type AccessCookieOptions,
   type AccessSession,
   type CookiePayload,
@@ -136,9 +146,23 @@ interface ValidateAccessInput {
   client?: PayhipClient;
   payhipClient?: PayhipClient;
   gumroadClient?: GumroadClient;
+  testerStore?: TesterCodeStore;
   now?: number;
   revalidate?: boolean | "if_stale";
 }
+
+interface ActivateTesterAccessInput {
+  testerCode: string;
+  email?: string | null;
+  from?: string | null;
+  cookieStore?: AccessCookieStore;
+  testerStore?: TesterCodeStore;
+  now?: number;
+}
+
+export type ActivateTesterAccessResult =
+  | { ok: true; session: AccessSession; redirectTo: string }
+  | { ok: false; reason: TesterDenialReason };
 
 function readEnv(name: string): string {
   const value = process.env[name];
@@ -406,6 +430,12 @@ async function resolveCookieStore(store?: AccessCookieStore): Promise<AccessCook
   return store ?? (await getAccessCookieStore());
 }
 
+async function resolveTesterStore(store?: TesterCodeStore): Promise<TesterCodeStore> {
+  if (store) return store;
+  const { getTesterCodeStore } = await import("@/lib/db/tester-store");
+  return getTesterCodeStore();
+}
+
 export async function createAccessSession(input: {
   email: string;
   licenceKey: string;
@@ -413,22 +443,34 @@ export async function createAccessSession(input: {
   provider?: LicenceProvider;
   now?: number;
   cookieStore?: AccessCookieStore;
+  expiresAt?: number;
+  testerRecordId?: string;
+  licenceTail?: string;
 }): Promise<AccessSession> {
   const now = input.now ?? Date.now();
+  const provider = input.provider ?? "payhip";
+  const isTester = provider === "tester";
   const email = normalizeEmail(input.email);
-  const licenceKey = normalizeLicenceKey(input.licenceKey);
+  const licenceKey = isTester ? "" : normalizeLicenceKey(input.licenceKey);
+  const testerRecordId = isTester ? input.testerRecordId : undefined;
+  if (isTester && !testerRecordId) {
+    throw new Error("Tester sessions require a testerRecordId.");
+  }
   const payload: CookiePayload = {
     accessId: randomUUID(),
     email,
-    licenceHash: hashLicenceIdentifier(licenceKey),
-    licenceTail: licenceTail(licenceKey),
+    licenceHash: isTester
+      ? hashLicenceIdentifier(`tester:${testerRecordId}`)
+      : hashLicenceIdentifier(licenceKey),
+    licenceTail: input.licenceTail ?? licenceTail(licenceKey),
     status: "active",
     issuedAt: now,
-    expiresAt: now + SESSION_TTL_MS,
+    expiresAt: input.expiresAt ?? now + SESSION_TTL_MS,
     lastRevalidatedAt: now,
     usageCounted: input.usageCounted,
-    provider: input.provider ?? "payhip",
+    provider,
     licenceKey,
+    ...(testerRecordId ? { testerRecordId } : {}),
   };
   const token = signAccessSession(payload);
   const store = await resolveCookieStore(input.cookieStore);
@@ -448,6 +490,50 @@ async function persistSession(payload: CookiePayload, cookieStore?: AccessCookie
   return publicSession(payload);
 }
 
+type StoredAccessCheck =
+  | { ok: true }
+  | { ok: false; reason: "invalid" | "disabled" | "expired" | "network" | "email_mismatch" | "activation_limit" | "misconfigured" | "rate_limited" };
+
+function toSessionFailure(reason: Exclude<StoredAccessCheck, { ok: true }>["reason"]): "invalid" | "expired" | "disabled" | "network" {
+  if (reason === "disabled") return "disabled";
+  if (reason === "expired") return "expired";
+  if (reason === "network") return "network";
+  return "invalid";
+}
+
+async function revalidateStoredAccess(
+  payload: CookiePayload,
+  options: ValidateAccessInput,
+  now: number,
+): Promise<StoredAccessCheck> {
+  const provider = sessionProvider(payload);
+  if (provider === "tester") {
+    const testerRecordId = payload.testerRecordId;
+    if (!testerRecordId) return { ok: false, reason: "invalid" };
+    try {
+      const testerStore = await resolveTesterStore(options.testerStore);
+      const record = await testerStore.findById(testerRecordId);
+      if (!record) return { ok: false, reason: "invalid" };
+      return inspectExistingTesterSession(record, now, payload.email);
+    } catch {
+      return { ok: false, reason: "network" };
+    }
+  }
+
+  const payhipClient = options.payhipClient ?? options.client ?? defaultPayhipClient;
+  const gumroadClient = options.gumroadClient ?? defaultGumroadClient;
+  if (provider === "gumroad") {
+    const verified = await verifyGumroadLicence(payload.email, payload.licenceKey, {
+      client: gumroadClient,
+      incrementUses: false,
+    });
+    return verified.ok ? { ok: true } : verified;
+  }
+
+  const verified = await verifyPayhipLicence(payload.email, payload.licenceKey, payhipClient);
+  return verified.ok ? { ok: true } : verified;
+}
+
 export async function getAccessSession(options: ValidateAccessInput = {}): Promise<SessionValidation> {
   return validateAccessSession(options);
 }
@@ -460,28 +546,21 @@ export async function validateAccessSession(options: ValidateAccessInput = {}): 
     return { ok: false, reason: parsed.reason };
   }
 
+  const provider = sessionProvider(parsed.payload);
   const stale = now - parsed.payload.lastRevalidatedAt >= REVALIDATE_INTERVAL_MS;
-  const shouldRevalidate = options.revalidate === true || (options.revalidate === "if_stale" && stale);
+  const shouldRevalidate =
+    options.revalidate === true ||
+    (options.revalidate === "if_stale" && (stale || provider === "tester"));
   if (!shouldRevalidate) {
     return { ok: true, session: parsed.session, needsRefresh: false };
   }
 
-  const payhipClient = options.payhipClient ?? options.client ?? defaultPayhipClient;
-  const gumroadClient = options.gumroadClient ?? defaultGumroadClient;
-  const provider = sessionProvider(parsed.payload);
-  const verified =
-    provider === "gumroad"
-      ? await verifyGumroadLicence(parsed.payload.email, parsed.payload.licenceKey, {
-          client: gumroadClient,
-          incrementUses: false,
-        })
-      : await verifyPayhipLicence(parsed.payload.email, parsed.payload.licenceKey, payhipClient);
+  const verified = await revalidateStoredAccess(parsed.payload, options, now);
   if (!verified.ok && verified.reason === "network") {
     return { ok: true, session: parsed.session, needsRefresh: true };
   }
   if (!verified.ok) {
-    if (verified.reason === "disabled") return { ok: false, reason: "disabled" };
-    return { ok: false, reason: "invalid" };
+    return { ok: false, reason: toSessionFailure(verified.reason) };
   }
 
   return { ok: true, session: parsed.session, needsRefresh: true };
@@ -497,28 +576,17 @@ export async function renewAccessSession(options: ValidateAccessInput = {}): Pro
     return { ok: false, reason: parsed.reason };
   }
 
-  const payhipClient = options.payhipClient ?? options.client ?? defaultPayhipClient;
-  const gumroadClient = options.gumroadClient ?? defaultGumroadClient;
-  const provider = sessionProvider(parsed.payload);
-  const verified =
-    provider === "gumroad"
-      ? await verifyGumroadLicence(parsed.payload.email, parsed.payload.licenceKey, {
-          client: gumroadClient,
-          incrementUses: false,
-        })
-      : await verifyPayhipLicence(parsed.payload.email, parsed.payload.licenceKey, payhipClient);
-
+  const verified = await revalidateStoredAccess(parsed.payload, options, now);
   if (!verified.ok && verified.reason === "network") {
     return { ok: true, session: parsed.session, needsRefresh: true };
   }
   if (!verified.ok) {
     await clearAccessSession(store);
-    if (verified.reason === "disabled") return { ok: false, reason: "disabled" };
-    return { ok: false, reason: "invalid" };
+    return { ok: false, reason: toSessionFailure(verified.reason) };
   }
 
   parsed.payload.lastRevalidatedAt = now;
-  parsed.payload.provider = provider;
+  parsed.payload.provider = sessionProvider(parsed.payload);
   const session = await persistSession(parsed.payload, store);
   return { ok: true, session, needsRefresh: false };
 }
@@ -584,6 +652,101 @@ export async function activateAccess(input: ActivateAccessInput): Promise<Activa
     cookieStore: store,
   });
 
+  return { ok: true, session, redirectTo: safeRedirectPath(input.from) };
+}
+
+export async function activateTesterAccess(input: ActivateTesterAccessInput): Promise<ActivateTesterAccessResult> {
+  const now = input.now ?? Date.now();
+  if (getSessionSecret().length < 16) {
+    logTesterEvent("tester_activation_failed", { outcome: "misconfigured" });
+    return { ok: false, reason: "misconfigured" };
+  }
+
+  const normalisedCode = normalizeTesterCode(input.testerCode);
+  if (!normalisedCode) {
+    logTesterEvent("tester_activation_failed", { outcome: "invalid" });
+    return { ok: false, reason: "invalid" };
+  }
+
+  const store = await resolveCookieStore(input.cookieStore);
+  let testerStore: TesterCodeStore;
+  try {
+    testerStore = await resolveTesterStore(input.testerStore);
+  } catch {
+    logTesterEvent("tester_activation_failed", { outcome: "network" });
+    return { ok: false, reason: "network" };
+  }
+
+  const codePrefix = `PIQ-TEST-****-${normalisedCode.slice(-4)}`;
+  let record;
+  try {
+    record = await testerStore.findByHash(hashTesterCode(normalisedCode));
+  } catch {
+    logTesterEvent("tester_activation_failed", { outcome: "network" });
+    return { ok: false, reason: "network" };
+  }
+
+  if (!record) {
+    logTesterEvent("tester_activation_failed", { outcome: "invalid", codePrefix });
+    return { ok: false, reason: "invalid" };
+  }
+
+  const email = input.email ? normalizeEmail(input.email) : "";
+  const current = await validateAccessSession({
+    cookieStore: store,
+    testerStore,
+    now,
+    revalidate: false,
+  });
+  const sameBrowser =
+    current.ok &&
+    current.session.provider === "tester" &&
+    current.session.testerRecordId === record.id;
+
+  const inspected = sameBrowser
+    ? inspectExistingTesterSession(record, now, email || current.session.email)
+    : inspectNewTesterActivation(record, now, email || undefined);
+  if (!inspected.ok) return inspected;
+
+  if (!sameBrowser) {
+    let incremented: typeof record | null;
+    try {
+      incremented = await testerStore.incrementActivation(record.id, now);
+    } catch {
+      logTesterEvent("tester_activation_failed", {
+        recordId: record.id,
+        codePrefix: record.codePrefix,
+        outcome: "network",
+      });
+      return { ok: false, reason: "network" };
+    }
+    if (!incremented) {
+      logTesterEvent("tester_activation_failed", {
+        recordId: record.id,
+        codePrefix: record.codePrefix,
+        outcome: "activation_limit",
+      });
+      return { ok: false, reason: "activation_limit" };
+    }
+    record = incremented;
+  }
+
+  const session = await createAccessSession({
+    email: record.emailRestriction ?? email,
+    licenceKey: "",
+    usageCounted: true,
+    provider: "tester",
+    now,
+    cookieStore: store,
+    expiresAt: record.expiresAt,
+    testerRecordId: record.id,
+    licenceTail: testerCodeTail(record.codePrefix),
+  });
+
+  logTesterEvent("tester_activation_success", {
+    recordId: record.id,
+    codePrefix: record.codePrefix,
+  });
   return { ok: true, session, redirectTo: safeRedirectPath(input.from) };
 }
 

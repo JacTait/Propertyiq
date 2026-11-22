@@ -385,8 +385,11 @@ describe("Render helpers do not write Next.js cookies", () => {
     const route = readFileSync(path.resolve(__dirname, "../../app/api/access/revalidate/route.ts"), "utf8");
     const verify = readFileSync(path.resolve(__dirname, "../../app/api/access/verify/route.ts"), "utf8");
     const logout = readFileSync(path.resolve(__dirname, "../../app/api/access/logout/route.ts"), "utf8");
+    const tester = readFileSync(path.resolve(__dirname, "../../app/api/access/tester/route.ts"), "utf8");
     expect(route).toContain("renewAccessSession");
     expect(verify).toContain("activateAccess");
     expect(logout).toContain("logoutAccess");
+    expect(tester).toContain("activateTesterAccess");
+    expect(tester).not.toContain("cookies()");
   });
 });

@@ -6,6 +6,7 @@ export const ACCESS_ERROR_MESSAGES = {
     "This licence has reached its device activation limit. Sign out on another browser or contact support.",
   network: "We could not reach the licence service. Please try again shortly.",
   rate_limited: "Too many attempts. Please wait and try again.",
+  tester: "That tester code could not be activated.",
 } as const;
 
 export type AccessClientError = keyof typeof ACCESS_ERROR_MESSAGES;

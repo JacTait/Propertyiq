@@ -328,9 +328,12 @@ describe("Secret exposure", () => {
       if (file.endsWith("propertyiq-access.test.ts")) continue;
       const source = readFileSync(file, "utf8");
       if (
-        source.includes("NEXT_PUBLIC_PAYHIP") ||
-        source.includes("NEXT_PUBLIC_GUMROAD") ||
-        source.includes("NEXT_PUBLIC_PROPERTYIQ_SESSION")
+        source.includes("NEXT_PUBLIC_PAYHIP_PRODUCT_SECRET") ||
+        source.includes("NEXT_PUBLIC_PAYHIP_PRODUCT_LINK") ||
+        source.includes("NEXT_PUBLIC_GUMROAD_PROPERTYIQ") ||
+        source.includes("NEXT_PUBLIC_GUMROAD_PRODUCT_ID") ||
+        source.includes("NEXT_PUBLIC_PROPERTYIQ_SESSION") ||
+        source.includes("NEXT_PUBLIC_PROPERTYIQ_TESTER")
       ) {
         publicEnvHits.push(file);
       }
@@ -339,7 +342,10 @@ describe("Secret exposure", () => {
         isClient &&
         (source.includes("PAYHIP_PRODUCT_SECRET_KEY") ||
           source.includes("PROPERTYIQ_SESSION_SECRET") ||
-          source.includes("GUMROAD_PROPERTYIQ_PRODUCT_ID"))
+          source.includes("GUMROAD_PROPERTYIQ_PRODUCT_ID") ||
+          source.includes("PROPERTYIQ_TESTER_ADMIN_SECRET") ||
+          source.includes("POSTGRES_URL") ||
+          source.includes("DATABASE_URL"))
       ) {
         clientHits.push(file);
       }

@@ -38,7 +38,14 @@ export function isProtectedPath(pathname: string): boolean {
 
 export function isProtectedApiPath(pathname: string): boolean {
   const path = normalizePathname(pathname);
-  if (path === "/api/access/verify" || path === "/api/access/support-reset") {
+  if (
+    path === "/api/access/verify" ||
+    path === "/api/access/support-reset" ||
+    path === "/api/access/tester"
+  ) {
+    return false;
+  }
+  if (path.startsWith("/api/admin/")) {
     return false;
   }
   if (path.startsWith("/api/access/")) {
