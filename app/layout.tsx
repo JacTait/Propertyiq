@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter_Tight } from "next/font/google";
 import { WhopPixel } from "@/components/analytics/whop-pixel";
+import { WhopPixelRouteTracker } from "@/components/analytics/whop-pixel-route-tracker";
 import { Providers } from "@/components/layout/providers";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import "./globals.css";
@@ -48,8 +49,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${heading.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <head>
         <WhopPixel />
+      </head>
+      <body className="min-h-full flex flex-col">
+        <WhopPixelRouteTracker />
         <Providers>{children}</Providers>
       </body>
     </html>
