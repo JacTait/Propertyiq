@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter_Tight } from "next/font/google";
+import { WhopPixel } from "@/components/analytics/whop-pixel";
 import { Providers } from "@/components/layout/providers";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import "./globals.css";
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${heading.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <WhopPixel />
         <Providers>{children}</Providers>
       </body>
     </html>

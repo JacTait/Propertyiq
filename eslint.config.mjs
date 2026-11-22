@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Nested unrelated project; tsconfig already excludes it.
+    "my-website/**",
   ]),
 ]);
 
