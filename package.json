@@ -10,7 +10,11 @@
     "test": "vitest run",
     "tester:create": "tsx scripts/tester-create.ts",
     "tester:list": "tsx scripts/tester-list.ts",
-    "tester:revoke": "tsx scripts/tester-revoke.ts"
+    "tester:revoke": "tsx scripts/tester-revoke.ts",
+    "whop:list": "tsx scripts/whop-list.ts",
+    "whop:inspect": "tsx scripts/whop-inspect.ts",
+    "whop:revoke": "tsx scripts/whop-revoke.ts",
+    "whop:reconcile": "tsx scripts/whop-reconcile.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.5",
@@ -23,6 +27,7 @@
     "@radix-ui/react-switch": "^1.4.1",
     "@radix-ui/react-tabs": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
+    "@whop/sdk": "^2.8.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^14.10.1",

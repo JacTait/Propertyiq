@@ -8,9 +8,11 @@ const UNAVAILABLE = "Purchase option temporarily unavailable.";
 export function PurchaseOptions({
   gumroadUrl,
   payhipUrl,
+  whopUrl = null,
 }: {
   gumroadUrl: string | null;
   payhipUrl: string | null;
+  whopUrl?: string | null;
 }) {
   return (
     <Card>
@@ -30,19 +32,22 @@ export function PurchaseOptions({
           <p className="mt-2 text-sm text-muted-foreground">One-off payment · Lifetime access</p>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
           <MarketplaceButton href={gumroadUrl} label="Buy on Gumroad" />
           <MarketplaceButton href={payhipUrl} label="Buy on Payhip" />
+          <MarketplaceButton href={whopUrl} label="Buy on Whop" />
         </div>
 
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">How it works</p>
           <ol className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
             <li>
-              <span className="font-medium text-foreground">1.</span> Purchase PropertyIQ through Gumroad or Payhip.
+              <span className="font-medium text-foreground">1.</span> Purchase PropertyIQ through Gumroad, Payhip or
+              Whop.
             </li>
             <li>
-              <span className="font-medium text-foreground">2.</span> You&apos;ll receive a unique PropertyIQ licence key.
+              <span className="font-medium text-foreground">2.</span> Gumroad and Payhip include a licence key with the
+              purchase. Whop buyers retrieve theirs below using the payment ID from the Whop receipt.
             </li>
             <li>
               <span className="font-medium text-foreground">3.</span> Return to this page.

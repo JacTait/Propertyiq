@@ -165,6 +165,9 @@ beforeEach(() => {
   process.env.PAYHIP_PROPERTYIQ_PRODUCT_LINK = "PIQ1";
   process.env.PAYHIP_MAX_ACTIVATIONS = "2";
   delete process.env.GUMROAD_PROPERTYIQ_PRODUCT_ID;
+  delete process.env.WHOP_API_KEY;
+  delete process.env.WHOP_WEBHOOK_SECRET;
+  delete process.env.WHOP_PROPERTYIQ_PRODUCT_ID;
 });
 
 afterEach(() => {
@@ -506,6 +509,8 @@ describe("Complimentary tester access", () => {
     }
     expect(isProtectedApiPath("/api/access/tester")).toBe(false);
     expect(isProtectedApiPath("/api/admin/tester-codes")).toBe(false);
+    expect(isProtectedApiPath("/api/access/whop-claim")).toBe(false);
+    expect(isProtectedApiPath("/api/webhooks/whop")).toBe(false);
     expect(isProtectedApiPath("/api/access/status")).toBe(true);
   });
 

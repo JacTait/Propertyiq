@@ -14,6 +14,7 @@ import {
   getGumroadProductUrl,
   getPayhipProductUrl,
   getPurchaseUrls,
+  getWhopProductUrl,
   resetPurchaseUrlWarningsForTests,
   sanitizePublicProductUrl,
 } from "@/lib/auth/purchase-urls";
@@ -28,6 +29,7 @@ vi.mock("next/headers", () => ({
 
 const GUMROAD_URL = "https://meridianproducts.gumroad.com/l/PortfolioIQ";
 const PAYHIP_URL = "https://payhip.com/b/4kT9y";
+const WHOP_URL = "https://whop.com/propertyiq";
 const SECRET = "propertyiq-session-secret-key";
 
 class MemoryCookieStore implements AccessCookieStore {
@@ -97,7 +99,9 @@ describe("Access page purchase options", () => {
 
   it("4. resolves the Gumroad purchase button to the PropertyIQ Gumroad URL", () => {
     expect(getGumroadProductUrl({ NEXT_PUBLIC_GUMROAD_PRODUCT_URL: GUMROAD_URL })).toBe(GUMROAD_URL);
-    const html = renderToStaticMarkup(<PurchaseOptions gumroadUrl={GUMROAD_URL} payhipUrl={PAYHIP_URL} />);
+    const html = renderToStaticMarkup(
+      <PurchaseOptions gumroadUrl={GUMROAD_URL} payhipUrl={PAYHIP_URL} whopUrl={WHOP_URL} />,
+    );
     expect(html).toContain(`href="${GUMROAD_URL}"`);
     expect(html).toContain("Buy on Gumroad");
   });
@@ -202,6 +206,31 @@ describe("Access page purchase options", () => {
     );
     expect(source).not.toContain("NEXT_PUBLIC_GUMROAD_PRODUCT_URL");
     expect(source).not.toContain("NEXT_PUBLIC_PAYHIP_PRODUCT_URL");
+    expect(source).not.toContain("NEXT_PUBLIC_WHOP_PRODUCT_URL");
+  });
+
+  it("16. shows the Whop button when NEXT_PUBLIC_WHOP_PRODUCT_URL is configured", () => {
+    expect(getWhopProductUrl({ NEXT_PUBLIC_WHOP_PRODUCT_URL: WHOP_URL })).toBe(WHOP_URL);
+    const html = renderToStaticMarkup(
+      <PurchaseOptions gumroadUrl={GUMROAD_URL} payhipUrl={PAYHIP_URL} whopUrl={WHOP_URL} />,
+    );
+    const anchor = anchorFor(html, WHOP_URL);
+    expect(html).toContain("Buy on Whop");
+    expect(anchor).toBeTruthy();
+    expect(anchor).toContain(`href="${WHOP_URL}"`);
+    expect(anchor).toContain('target="_blank"');
+    expect(anchor).toContain('rel="noopener noreferrer"');
+  });
+
+  it("17. replaces only the Whop button when the Whop URL is missing", () => {
+    expect(getPurchaseUrls({ NEXT_PUBLIC_GUMROAD_PRODUCT_URL: GUMROAD_URL, NEXT_PUBLIC_PAYHIP_PRODUCT_URL: PAYHIP_URL }).whopUrl).toBeNull();
+    const html = renderToStaticMarkup(
+      <PurchaseOptions gumroadUrl={GUMROAD_URL} payhipUrl={PAYHIP_URL} whopUrl={null} />,
+    );
+    expect(html).toContain("Buy on Gumroad");
+    expect(html).toContain("Buy on Payhip");
+    expect(html).not.toContain("Buy on Whop");
+    expect(html).toContain("Purchase option temporarily unavailable.");
   });
 });
 
@@ -210,6 +239,9 @@ describe("Public purchase URL configuration", () => {
     const example = readFileSync(path.resolve(__dirname, "../../.env.example"), "utf8");
     expect(example).toContain(`NEXT_PUBLIC_GUMROAD_PRODUCT_URL=${GUMROAD_URL}`);
     expect(example).toContain(`NEXT_PUBLIC_PAYHIP_PRODUCT_URL=${PAYHIP_URL}`);
+    expect(example).toContain("NEXT_PUBLIC_WHOP_PRODUCT_URL=");
+    expect(example).toContain("WHOP_WEBHOOK_SECRET=");
+    expect(example).not.toMatch(/WHOP_API_KEY=.+/);
   });
 
   it("rejects unsafe purchase URLs", () => {

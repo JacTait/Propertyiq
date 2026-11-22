@@ -41,8 +41,12 @@ export function isProtectedApiPath(pathname: string): boolean {
   if (
     path === "/api/access/verify" ||
     path === "/api/access/support-reset" ||
-    path === "/api/access/tester"
+    path === "/api/access/tester" ||
+    path === "/api/access/whop-claim"
   ) {
+    return false;
+  }
+  if (path.startsWith("/api/webhooks/")) {
     return false;
   }
   if (path.startsWith("/api/admin/")) {

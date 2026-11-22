@@ -14,7 +14,7 @@ const SESSION_VERSION = "v1";
 
 export type AccessStatus = "active";
 
-export type LicenceProvider = "payhip" | "gumroad" | "tester";
+export type LicenceProvider = "payhip" | "gumroad" | "tester" | "whop";
 
 export interface AccessSession {
   accessId: string;
@@ -102,7 +102,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isLicenceProvider(value: unknown): value is LicenceProvider {
-  return value === "payhip" || value === "gumroad" || value === "tester";
+  return value === "payhip" || value === "gumroad" || value === "tester" || value === "whop";
 }
 
 function isCookiePayload(value: unknown): value is CookiePayload {

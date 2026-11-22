@@ -144,6 +144,9 @@ beforeEach(() => {
   process.env.PAYHIP_PROPERTYIQ_PRODUCT_LINK = "PIQ1";
   process.env.PAYHIP_MAX_ACTIVATIONS = "2";
   delete process.env.GUMROAD_PROPERTYIQ_PRODUCT_ID;
+  delete process.env.WHOP_API_KEY;
+  delete process.env.WHOP_WEBHOOK_SECRET;
+  delete process.env.WHOP_PROPERTYIQ_PRODUCT_ID;
 });
 
 afterEach(() => {
@@ -333,7 +336,10 @@ describe("Secret exposure", () => {
         source.includes("NEXT_PUBLIC_GUMROAD_PROPERTYIQ") ||
         source.includes("NEXT_PUBLIC_GUMROAD_PRODUCT_ID") ||
         source.includes("NEXT_PUBLIC_PROPERTYIQ_SESSION") ||
-        source.includes("NEXT_PUBLIC_PROPERTYIQ_TESTER")
+        source.includes("NEXT_PUBLIC_PROPERTYIQ_TESTER") ||
+        source.includes("NEXT_PUBLIC_WHOP_API_KEY") ||
+        source.includes("NEXT_PUBLIC_WHOP_WEBHOOK_SECRET") ||
+        source.includes("NEXT_PUBLIC_WHOP_PROPERTYIQ")
       ) {
         publicEnvHits.push(file);
       }
@@ -345,7 +351,10 @@ describe("Secret exposure", () => {
           source.includes("GUMROAD_PROPERTYIQ_PRODUCT_ID") ||
           source.includes("PROPERTYIQ_TESTER_ADMIN_SECRET") ||
           source.includes("POSTGRES_URL") ||
-          source.includes("DATABASE_URL"))
+          source.includes("DATABASE_URL") ||
+          source.includes("WHOP_API_KEY") ||
+          source.includes("WHOP_WEBHOOK_SECRET") ||
+          source.includes("WHOP_PROPERTYIQ_PRODUCT_ID"))
       ) {
         clientHits.push(file);
       }

@@ -17,6 +17,11 @@ import {
   safeRedirectPath,
 } from "@/lib/auth/routes";
 import {
+  type PurchasedLicenceStore,
+  isWhopLicenceKey,
+  normalizeWhopLicenceKey,
+} from "@/lib/auth/purchased-licences";
+import {
   type TesterCodeStore,
   type TesterDenialReason,
   hashTesterCode,
@@ -26,6 +31,7 @@ import {
   normalizeTesterCode,
   testerCodeTail,
 } from "@/lib/auth/tester-codes";
+import { verifyWhopLicence, whopProductConfigured } from "@/lib/auth/whop";
 import {
   type AccessCookieOptions,
   type AccessSession,
@@ -136,6 +142,7 @@ interface ActivateAccessInput {
   client?: PayhipClient;
   payhipClient?: PayhipClient;
   gumroadClient?: GumroadClient;
+  purchasedLicenceStore?: PurchasedLicenceStore;
   cookieStore?: AccessCookieStore;
   now?: number;
   incrementUsage?: boolean;
@@ -147,6 +154,7 @@ interface ValidateAccessInput {
   payhipClient?: PayhipClient;
   gumroadClient?: GumroadClient;
   testerStore?: TesterCodeStore;
+  purchasedLicenceStore?: PurchasedLicenceStore;
   now?: number;
   revalidate?: boolean | "if_stale";
 }
@@ -190,7 +198,7 @@ export function payhipConfigured(): boolean {
 }
 
 export function accessSecretsConfigured(): boolean {
-  return getSessionSecret().length >= 16 && (payhipConfigured() || gumroadConfigured());
+  return getSessionSecret().length >= 16 && (payhipConfigured() || gumroadConfigured() || whopProductConfigured());
 }
 
 export async function getAccessCookieStore(): Promise<AccessCookieStore> {
@@ -396,12 +404,27 @@ export async function verifyAuthorisedLicence(
   options: {
     payhipClient?: PayhipClient;
     gumroadClient?: GumroadClient;
+    purchasedLicenceStore?: PurchasedLicenceStore;
     incrementGumroadUses?: boolean;
   } = {},
 ): Promise<AuthorisedLicenceResult> {
-  if (getSessionSecret().length < 16 || (!payhipConfigured() && !gumroadConfigured())) {
+  if (
+    getSessionSecret().length < 16 ||
+    (!payhipConfigured() && !gumroadConfigured() && !whopProductConfigured() && !isWhopLicenceKey(licenceKey))
+  ) {
     logSafe("verify_misconfigured");
     return { ok: false, reason: "misconfigured" };
+  }
+
+  if (isWhopLicenceKey(licenceKey)) {
+    try {
+      const store = await resolvePurchasedStore(options.purchasedLicenceStore);
+      const whop = await verifyWhopLicence(email, licenceKey, store);
+      if (whop.ok) return { ok: true, provider: "whop", uses: 0 };
+      return whop;
+    } catch {
+      return { ok: false, reason: "network" };
+    }
   }
 
   const outcomes: AuthorisedLicenceResult[] = [];
@@ -434,6 +457,12 @@ async function resolveTesterStore(store?: TesterCodeStore): Promise<TesterCodeSt
   if (store) return store;
   const { getTesterCodeStore } = await import("@/lib/db/tester-store");
   return getTesterCodeStore();
+}
+
+async function resolvePurchasedStore(store?: PurchasedLicenceStore): Promise<PurchasedLicenceStore> {
+  if (store) return store;
+  const { getPurchasedLicenceStore } = await import("@/lib/db/purchased-licence-store");
+  return getPurchasedLicenceStore();
 }
 
 export async function createAccessSession(input: {
@@ -520,6 +549,16 @@ async function revalidateStoredAccess(
     }
   }
 
+  if (provider === "whop") {
+    try {
+      const store = await resolvePurchasedStore(options.purchasedLicenceStore);
+      const verified = await verifyWhopLicence(payload.email, payload.licenceKey, store);
+      return verified.ok ? { ok: true } : verified;
+    } catch {
+      return { ok: false, reason: "network" };
+    }
+  }
+
   const payhipClient = options.payhipClient ?? options.client ?? defaultPayhipClient;
   const gumroadClient = options.gumroadClient ?? defaultGumroadClient;
   if (provider === "gumroad") {
@@ -599,17 +638,20 @@ export async function activateAccess(input: ActivateAccessInput): Promise<Activa
   const inspected = await verifyAuthorisedLicence(input.email, input.licenceKey, {
     payhipClient,
     gumroadClient,
+    purchasedLicenceStore: input.purchasedLicenceStore,
     incrementGumroadUses: false,
   });
   if (!inspected.ok) return inspected;
 
-  const licenceKey = normalizeLicenceKey(input.licenceKey);
+  const licenceKey =
+    inspected.provider === "whop" ? normalizeWhopLicenceKey(input.licenceKey) : normalizeLicenceKey(input.licenceKey);
   const current = await validateAccessSession({
     cookieStore: store,
     now,
     revalidate: false,
     payhipClient,
     gumroadClient,
+    purchasedLicenceStore: input.purchasedLicenceStore,
   });
   const sameBrowser =
     current.ok &&
@@ -618,7 +660,18 @@ export async function activateAccess(input: ActivateAccessInput): Promise<Activa
     current.session.provider === inspected.provider;
 
   let usageCounted = sameBrowser ? current.session.usageCounted : true;
-  if (!sameBrowser && input.incrementUsage !== false) {
+  if (inspected.provider === "whop") {
+    usageCounted = true;
+    if (!sameBrowser) {
+      try {
+        const purchased = await resolvePurchasedStore(input.purchasedLicenceStore);
+        const record = await verifyWhopLicence(input.email, licenceKey, purchased);
+        if (record.ok) await purchased.markActivated(record.record.id, now);
+      } catch {
+        return { ok: false, reason: "network" };
+      }
+    }
+  } else if (!sameBrowser && input.incrementUsage !== false) {
     if (inspected.uses >= getMaxActivations()) {
       logSafe("verify_denied", {
         provider: inspected.provider,

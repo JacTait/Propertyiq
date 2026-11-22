@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PurchaseOptions } from "@/components/access/purchase-options";
+import { WhopLicenceClaim } from "@/components/access/whop-licence-claim";
 import { accessQueryWithoutLicenceKey, licenceKeyFromAccessQuery } from "@/lib/auth/access-query";
 import { ACCESS_ERROR_MESSAGES, type AccessClientError } from "@/lib/auth/messages";
 import { getPurchaseUrls } from "@/lib/auth/purchase-urls";
@@ -109,7 +110,7 @@ export function AccessScreen() {
 
   const busy = state === "loading" || state === "success";
   const testerBusy = testerState === "loading" || testerState === "success";
-  const { gumroadUrl, payhipUrl } = getPurchaseUrls();
+  const { gumroadUrl, payhipUrl, whopUrl } = getPurchaseUrls();
   const message =
     state === "success"
       ? "Access activated. Taking you to Quick Underwrite."
@@ -189,7 +190,8 @@ export function AccessScreen() {
               )}
 
               <p className="text-xs text-muted-foreground">
-                Purchased through Payhip or Gumroad? Your licence key is included with your purchase.
+                Purchased through Payhip or Gumroad? Your licence key is included with your purchase. Bought on Whop?
+                Retrieve your key below, then activate here.
               </p>
 
               <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
@@ -213,7 +215,16 @@ export function AccessScreen() {
           <span className="h-px flex-1 bg-border" aria-hidden="true" />
         </div>
 
-        <PurchaseOptions gumroadUrl={gumroadUrl} payhipUrl={payhipUrl} />
+        <PurchaseOptions gumroadUrl={gumroadUrl} payhipUrl={payhipUrl} whopUrl={whopUrl} />
+
+        <WhopLicenceClaim
+          disabled={busy || testerBusy}
+          initialEmail={email}
+          onClaimed={(claimed) => {
+            setEmail(claimed.email);
+            setLicenceKey(claimed.licenceKey);
+          }}
+        />
 
         <Card className="mt-6">
           <CardHeader>
